@@ -1,0 +1,637 @@
+[22-May-2026 08:15:00 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:00 ===
+[22-May-2026 08:15:00 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:15:00 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:00 ===
+[22-May-2026 08:15:00 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:15:00 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:00 ===
+[22-May-2026 08:15:00 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:15:00 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:15:01 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:01 ===
+[22-May-2026 08:15:01 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:15:01 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:15:06 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:06 ===
+[22-May-2026 08:15:07 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:15:07 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:15:07 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:07 ===
+[22-May-2026 08:15:10 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:15:10 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:15:10 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:10 ===
+[22-May-2026 08:15:12 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:15:12 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:15:31 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:31 ===
+[22-May-2026 08:15:31 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:15:31 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:15:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:50 ===
+[22-May-2026 08:15:50 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:15:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:50 ===
+[22-May-2026 08:15:50 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:15:50 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:15:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:50 ===
+[22-May-2026 08:15:50 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:15:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:50 ===
+[22-May-2026 08:15:50 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:15:50 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:15:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:55 ===
+[22-May-2026 08:15:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:15:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:15:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:57 ===
+[22-May-2026 08:15:58 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:15:58 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:15:59 Europe/Berlin] === API aufgerufen am 2026-05-22 08:15:59 ===
+[22-May-2026 08:16:00 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:16:00 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:16:20 Europe/Berlin] === API aufgerufen am 2026-05-22 08:16:20 ===
+[22-May-2026 08:16:20 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:16:20 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:16:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:16:50 ===
+[22-May-2026 08:16:50 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:16:50 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:16:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:16:55 ===
+[22-May-2026 08:16:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:16:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:16:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:16:58 ===
+[22-May-2026 08:16:59 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:16:59 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:16:59 Europe/Berlin] === API aufgerufen am 2026-05-22 08:16:59 ===
+[22-May-2026 08:17:02 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:17:02 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:17:20 Europe/Berlin] === API aufgerufen am 2026-05-22 08:17:20 ===
+[22-May-2026 08:17:20 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:17:20 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:17:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:17:50 ===
+[22-May-2026 08:17:50 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:17:50 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:17:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:17:55 ===
+[22-May-2026 08:17:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:17:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:17:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:17:57 ===
+[22-May-2026 08:17:59 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:17:59 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:17:59 Europe/Berlin] === API aufgerufen am 2026-05-22 08:17:59 ===
+[22-May-2026 08:18:02 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:18:02 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:18:20 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:20 ===
+[22-May-2026 08:18:21 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:18:21 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:18:24 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:24 ===
+[22-May-2026 08:18:24 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:18:24 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:24 ===
+[22-May-2026 08:18:24 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:18:24 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:24 ===
+[22-May-2026 08:18:24 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:18:24 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:18:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:25 ===
+[22-May-2026 08:18:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:18:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:18:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:30 ===
+[22-May-2026 08:18:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:18:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:18:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:32 ===
+[22-May-2026 08:18:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:18:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:18:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:35 ===
+[22-May-2026 08:18:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:18:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:18:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:18:55 ===
+[22-May-2026 08:18:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:18:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:19:26 Europe/Berlin] === API aufgerufen am 2026-05-22 08:19:26 ===
+[22-May-2026 08:19:26 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:19:26 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:19:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:19:30 ===
+[22-May-2026 08:19:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:19:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:19:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:19:33 ===
+[22-May-2026 08:19:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:19:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:19:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:19:35 ===
+[22-May-2026 08:19:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:19:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:19:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:19:57 ===
+[22-May-2026 08:19:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:19:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:20:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:20:27 ===
+[22-May-2026 08:20:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:20:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:20:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:20:30 ===
+[22-May-2026 08:20:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:20:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:20:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:20:33 ===
+[22-May-2026 08:20:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:20:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:20:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:20:35 ===
+[22-May-2026 08:20:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:20:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:20:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:20:57 ===
+[22-May-2026 08:20:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:20:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:21:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:21:27 ===
+[22-May-2026 08:21:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:21:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:21:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:21:30 ===
+[22-May-2026 08:21:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:21:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:21:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:21:33 ===
+[22-May-2026 08:21:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:21:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:21:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:21:35 ===
+[22-May-2026 08:21:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:21:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:21:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:21:57 ===
+[22-May-2026 08:21:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:21:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:22:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:22:27 ===
+[22-May-2026 08:22:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:22:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:22:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:22:30 ===
+[22-May-2026 08:22:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:22:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:22:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:22:32 ===
+[22-May-2026 08:22:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:22:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:22:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:22:35 ===
+[22-May-2026 08:22:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:22:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:22:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:22:57 ===
+[22-May-2026 08:22:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:22:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:23:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:23:27 ===
+[22-May-2026 08:23:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:23:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:23:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:23:30 ===
+[22-May-2026 08:23:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:23:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:23:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:23:33 ===
+[22-May-2026 08:23:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:23:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:23:36 Europe/Berlin] === API aufgerufen am 2026-05-22 08:23:36 ===
+[22-May-2026 08:23:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:23:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:23:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:23:57 ===
+[22-May-2026 08:23:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:23:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:24:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:24:27 ===
+[22-May-2026 08:24:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:24:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:24:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:24:30 ===
+[22-May-2026 08:24:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:24:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:24:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:24:33 ===
+[22-May-2026 08:24:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:24:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:24:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:24:35 ===
+[22-May-2026 08:24:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:24:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:24:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:24:57 ===
+[22-May-2026 08:24:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:24:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:25:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:25:27 ===
+[22-May-2026 08:25:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:25:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:25:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:25:30 ===
+[22-May-2026 08:25:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:25:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:25:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:25:33 ===
+[22-May-2026 08:25:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:25:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:25:37 Europe/Berlin] === API aufgerufen am 2026-05-22 08:25:37 ===
+[22-May-2026 08:25:39 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:25:39 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:25:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:25:57 ===
+[22-May-2026 08:25:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:25:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:26:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:26:27 ===
+[22-May-2026 08:26:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:26:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:26:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:26:30 ===
+[22-May-2026 08:26:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:26:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:26:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:26:32 ===
+[22-May-2026 08:26:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:26:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:26:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:26:35 ===
+[22-May-2026 08:26:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:26:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:26:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:26:57 ===
+[22-May-2026 08:26:57 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:26:57 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:27:27 Europe/Berlin] === API aufgerufen am 2026-05-22 08:27:27 ===
+[22-May-2026 08:27:27 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:27:27 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:27:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:27:30 ===
+[22-May-2026 08:27:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:27:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:27:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:27:33 ===
+[22-May-2026 08:27:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:27:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:27:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:27:35 ===
+[22-May-2026 08:27:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:27:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:27:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:27:57 ===
+[22-May-2026 08:27:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:27:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:28:28 Europe/Berlin] === API aufgerufen am 2026-05-22 08:28:28 ===
+[22-May-2026 08:28:28 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:28:28 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:28:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:28:30 ===
+[22-May-2026 08:28:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:28:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:28:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:28:33 ===
+[22-May-2026 08:28:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:28:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:28:36 Europe/Berlin] === API aufgerufen am 2026-05-22 08:28:36 ===
+[22-May-2026 08:28:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:28:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:28:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:28:58 ===
+[22-May-2026 08:28:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:28:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:29:28 Europe/Berlin] === API aufgerufen am 2026-05-22 08:29:28 ===
+[22-May-2026 08:29:28 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:29:28 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:29:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:29:30 ===
+[22-May-2026 08:29:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:29:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:29:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:29:32 ===
+[22-May-2026 08:29:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:29:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:29:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:29:35 ===
+[22-May-2026 08:29:39 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:29:39 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:29:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:29:58 ===
+[22-May-2026 08:29:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:29:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:30:28 Europe/Berlin] === API aufgerufen am 2026-05-22 08:30:28 ===
+[22-May-2026 08:30:28 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:30:28 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:30:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:30:30 ===
+[22-May-2026 08:30:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:30:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:30:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:30:33 ===
+[22-May-2026 08:30:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:30:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:30:36 Europe/Berlin] === API aufgerufen am 2026-05-22 08:30:36 ===
+[22-May-2026 08:30:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:30:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:30:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:30:58 ===
+[22-May-2026 08:30:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:30:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:31:28 Europe/Berlin] === API aufgerufen am 2026-05-22 08:31:28 ===
+[22-May-2026 08:31:28 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:31:28 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:31:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:31:30 ===
+[22-May-2026 08:31:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:31:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:31:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:31:33 ===
+[22-May-2026 08:31:35 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:31:35 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:31:36 Europe/Berlin] === API aufgerufen am 2026-05-22 08:31:36 ===
+[22-May-2026 08:31:39 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:31:39 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:31:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:31:58 ===
+[22-May-2026 08:31:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:31:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:32:28 Europe/Berlin] === API aufgerufen am 2026-05-22 08:32:28 ===
+[22-May-2026 08:32:28 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:32:28 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:32:30 Europe/Berlin] === API aufgerufen am 2026-05-22 08:32:30 ===
+[22-May-2026 08:32:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:32:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:32:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:32:32 ===
+[22-May-2026 08:32:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:32:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:32:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:32:35 ===
+[22-May-2026 08:32:38 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:32:38 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:32:58 Europe/Berlin] === API aufgerufen am 2026-05-22 08:32:58 ===
+[22-May-2026 08:32:58 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:32:58 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:33:12 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:12 ===
+[22-May-2026 08:33:12 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:12 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:12 ===
+[22-May-2026 08:33:12 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:12 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:12 ===
+[22-May-2026 08:33:12 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:12 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:12 ===
+[22-May-2026 08:33:12 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:17 ===
+[22-May-2026 08:33:17 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:17 ===
+[22-May-2026 08:33:17 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:17 ===
+[22-May-2026 08:33:17 Europe/Berlin] API-FEHLER: Too few arguments to function App\Database::__construct(), 0 passed in /var/www/html/age_web/classes/Dashboard.php on line 9 and exactly 1 expected
+Stacktrace:
+#0 /var/www/html/age_web/classes/Dashboard.php(9): App\Database->__construct()
+#1 /var/www/html/age_web/api.php(99): App\Dashboard->__construct()
+#2 {main}
+[22-May-2026 08:33:23 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:23 ===
+[22-May-2026 08:33:23 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:33:23 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:23 ===
+[22-May-2026 08:33:23 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:33:23 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:23 ===
+[22-May-2026 08:33:23 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:33:23 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:33:24 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:24 ===
+[22-May-2026 08:33:24 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:33:24 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:33:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:29 ===
+[22-May-2026 08:33:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:33:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:33:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:32 ===
+[22-May-2026 08:33:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:33:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:33:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:35 ===
+[22-May-2026 08:33:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:33:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:33:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:33:55 ===
+[22-May-2026 08:33:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:33:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:34:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:34:25 ===
+[22-May-2026 08:34:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:34:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:34:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:34:29 ===
+[22-May-2026 08:34:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:34:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:34:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:34:32 ===
+[22-May-2026 08:34:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:34:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:34:34 Europe/Berlin] === API aufgerufen am 2026-05-22 08:34:34 ===
+[22-May-2026 08:34:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:34:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:34:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:34:55 ===
+[22-May-2026 08:34:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:34:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:35:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:35:25 ===
+[22-May-2026 08:35:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:35:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:35:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:35:29 ===
+[22-May-2026 08:35:31 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:35:31 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:35:31 Europe/Berlin] === API aufgerufen am 2026-05-22 08:35:31 ===
+[22-May-2026 08:35:33 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:35:33 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:35:33 Europe/Berlin] === API aufgerufen am 2026-05-22 08:35:33 ===
+[22-May-2026 08:35:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:35:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:35:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:35:55 ===
+[22-May-2026 08:35:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:35:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:36:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:36:25 ===
+[22-May-2026 08:36:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:36:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:36:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:36:29 ===
+[22-May-2026 08:36:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:36:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:36:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:36:32 ===
+[22-May-2026 08:36:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:36:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:36:34 Europe/Berlin] === API aufgerufen am 2026-05-22 08:36:34 ===
+[22-May-2026 08:36:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:36:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:36:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:36:55 ===
+[22-May-2026 08:36:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 777
+[22-May-2026 08:36:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:37:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:37:25 ===
+[22-May-2026 08:37:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:37:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:37:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:37:29 ===
+[22-May-2026 08:37:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:37:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:37:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:37:32 ===
+[22-May-2026 08:37:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:37:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:37:34 Europe/Berlin] === API aufgerufen am 2026-05-22 08:37:34 ===
+[22-May-2026 08:37:37 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:37:37 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:37:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:37:55 ===
+[22-May-2026 08:37:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:37:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:38:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:38:25 ===
+[22-May-2026 08:38:25 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:38:25 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:38:29 Europe/Berlin] === API aufgerufen am 2026-05-22 08:38:29 ===
+[22-May-2026 08:38:32 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:38:32 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:38:32 Europe/Berlin] === API aufgerufen am 2026-05-22 08:38:32 ===
+[22-May-2026 08:38:34 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:38:34 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:38:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:38:35 ===
+[22-May-2026 08:38:36 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:38:36 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:38:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:38:55 ===
+[22-May-2026 08:38:55 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:38:55 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:39:13 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:13 ===
+[22-May-2026 08:39:13 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:39:13 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:13 ===
+[22-May-2026 08:39:13 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:39:13 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:13 ===
+[22-May-2026 08:39:13 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:39:13 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:39:13 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:13 ===
+[22-May-2026 08:39:13 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:39:13 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:39:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:18 ===
+[22-May-2026 08:39:21 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:39:21 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:39:21 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:21 ===
+[22-May-2026 08:39:24 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:39:24 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:39:24 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:24 ===
+[22-May-2026 08:39:27 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:39:27 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:39:43 Europe/Berlin] === API aufgerufen am 2026-05-22 08:39:43 ===
+[22-May-2026 08:39:43 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:39:43 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:40:13 Europe/Berlin] === API aufgerufen am 2026-05-22 08:40:13 ===
+[22-May-2026 08:40:13 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:40:13 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:40:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:40:18 ===
+[22-May-2026 08:40:22 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:40:22 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:40:22 Europe/Berlin] === API aufgerufen am 2026-05-22 08:40:22 ===
+[22-May-2026 08:40:25 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:40:25 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:40:25 Europe/Berlin] === API aufgerufen am 2026-05-22 08:40:25 ===
+[22-May-2026 08:40:28 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:40:28 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:40:44 Europe/Berlin] === API aufgerufen am 2026-05-22 08:40:44 ===
+[22-May-2026 08:40:44 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:40:44 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:41:14 Europe/Berlin] === API aufgerufen am 2026-05-22 08:41:14 ===
+[22-May-2026 08:41:14 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:41:14 Europe/Berlin] getMailsPaginated
+[22-May-2026 08:41:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:41:18 ===
+[22-May-2026 08:41:20 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:41:20 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:41:20 Europe/Berlin] === API aufgerufen am 2026-05-22 08:41:20 ===
+[22-May-2026 08:41:22 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:41:22 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:41:22 Europe/Berlin] === API aufgerufen am 2026-05-22 08:41:22 ===
+[22-May-2026 08:41:25 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:41:25 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:41:44 Europe/Berlin] === API aufgerufen am 2026-05-22 08:41:44 ===
+[22-May-2026 08:41:44 Europe/Berlin] PHP Warning:  Undefined property: App\MailProcessor::$dashboard in /var/www/html/age_web/classes/MailProcessor.php on line 772
+[22-May-2026 08:41:44 Europe/Berlin] getMailsPaginated: Call to a member function decrypt() on null
+[22-May-2026 08:42:10 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:10 ===
+[22-May-2026 08:42:10 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:42:10 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:10 ===
+[22-May-2026 08:42:10 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:42:10 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:10 ===
+[22-May-2026 08:42:11 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:11 ===
+[22-May-2026 08:42:16 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:16 ===
+[22-May-2026 08:42:18 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:42:18 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:42:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:18 ===
+[22-May-2026 08:42:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:18 ===
+[22-May-2026 08:42:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:18 ===
+[22-May-2026 08:42:19 Europe/Berlin] PaperlessURL:http://192.168.0.72:8030/api/documents/?query=%3D%3Futf-8%3FQ%3FUnsere_Obst-_und_Gem%3DC3%3DBCseangebote%3F%3D&page=1&page_size=30
+[22-May-2026 08:42:19 Europe/Berlin] API-FEHLER: keinen Datensatz gefunden
+Stacktrace:
+#0 /var/www/html/age_web/classes/api/PaperlessController.php(36): App\PaperlessProcessor->search('=?utf-8?Q?Unser...', '')
+#1 /var/www/html/age_web/api.php(168): App\Api\PaperlessController->search()
+#2 {main}
+[22-May-2026 08:42:19 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:19 ===
+[22-May-2026 08:42:19 Europe/Berlin] API-FEHLER: Diese E-Mail ist noch nicht mit Paperless verknüpft.
+Stacktrace:
+#0 /var/www/html/age_web/api.php(168): App\Api\PaperlessController->getMailTree()
+#1 {main}
+[22-May-2026 08:42:19 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:19 ===
+[22-May-2026 08:42:19 Europe/Berlin] getContactTimeline
+[22-May-2026 08:42:19 Europe/Berlin] Array
+(
+    [hash] => bfdb78ccc7beb5ed7d85671a5d6b9233215a654adedc32f50abad9f72b1dec0c
+)
+
+[22-May-2026 08:42:19 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:19 ===
+[22-May-2026 08:42:19 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:19 ===
+[22-May-2026 08:42:20 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:42:20 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:42:20 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:20 ===
+[22-May-2026 08:42:22 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:42:22 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:42:35 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:35 ===
+[22-May-2026 08:42:35 Europe/Berlin] getContactTimeline
+[22-May-2026 08:42:35 Europe/Berlin] 
+[22-May-2026 08:42:41 Europe/Berlin] === API aufgerufen am 2026-05-22 08:42:41 ===
+[22-May-2026 08:43:11 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:11 ===
+[22-May-2026 08:43:16 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:16 ===
+[22-May-2026 08:43:17 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:43:17 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:43:18 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:18 ===
+[22-May-2026 08:43:20 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:43:20 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:43:21 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:21 ===
+[22-May-2026 08:43:23 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:43:23 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:43:41 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:41 ===
+[22-May-2026 08:43:46 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:46 ===
+[22-May-2026 08:43:46 Europe/Berlin] API-FEHLER: Aktion 'crm_get_appointments' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:43:46 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:46 ===
+[22-May-2026 08:43:46 Europe/Berlin] API-FEHLER: Aktion 'crm_get_notes' ist unbekannt.
+Stacktrace:
+#0 {main}
+[22-May-2026 08:43:46 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:46 ===
+[22-May-2026 08:43:47 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:47 ===
+[22-May-2026 08:43:48 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:48 ===
+[22-May-2026 08:43:49 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:49 ===
+[22-May-2026 08:43:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:50 ===
+[22-May-2026 08:43:50 Europe/Berlin] getContactTimeline
+[22-May-2026 08:43:50 Europe/Berlin] Array
+(
+    [hash] => c932ec7dfd8ef05e9e15ed92d1c1441ba33f36e5edbb19f50c2d9efbe5669672
+)
+
+[22-May-2026 08:43:50 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:50 ===
+[22-May-2026 08:43:51 Europe/Berlin] PaperlessURL:http://192.168.0.72:8030/api/documents/?query=Dokumenteneingang+OnlineBanking-Postfach&page=1&page_size=30
+[22-May-2026 08:43:51 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:51 ===
+[22-May-2026 08:43:51 Europe/Berlin] API-FEHLER: Diese E-Mail ist noch nicht mit Paperless verknüpft.
+Stacktrace:
+#0 /var/www/html/age_web/api.php(168): App\Api\PaperlessController->getMailTree()
+#1 {main}
+[22-May-2026 08:43:51 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:51 ===
+[22-May-2026 08:43:51 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:51 ===
+[22-May-2026 08:43:53 Europe/Berlin] API-FEHLER: Der IMAP-Server hat keinen Inhalt für diese E-Mail zurückgegeben.
+Stacktrace:
+#0 /var/www/html/age_web/api.php(168): App\Api\MailController->streamHtml()
+#1 {main}
+[22-May-2026 08:43:53 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:53 ===
+[22-May-2026 08:43:54 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:43:54 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:43:54 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:54 ===
+[22-May-2026 08:43:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:43:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:43:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:43:57 ===
+[22-May-2026 08:44:00 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:44:00 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:44:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:44:17 ===
+[22-May-2026 08:44:47 Europe/Berlin] === API aufgerufen am 2026-05-22 08:44:47 ===
+[22-May-2026 08:44:52 Europe/Berlin] === API aufgerufen am 2026-05-22 08:44:52 ===
+[22-May-2026 08:44:53 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:44:53 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:44:54 Europe/Berlin] === API aufgerufen am 2026-05-22 08:44:54 ===
+[22-May-2026 08:44:56 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:44:56 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:44:56 Europe/Berlin] === API aufgerufen am 2026-05-22 08:44:56 ===
+[22-May-2026 08:44:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:44:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:45:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:45:17 ===
+[22-May-2026 08:45:47 Europe/Berlin] === API aufgerufen am 2026-05-22 08:45:47 ===
+[22-May-2026 08:45:52 Europe/Berlin] === API aufgerufen am 2026-05-22 08:45:52 ===
+[22-May-2026 08:45:54 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6399 | Letzte UID in DB: 130461 | Höchste UID Server: 130461
+[22-May-2026 08:45:54 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:45:55 Europe/Berlin] === API aufgerufen am 2026-05-22 08:45:55 ===
+[22-May-2026 08:45:57 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5192 | Höchste UID Server: 5161
+[22-May-2026 08:45:57 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:45:57 Europe/Berlin] === API aufgerufen am 2026-05-22 08:45:57 ===
+[22-May-2026 08:46:00 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2031 | Letzte UID in DB: 4939 | Höchste UID Server: 4939
+[22-May-2026 08:46:00 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[22-May-2026 08:46:17 Europe/Berlin] === API aufgerufen am 2026-05-22 08:46:17 ===
