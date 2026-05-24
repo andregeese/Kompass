@@ -110,7 +110,7 @@ const detailViewComponent = () => ({
     },
 
     // Erstellt den neuen CRM-Kontakt über die Sidebar
-    async saveContact() {
+    async saveContactDetail() {
         if (!this.formData.name) return alert('Bitte einen Namen eingeben.');
         this.crmLoading = true;
 

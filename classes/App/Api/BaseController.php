@@ -1,9 +1,9 @@
 <?php
 namespace App\Api;
 
-
 abstract class BaseController {
     protected $dashboard;
+
     // Registry für geladene Services
     private $services = [];
 
@@ -12,16 +12,25 @@ abstract class BaseController {
     }
 
     /**
+     * Lazy-Loader für Services
+     */
+    // Proxy: Controller fragt das Dashboard
+    protected function getService($name, $className) {
+        return $this->dashboard->getService($name, $className);
+    }
+    
+    /**
      * Proxy-Methode: So kann ich in Controllern einfach $this->xyz->... schreiben
-     * @property \App\MailProcessor $mail
-     * @property \App\ContactProcessor $contact
-     * @property \App\PaperlessProcessor $processor
+     * @property \App\MailProcessor $mailProcess
+     * @property \App\ContactProcessor $contactProcess
+     * @property \App\PaperlessProcessor $processorProcess
      */
     public function __get($name) {
         $services = [
-            'mail'    => \App\MailProcessor::class,
-            'contact' => \App\ContactProcessor::class,
-            'paperless' => \App\PaperlessProcessor::class
+            'mailProcess'    => \App\MailProcessor::class,
+            'contactProcess' => \App\ContactProcessor::class,
+            'paperlessProcess' => \App\PaperlessProcessor::class,
+            'systemProcess' => \App\SystemProcessor::class
         ];
 
         if (array_key_exists($name, $services)) {
@@ -29,16 +38,7 @@ abstract class BaseController {
         }
     }
 
-    /**
-     * Lazy-Loader für Services
-     */
-    protected function getService($name, $className) {
-        if (!isset($this->services[$name])) {
-            // Instanziiert den Service nur bei Bedarf
-            $this->services[$name] = new $className($this->dashboard);
-        }
-        return $this->services[$name];
-    }
+    
 
     protected function cleanBuffer() {
         if (ob_get_length()) {

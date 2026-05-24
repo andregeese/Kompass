@@ -3,7 +3,17 @@ namespace App;
 use PDO;
 use DateTime;
 
-class Dashboard extends Database {
+class Dashboard extends Database 
+{
+    private $instances = [];
+    
+    // Das Dashboard ist der einzige Ort, der Instanzen wirklich hält
+    public function getService($name, $className) {
+        if (!isset($this->instances[$name])) {
+            $this->instances[$name] = new $className($this);
+        }
+        return $this->instances[$name];
+    }
 
     public function __construct() {
         parent::__construct($this);
@@ -211,33 +221,18 @@ class Dashboard extends Database {
         return strtolower(trim($rawSender));
     }
 
-    
-
-    public function getContactByMail(string $hash)
-    {
-        $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-
-        $sql="SELECT 
-            c.id AS contact_id,
-            c.display_name,
-            c.type,
-            GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails
-        FROM contacts AS c
-        INNER JOIN mails AS m ON c.id = m.contact_id
-        LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-        WHERE SHA2(CONCAT(m.id, :salt), 256) = :hash 
-        AND m.tenant_id = :tenant_id
-        GROUP BY c.id, c.display_name, c.type
-        LIMIT 1;";
-
-        $ret = $this->queryIt($sql,
-            ["hash" => $hash,
-            "salt" =>  defined('HASH_SALT') ? HASH_SALT : '']
-        );
-
-        return $ret[0];
-
+    // Zentraler JSON-Antwort-Sender
+    protected function newsendResponse($success, $details = [], $error = null) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => (bool) $success,
+            'details' => $details, // Immer ein Array
+            'error'   => $error    // Immer ein String oder null
+        ]);
+        exit;
     }
+
+    
 
     /**
      * Finde alle Mails zu den Kontakten
@@ -276,7 +271,7 @@ class Dashboard extends Database {
      * * @param string $email Die zu prüfende E-Mail-Adresse
      * @return array Status und Kontaktdaten oder Vorschlag
      */
-    public function findContactByEmail(string $email): array {
+    /*public function findContactByEmail(string $email): array {
         $email = strtolower(trim($email));
         
         // Validierung, falls mal Datenmüll ankommt
@@ -339,7 +334,7 @@ class Dashboard extends Database {
             'suggested_name' => ucfirst($domainName), // Erster Buchstabe groß als Namensvorschlag
             'email' => $email
         ];
-    }
+    }*/
 
     /**
      * Sendet eine standardisierte JSON-Antwort an das Frontend.
@@ -368,8 +363,4 @@ class Dashboard extends Database {
         exit;
     }
 
-
-
-    /*** PAPERLESS */
-    
 }

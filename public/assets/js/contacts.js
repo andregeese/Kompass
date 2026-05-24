@@ -1,5 +1,6 @@
 const contactsViewComponent = () => ({
     contacts: [],
+    paperlessContacts: [],
     searchQueryContacts: '',
     loading: false,
     hasMore: true,
@@ -8,6 +9,8 @@ const contactsViewComponent = () => ({
     activeContact: null,
     isMatchPanelOpen: false,
     matchSearchQuery: '',
+    matchResults: [],
+    loadingMatch: false,
     matchResults: [],
 
     async initContacts() {
@@ -20,19 +23,53 @@ const contactsViewComponent = () => ({
             }, 300);
         });
 
-        await this.loadContacts(false);
+        //await this.loadContacts(false);
     },
 
     // FEHLENDER GETTER: Alpine braucht diesen, um das x-for im Template zu füllen
     get filteredContacts() {
         return this.contacts; 
     },
+
+    get sortedMatchResults() {
+        if (!Array.isArray(this.matchResults)) return [];
+        const results = (this.matchResults && Array.isArray(this.matchResults)) ? this.matchResults : [];
+
+        return [...results].sort((a, b) => {
+            // Sicherer Vergleich
+            const aId = Number(a.id);
+            const bId = Number(b.id);
+            const isASelected = this.activeContact?.emails?.some(e => Number(e.id) === aId) || false;
+            const isBSelected = this.activeContact?.emails?.some(e => Number(e.id) === bId) || false;
+            
+            if (isASelected && !isBSelected) return -1;
+            if (!isASelected && isBSelected) return 1;
+            return 0;
+        });
+    },
+
+    toggleEmail(contact) {
+        if (!this.activeContact.emails) this.activeContact.emails = [];
+        
+        const contactId = Number(contact.ceid);
+        const existingIndex = this.activeContact.emails.findIndex(e => Number(e.ceid) === contactId);
+        
+        if (existingIndex === -1) {
+            this.activeContact.emails.push({ ceid: contactId, email: contact.email });
+        } else {
+            this.activeContact.emails.splice(existingIndex, 1);
+        }
+    },
     
     openMatchModal(contact) {
         this.activeContact = contact;
         this.isMatchPanelOpen = true;
 
-        //await this.fetchEmailsForContact(contact.id);
+        // Zuerst die Mails vom Server laden
+        this.fetchEmailsForContact(contact.id).then(() => {
+            // Erst wenn geladen, matchResults mit den aktiven befüllen
+            this.matchResults = [...this.activeContact.emails];
+        });
     },
 
     closeMatchModal() {
@@ -41,13 +78,48 @@ const contactsViewComponent = () => ({
     },
 
     async fetchEmailsForContact(contactId) {
-        // Neue API-Abfrage wie von dir gewünscht
-        const data = await safeFetch(`${this.apiUrl}?action=search_emails_by_contact&id=${contactId}`);
-        if (data?.success) {
-            this.matchResults = data.details.emails || [];
+        this.loadingMatch = true;
+        try {
+            const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_contact&query=${contactId}`);
+            if (data?.success) {
+                // Erst die bestehenden Mails für den Kontakt setzen
+                this.activeContact.emails = data.details.contacts || [];
+                // Dann die Suchergebnisse befüllen
+                this.matchResults = data.details.contacts || []; 
+            }
+        } catch (e) {
+            console.error("Fehler beim Laden:", e);
+        } finally {
+            this.loadingMatch = false;
         }
     },
+    
+    async saveContact() 
+    {
+       try {
+            
+            const response = await safeFetch('api.php?action=save_contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                // Hier schicken wir das ganze Objekt mit dem aktualisierten E-Mail-Array
+                body: JSON.stringify(this.activeContact)
+            });
 
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('Kontakt gespeichert:', result.message);
+                // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
+            } else {
+                alert('Fehler: ' + (result.error || 'Unbekannt'));
+            }
+        } catch (err) {
+            console.error('Speicherfehler:', err);
+        }
+
+    },
     async linkToMatch(contactId, itemId) {
         // Finde das ausgewählte Ergebnis, um den Typ zu bestimmen
         const result = this.matchResults.find(r => r.id === itemId);
@@ -63,11 +135,33 @@ const contactsViewComponent = () => ({
         this.closeMatchModal();
     },
 
+    /**
+     * E-Mail Suche für das Matching
+     * @returns 
+     */
     async performMatchSearch() {
-        if (this.matchSearchQuery.length < 2) return;
-        // Beispiel-API-Aufruf: Suche nach Dokumenten oder Mails für diesen Kontakt
-        const data = await safeFetch(`${this.apiUrl}?action=get_correspondet&query=${encodeURIComponent(this.matchSearchQuery)}`);
-        this.matchResults = data.details || [];
+        if (this.matchSearchQuery.length < 2) {
+            // Zeige nur die bereits verknüpften E-Mails an
+            this.matchResults = [...this.activeContact.emails];
+            return;
+        }
+        this.loadingMatch = true;
+        try {
+            const data = await safeFetch(`${this.apiUrl}?action=list_contacts&query=${this.matchSearchQuery}`);
+            
+            // Suche ausführen und die bereits ausgewählten beibehalten
+            // Wir mischen die Suchergebnisse mit den bereits gewählten
+            const searchResults = data.details?.contacts || [];
+            
+            // Mergen: Bestehende + Neue, dabei Duplikate vermeiden
+            const combined = [...this.activeContact.emails, ...searchResults];
+            this.matchResults = Array.from(new Map(combined.map(item => [item.ceid, item])).values());
+            
+        } catch (err) {
+            console.error("Suche fehlgeschlagen:", err);
+        } finally {
+            this.loadingMatch = false;
+        }
     },
 
     // Lädt die Kontaktliste (mit optionalem Suchbegriff)
@@ -139,6 +233,70 @@ const contactsViewComponent = () => ({
 
         await safeFetch('api.php?action=link_contact_item', { method: 'POST', body: fd });
         // Hier könnte man analog das UI aktualisieren
+    },
+
+    async saveInlineContact(contact) 
+    {
+        try {
+            // Optionale Validierung vor dem Absenden
+            if (!contact.displayname || contact.displayname.trim() === '') {
+                alert('Bitte einen Namen angeben.');
+                return;
+            }
+
+            // POST-Request an deine api.php mit dem Query-Parameter
+            const response = await safeFetch('api.php?action=save_contact_manual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Falls du CSRF-Token oder andere Sicherheits-Header nutzt, hier einfügen:
+                    // 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    id: contact.id,
+                    displayname: contact.displayname,
+                    email: contact.email,
+                    street: contact.street,
+                    zip: contact.zip,
+                    city: contact.city
+                })
+            });
+
+            // Falls der Server mit einem Fehler-Statuscode (z.B. 400 oder 500) antwortet
+            if (!response.ok) {
+                throw new Error(`Server-Fehler: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Optional: Eine kleine Erfolgsmeldung in der Konsole oder Toast-Nachricht
+                console.log('Kontakt erfolgreich aktualisiert:', result.message);
+                
+                // Falls deine API die bereinigten/neuen Daten zurückgibt, 
+                // kannst du sie hier direkt wieder in das Objekt schreiben:
+                if (result.data) {
+                    Object.assign(contact, result.data);
+                }
+            } else {
+                // Falls die API 'success: false' liefert (z.B. Validierungsfehler in PHP)
+                alert(`Fehler beim Speichern: ${result.error || 'Unbekannter Fehler'}`);
+                
+                // Rollback: Holt die alten Daten vom Server zurück, um das UI zu bereinigen
+                if (typeof this.initContacts === 'function') {
+                    this.initContacts();
+                }
+            }
+
+        } catch (error) {
+            console.error('Netzwerk- oder Verarbeitungsfehler:', error);
+            alert('Verbindung zur API fehlgeschlagen. Die Änderungen konnten nicht gespeichert werden.');
+            
+            // Im Fehlerfall ebenfalls die Daten zurücksetzen
+            if (typeof this.this.initContacts === 'function') {
+                this.initContacts();
+            }
+        }
     }
 });
 

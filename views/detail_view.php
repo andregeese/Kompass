@@ -187,7 +187,7 @@
                                 <input type="checkbox" 
                                     :value="corr.name" 
                                     x-model="selectedCorrespondents" 
-                                    @change="contactState?.status === 'matched' ? saveContact() : null" 
+                                    @change="contactState?.status === 'matched' ? saveContactDetail() : null" 
                                     class="rounded border-slate-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-800">
                                 <span x-text="corr.name" class="truncate"></span>
                                 <span x-show="corr.score" class="text-[9px] text-slate-400 font-mono ml-auto" x-text="'(' + parseFloat(corr.score).toFixed(1) + ')'"></span>
@@ -210,7 +210,7 @@
             </div>
 
             <template x-if="contactState.status === 'unknown' || contactState.status === 'suggestion'">
-                <button @click="saveContact()" 
+                <button @click="saveContactDetail()" 
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-xs shadow-md shadow-blue-500/10 flex items-center justify-center space-x-2 mt-2">
                     <span>Speichern & Verknüpfen</span>
                 </button>

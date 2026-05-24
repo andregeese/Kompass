@@ -424,7 +424,7 @@ document.addEventListener('alpine:init', () => {
                 
                 if (data.success) {
                     if (data.status === 'info_error') {
-                        // 🚀 Hier landet die Nachricht deiner "throw new Exception" aus dem Backend!
+                        // 🚀 Hier landet die Nachricht deiner "throw new \Exception" aus dem Backend!
                         this.paperlessStatusText = data.error;
                         this.paperlessTree = {};
                     } else {

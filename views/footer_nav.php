@@ -11,15 +11,7 @@
     <a href="index.php?view=appointments" :class="currentView === 'appointments' ? 'text-blue-500 font-bold' : 'text-slate-400 dark:text-gray-400'" class="flex flex-col items-center space-y-0.5 transition-colors">
         <span class="text-lg">📅</span><span class="text-[10px]">Termine</span>
     </a>
-    <div x-data="{ 
-        checkNotificationPermission() {
-            if (Notification.permission !== 'granted') {
-                Notification.requestPermission();
-            }
-        }
-    }">
-        <button @click="checkNotificationPermission()" class="px-3 py-1.5 bg-slate-100 dark:bg-gray-750 rounded-lg text-xs font-semibold">
-            🔔 Mitteilungen erlauben
-        </button>
-    </div>
+    <a href="index.php?view=contacts" :class="currentView === 'contacts' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-semibold' : 'text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-750'" class="w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm transition-all">
+        <span class="text-lg">👥</span> <span class="text-[10px]">Kontakte & Partner</span>        
+    </a>
 </footer>

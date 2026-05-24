@@ -90,7 +90,7 @@ const mailViewComponent = () => ({
             const folder = this.currentFolder || 'INBOX';
             
             // Aufbau der URL
-            let url = `${this.$data.apiUrl}?action=${isSearch ? 'search_mail' : 'list'}&folder=${folder}`;
+            let url = `${this.$data.apiUrl}?action=${isSearch ? 'search_mail' : 'list_mails'}&folder=${folder}`;
             
             if (isSearch) {
                 url += `&query=${encodeURIComponent(this.mailSearchQuery)}`;
@@ -362,7 +362,7 @@ const mailViewComponent = () => ({
 
         try {
             // 🚀 FIX: Backticks genutzt
-            const data = await safeFetch(`${this.$data.apiUrl}?action=list&limit=50`);
+            const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&limit=50`);
             
             if (data && data.success && data.details?.mails) {
                 // 🚀 FIX: Einheitlich $data.mails prüfen und setzen

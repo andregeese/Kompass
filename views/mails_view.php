@@ -30,20 +30,47 @@
 
             <template x-for="mail in mails" :key="mail.hash">
                 <div @click="viewMail(mail); currentMail=mail; $dispatch('toggle-sidebar-request', { tab: 'context' });" 
-                    class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all"
+                    class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
                     :class="{
                             'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedHash === mail.hash,
-                            'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined
+                            'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined,
+                            'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read // Gelesene Mails leicht ausgrauen
                         }">
                     
-                    <div class="flex justify-between text-[11px] text-slate-400 dark:text-gray-400 mb-1">
-                        <span class="font-bold text-blue-500 dark:text-blue-400" x-text="mail.sender"></span>
-                        <span x-text="mail.date"></span>
+                    <!-- 1. UNGELESEN-INDIKATOR (Blauer Punkt ganz links) -->
+                    <div x-show="!mail.is_read" 
+                        class="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-sm shadow-blue-500/50">
+                    </div>
+
+                    <!-- Kopfzeile mit Absender, Beantwortet-Status, Datum und Flagge -->
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-gray-400 mb-1 min-w-0">
+                        <div class="flex items-center space-x-1 truncate mr-2">
+                            <!-- 2. BEANTWORTET-INDIKATOR (Geschwungener Pfeil) -->
+                            <span x-show="mail.is_answered" class="text-blue-500 dark:text-blue-400 shrink-0 font-bold" title="Beantwortet">↩️</span>
+                            
+                            <!-- Absender (Wird fett, wenn die Mail ungelesen ist) -->
+                            <span class="text-blue-500 dark:text-blue-400 truncate" 
+                                :class="!mail.is_read ? 'font-black' : 'font-medium'" 
+                                x-text="mail.sender"></span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            <!-- 3. MARKIERT-INDIKATOR (Flagge / Pin) -->
+                            <span x-show="mail.is_flagged" class="text-amber-500 animate-pulse text-[12px]" title="Markiert">📌</span>
+                            <span x-text="mail.date"></span>
+                        </div>
                     </div>
                     
-                    <h4 class="text-xs font-semibold line-clamp-2 text-slate-800 dark:text-gray-200 mb-2" x-text="mail.subject"></h4>
+                    <!-- Betreffzeile (Ebenfalls fetter bei ungelesenen Mails) -->
+                    <h4 class="text-xs line-clamp-2 text-slate-800 dark:text-gray-200 mb-2" 
+                        :class="!mail.is_read ? 'font-bold' : 'font-normal text-slate-600 dark:text-gray-300'"
+                        x-text="mail.subject"></h4>
 
-                    <div class="flex justify-end pt-1 border-t border-slate-100 dark:border-gray-700/50 mt-2">
+                    <div class="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-gray-700/50 mt-2">
+                        <!-- Kleines Label für den Lesestatus (optional, gut für die Barrierefreiheit) -->
+                        <span class="text-[10px] text-slate-400 dark:text-gray-500 font-medium" 
+                            x-text="mail.is_read ? 'Gelesen' : 'Neu'"></span>
+
                         <button @click.stop="deleteMail(mail)" 
                                 class="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">
                             🗑️ Löschen

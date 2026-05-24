@@ -56,7 +56,7 @@ class AuthController extends BaseController {
 
         $newTenantId = $this->dashboard->registerUser($email, $passwordHash, $configParam);
         if ($newTenantId === false) {
-            throw new Exception("Registrierung im System fehlgeschlagen.");
+            throw new \Exception("Registrierung im System fehlgeschlagen.");
         }
             $_SESSION['user_id']   = $user['id'];
 

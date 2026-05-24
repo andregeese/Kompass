@@ -8,7 +8,7 @@ try {
     $uid = $_GET['uid'] ?? null;
 
     if (!$uid) {
-        throw new Exception("Keine UID übergeben.");
+        throw new \Exception("Keine UID übergeben.");
     }
 
     // Mail aus der Datenbank abrufen
@@ -17,7 +17,7 @@ try {
     $mail = $stmt->fetch();
 
     if (!$mail) {
-        throw new Exception("Mail nicht gefunden.");
+        throw new \Exception("Mail nicht gefunden.");
     }
 
     // Daten entschlüsseln

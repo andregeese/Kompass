@@ -79,7 +79,7 @@ class ErrorLogs
     }
 
     /**
-     * Handler für unaufgefangene Exceptions (throw new Exception)
+     * Handler für unaufgefangene Exceptions (throw new \Exception)
      */
     public static function handleException(\Throwable $exception) 
     {

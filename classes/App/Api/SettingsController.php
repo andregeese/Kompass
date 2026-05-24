@@ -38,7 +38,7 @@ class SettingsController extends BaseController {
         $success = $settingModel->saveTenantSettings($this->tenantId, $formData, $secretKey);
         
         if (!$success) {
-            throw new Exception("Fehler beim Aktualisieren der Einstellungen.");
+            throw new \Exception("Fehler beim Aktualisieren der Einstellungen.");
         }
         
         return [

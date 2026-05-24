@@ -6,15 +6,20 @@ use Throwable;
 
 class PaperlessProcessor extends Database
 {
+    use ServiceTrait;
     private string $apiUrl;
     private string $token;
-    private $dashboard;
+    protected $dashboard;
 
     public function __construct($dashboard) 
     {
         $this->apiUrl = "http://192.168.0.72:8030";
         $this->token = '17a32ab64bd39bfff975e81707e1548d737d424d';
-        $this->dashboard = $dashboard; // Hier liegt das Dashboard
+        
+        parent::__construct($dashboard); 
+    
+        $this->dashboard = $dashboard;
+
     }
 
 
@@ -44,14 +49,14 @@ class PaperlessProcessor extends Database
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        error_log("PaperlessURL:" . $url);
+        //error_log("PaperlessURL:" . $url);
 
         // Globale Fehlerprüfung für alle Endpunkte
         if ($httpCode === 0) {
-            throw new Exception("Paperless-Server ist offline oder nicht erreichbar. (cURL: $curlError)");
+            throw new \Exception("Paperless-Server ist offline oder nicht erreichbar. (cURL: $curlError)");
         }
         if ($httpCode === 401 || $httpCode === 403) {
-            throw new Exception("Zugriff verweigert. Der Paperless API-Token ist ungültig.");
+            throw new \Exception("Zugriff verweigert. Der Paperless API-Token ist ungültig.");
         }
         
         // Je nach Methode erwarten wir andere Erfolgs-Codes (GET: 200, POST: 201)
@@ -59,10 +64,40 @@ class PaperlessProcessor extends Database
         if ($httpCode !== $expectedCode) {
             // Versuche die Fehlermeldung von Paperless zu extrahieren, falls vorhanden
             $apiError = !empty($result) ? $result : 'Keine Antwortdetails';
-            throw new Exception("Paperless-API meldet Status $httpCode. Details: " . $apiError);
+            throw new \Exception("Paperless-API meldet Status $httpCode. Details: " . $apiError);
         }
     
         return $result;
+    }
+
+
+    public function getAllCorrespondents()
+    {
+        $params = [
+            'page_size' => 5000 // Holt bis zu 5000 Korrespondenten auf einmal
+        ];
+
+        $url = '/api/correspondents/?' . http_build_query($params);
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+
+        error_log(print_r($paperlessData, true));
+
+        $correspondents = [];
+
+        // Paperless liefert die Daten bei Pagination im Unterknoten 'results'
+        if (isset($paperlessData['results'])) {
+            foreach ($paperlessData['results'] as $item) {
+                error_log(print_r($item, true));
+                $correspondents[] = [
+                    'id'   => $item['id'],
+                    'name' => $item['name']
+                ];
+            }
+        }
+
+        $this->dashboard->sendResponse(true, $correspondents);
+        //return $correspondents;
     }
 
     /**
@@ -70,7 +105,7 @@ class PaperlessProcessor extends Database
      * * @param string $query Der Suchbegriff (z.B. die Domain 'mueller.de')
      * @return array Liste der eindeutigen Korrespondenten, sortiert nach dem höchsten Score
      */
-    public function searchForCorrespondet(string $query): array {
+    public function searchForCorrespondent(string $query): array {
         $query = trim($query);
         
         $params = [
@@ -79,13 +114,14 @@ class PaperlessProcessor extends Database
 
         // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
         $url = '/api/correspondents/?' . http_build_query($params);
+
         
         $jsonResponse = $this->request($url);
         $paperlessData = json_decode($jsonResponse, true);
         
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Ungültiges JSON von Paperless erhalten.");
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
         }
 
         $results = $paperlessData['results'] ?? [];
@@ -137,7 +173,7 @@ class PaperlessProcessor extends Database
         $paperlessData = json_decode($jsonResponse, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Ungültiges JSON von Paperless erhalten.");
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
         }
 
         $foundDocuments = [];
@@ -172,7 +208,7 @@ class PaperlessProcessor extends Database
             }
         }
         if (empty($foundDocuments)){
-            throw new Exception("keinen Datensatz gefunden");
+            error_log(__FUNCTION__.": keine Dokumente gefunden!");
         }
 
         // Fallback auf die nackte 'all' Liste, falls die Volltextsuche 0 Ergebnisse lieferte
@@ -190,11 +226,13 @@ class PaperlessProcessor extends Database
             }
         }
 
-        // Sortierung nach berechnetem Kombi-Score DESC
-        usort($foundDocuments, function($a, $b) {
-            return $b['originscore'] <=> $a['originscore'];
-        });
-
+        if (is_array($foundDocuments && count($foundDocuments)>0)){
+            // Sortierung nach berechnetem Kombi-Score DESC
+            usort($foundDocuments, function($a, $b) {
+                return $b['originscore'] <=> $a['originscore'];
+            });
+        }
+        
         return $foundDocuments;
     }
 
@@ -222,50 +260,45 @@ class PaperlessProcessor extends Database
         }
 
         $url = '/api/documents/?' . http_build_query($params);
-        try {
-        
-            $jsonResponse = $this->request($url);
-            $paperlessData = json_decode($jsonResponse, true);
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
 
-            // 💡 Diese Logs landen jetzt durch das `&$log` im Funktionskopf direkt im Haupt-Log!
-            $log[] = "<small style='color:gray;'>DEBUG Paperless-URL: " . htmlspecialchars($url) . "</small><br>";
+        // 💡 Diese Logs landen jetzt durch das `&$log` im Funktionskopf direkt im Haupt-Log!
+        $log[] = "<small style='color:gray;'>DEBUG Paperless-URL: " . htmlspecialchars($url) . "</small><br>";
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception("Ungültiges JSON von Paperless erhalten.");
-            }
-
-            $foundDocuments = [];
-
-            if (!empty($paperlessData['results']) && is_array($paperlessData['results'])) {
-                
-                foreach ($paperlessData['results'] as $doc) {
-                    if (empty($doc['id'])) continue;
-
-                    $docCreatedRaw = $doc['created'] ?? '';
-                    $docCreatedFormated = !empty($docCreatedRaw) ? date('Y-m-d', strtotime($docCreatedRaw)) : '';
-                    
-                    $isDateMatch = ($targetDate && $docCreatedFormated === $targetDate);
-
-                    // 💡 FIX: Die Dokumente müssen dem Rückgabe-Array auch HINZUGEFÜGT werden!
-                    $foundDocuments[] = [
-                        'id' => $doc['id'],
-                        'title' => $doc['title'] ?? 'Unbenannt',
-                        'created' => $docCreatedFormated,
-                        'is_date_match' => $isDateMatch,
-                        // Falls du die Web-URL zu Paperless mitsenden willst (anpassen falls nötig):
-                        'link' => '/document/' . $doc['id'] 
-                    ];
-                }
-            }
-
-            $log[] = "<small style='color:gray;'>DEBUG Trefferanzahl in Paperless: " . count($foundDocuments) . "</small><br>";
-
-            return $foundDocuments;
-
-        } catch (Exception $e) {
-            $log[] = "<small style='color:red;'>ERROR bei Paperless-Suche:  " . htmlspecialchars($e->getMessage()) . "</small><br>";
-            return [];
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
         }
+
+        $foundDocuments = [];
+
+        if (!empty($paperlessData['results']) && is_array($paperlessData['results'])) {
+            
+            foreach ($paperlessData['results'] as $doc) {
+                if (empty($doc['id'])) continue;
+
+                $docCreatedRaw = $doc['created'] ?? '';
+                $docCreatedFormated = !empty($docCreatedRaw) ? date('Y-m-d', strtotime($docCreatedRaw)) : '';
+                
+                $isDateMatch = ($targetDate && $docCreatedFormated === $targetDate);
+
+                // 💡 FIX: Die Dokumente müssen dem Rückgabe-Array auch HINZUGEFÜGT werden!
+                $foundDocuments[] = [
+                    'id' => $doc['id'],
+                    'title' => $doc['title'] ?? 'Unbenannt',
+                    'created' => $docCreatedFormated,
+                    'is_date_match' => $isDateMatch,
+                    // Falls du die Web-URL zu Paperless mitsenden willst (anpassen falls nötig):
+                    'link' => '/document/' . $doc['id'] 
+                ];
+            }
+        }
+
+        $log[] = "<small style='color:gray;'>DEBUG Trefferanzahl in Paperless: " . count($foundDocuments) . "</small><br>";
+
+        return $foundDocuments;
+
+    
     }
 
 
@@ -340,32 +373,35 @@ class PaperlessProcessor extends Database
     /**
      * Holt alle Dokumente eines Korrespondenten anhand seiner numerischen ID
      */
-    public function fetchDocumentsByCorrespondentId($correspondentId)
-    {
-        try {
-            error_log("DOK BY CORRES");
-            if (!$correspondentId) {
-                return [];
-            }
-
-            $url = "/api/documents/?correspondent__id__in=" . intval($correspondentId) . "&page_size=10";
-            $RAWResponse = $this->request($url);
-            $result = json_decode($RAWResponse, true);
-
-            if (!is_array($result) || empty($result['results'])) {
-                return [];
-            }
-
-            // Falls du den Count im Log behalten willst:
-            error_log(__function__ . "Anzahl Dokumente in Paperless: " . ($result['count'] ?? 0));
-
-            // Da 'results' bereits alle Details enthält, können wir es direkt zurückgeben!
-
-            return $result['results'];
-        } catch (Exception $e) {
-            error_log("Fehler in " . __function__ . ": " . $e->getMessage());
-            return [];  
+    public function fetchDocumentsByCorrespondentId($correspondentId=null)
+    {            
+        if (!$correspondentId) {
+            return ["kein Korrespondent eingegeben!!"];
         }
+
+        $idString = is_array($correspondentId) 
+        ? implode(',', array_map('intval', $correspondentId)) 
+        : intval($correspondentId);
+
+        $url = "/api/documents/?correspondent__id__in=" . $idString . "&page_size=10";
+
+        //$url = "/api/documents/?correspondent__id__in=" . intval($correspondentId) . "&page_size=10";
+        $RAWResponse = $this->request($url);
+        $result = json_decode($RAWResponse, true);
+
+        
+        if (!is_array($result) || empty($result['results'])) {
+            return [];
+        }
+
+        // Falls du den Count im Log behalten willst:
+        //error_log(__FUNCTION__ . ": Anzahl Dokumente in Paperless: ##" . ($result['count'] ?? 0) ."##");
+
+        //error_log(print_r($result['results'], true));
+        // Da 'results' bereits alle Details enthält, können wir es direkt zurückgeben!
+
+        return $result['results'];
+    
 
     }
     
@@ -450,11 +486,8 @@ class PaperlessProcessor extends Database
 
     public function linkContact($contact_id, $paperless_id)
     {
-        error_log($contact_id . " - " . $paperless_id);
-
         $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
-        error_log($sql);
-
+        
         $rows = $this->queryIt($sql, [
             'paperless' =>  $paperless_id,
             'cid' => $contact_id
@@ -473,4 +506,48 @@ class PaperlessProcessor extends Database
 
         return $result;
     }*/
+
+    public function getMailTree($hash, $correspondentid= null)
+    {
+
+        if (empty($hash) || $correspondentid === null) return [];
+
+        // 3. Jetzt die Dokumente holen
+        $paperlessDocs = $this->fetchDocumentsByCorrespondentId($correspondentid);
+        if (empty($paperlessDocs)) return [];
+
+        //alle results
+        $paperlessDocsRes = paperlessDocs["results"];
+
+        // Dynamische Ermittlung der Basis-URL aus den Mandanteneinstellungen
+        //$settings = $this->dashboard->getTenantSettings($this->tenantId);
+        //$baseUrl  = rtrim($settings['paperless_url'] ?? 'http://192.168.0.72:8030', '/');
+
+        $tree = [];
+        $monthsDe = [
+            '01' => 'Januar', '02' => 'Februar', '03' => 'März', '04' => 'April',
+            '05' => 'Mai', '06' => 'Juni', '07' => 'Juli', '08' => 'August',
+            '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Dezember'
+        ];
+
+        foreach ($paperlessDocs as $doc) {
+            $dateString = $doc['created'] ?? $doc['created_date'] ?? $doc['added'] ?? null;
+            $timestamp  = $dateString ? strtotime($dateString) : time();
+
+            $year      = date('Y', $timestamp);
+            $monthNum  = date('m', $timestamp);
+            $monthName = $monthsDe[$monthNum] ?? date('F', $timestamp);
+
+            $docId = $doc['id'] ?? null;
+            if (!$docId) continue;
+
+            $tree[$year][$monthName][] = [
+                'id'    => $docId,
+                'title' => $doc['title'] ?? 'Unbenanntes Dokument',
+                'link'  => $baseUrl . "/documents/" . $docId
+            ];
+        }
+
+        return krsort($tree);
+    }
 }

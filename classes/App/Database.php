@@ -53,8 +53,28 @@ class Database
         return self::$pdo;
     }
 
+    public function getCallerInfo() {
+        // Hole den Backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        
+        // Index 0: debug_backtrace() selbst
+        // Index 1: Die Funktion, die getCallerInfo() aufgerufen hat (dein Ziel)
+        // Index 2: Der Rufer, der Index 1 aufgerufen hat
+        $caller = $trace[2] ?? $trace[1]; 
+        
+        error_log(
+            print_r(
+                [
+                'file'     => $caller['file'] ?? 'unknown',
+                'line'     => $caller['line'] ?? 'unknown',
+                'function' => $caller['function'] ?? 'unknown',
+                'class'    => $caller['class'] ?? 'n/a'
+            ],true)
+        );
+    }
+
     /**
-     * Deine universelle Query-Methode - Sicher gegen SQL-Injections geschützt,
+     * Universelle Query-Methode - Sicher gegen SQL-Injections geschützt,
      * liefert IMMER ein flaches fetchAll()-Array zurück.
      * tenant_id wird hier mit reingeladen
      * @param string $query Das SQL-Query mit benannten Platzhaltern (z.B. :id, :name)
@@ -63,6 +83,8 @@ class Database
      */
     public function queryIt(string $query, array $params = [], bool $isTransactional = false): array 
     {
+        //$this->getCallerInfo();
+
         try {
             $pdo = self::getConnection();
 

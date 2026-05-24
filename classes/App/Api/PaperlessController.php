@@ -3,6 +3,9 @@ namespace App\Api;
 use App\PaperlessProcessor; // Importiere den Prozessor
 use Exception;
 
+/**
+ * @property \App\PaperlessProcessor $paperlessProcess
+ */
 class PaperlessController extends BaseController {
     
     public function sync() {
@@ -10,9 +13,9 @@ class PaperlessController extends BaseController {
         $id   = $_GET['id'] ?? $_POST['id'] ?? null;
 
         if ($hash !== null) {
-            $syncResult = $this->mailProc->getSingleMail2Paperless($hash, $id);   
+            $syncResult = $this->mailProcessProc->getSingleMail2Paperless($hash, $id);   
         } else {
-            $syncResult = $this->mailProc->getMails2Paperless(2000);
+            $syncResult = $this->mailProcessProc->getMails2Paperless(2000);
         }
 
         $isSuccess = $syncResult['success'] ?? false;
@@ -24,16 +27,20 @@ class PaperlessController extends BaseController {
         exit;
     }
 
+    /**
+     * Sucht in Paperless nach Dokumenten anhand von 
+     * @param string $query
+     * @param string $query
+     */
     public function search() {
         $query = $_REQUEST['query'] ?? ''; 
         $date  = $_REQUEST['date'] ?? ''; 
         
         if (empty($query)) {
-            throw new Exception("Kein Suchbegriff übergeben.");
+            throw new \Exception("Kein Suchbegriff übergeben.");
         }
-
     
-        $documents = $this->paperless->search($query, $date);
+        $documents = $this->paperlessProcess->search($query, $date);
 
         return [
             'success' => true,
@@ -56,11 +63,11 @@ class PaperlessController extends BaseController {
         error_log(print_r($data, true));
 
         if (empty($hash) || empty($paperlessId)) {
-            throw new Exception("Fehlende Parameter für das Verknüpfen.");
+            throw new \Exception("Fehlende Parameter für das Verknüpfen.");
         }
 
     
-        $this->paperless->linkMailToPaperless($hash, $paperlessId);
+        $this->paperlessProcess->linkMailToPaperless($hash, $paperlessId);
 
 
         return [
@@ -73,8 +80,7 @@ class PaperlessController extends BaseController {
     {
         $query        = trim($_REQUEST['query'] ?? '');
         
-        
-        $correspondents = $this->paperless->searchForCorrespondet($query);
+        $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
         $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
 
         return [
@@ -88,7 +94,7 @@ class PaperlessController extends BaseController {
     {
         $contactid        = trim($_POST['contact_id'] ?? '');
         $docId            = trim($_POST['item_id'] ?? '');
-        $ret = $this->paperless->linkContact($contactid, $docId);
+        $ret = $this->paperlessProcess->linkContact($contactid, $docId);
 
         return [
             'success' => true,
@@ -96,6 +102,9 @@ class PaperlessController extends BaseController {
         ];
     }
 
+    /**
+     * Hole alle Korrespondeten
+     */
     public function getCorrespondents() 
     {
         $hash        = trim($_REQUEST['hash'] ?? '');
@@ -111,95 +120,64 @@ class PaperlessController extends BaseController {
             }
         }
         
+        // Hole alle Kontakt, wenn Suche leer
         if (empty($searchQuery)) {
+
+            $correspondents = $this->paperlessProcess->getAllCorrespondents($searchQuery);
             return [
-                'success' => false, 
-                'error'   => 'Kein Suchbegriff ermittelbar (force_query und hash leer)'
+                'success' => true, 
+                'details' => $correspondents
             ];
+
+        }else{
+
+            $correspondents = $this->paperlessProcess->searchForCorrespondent($searchQuery);
+            $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
+
+            return [
+                'success' => true, 
+                'details'   => ['contacts' => $finalDetails]
+            ];
+
         }
 
-        $correspondents = $this->paperless->searchForCorrespondet($searchQuery);
-        $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
-        
-        $this->cleanBuffer();
-        \App\Dashboard::sendResponse(true, ['contacts' => $finalDetails]);
+        //$this->cleanBuffer();
+        //\App\Dashboard::sendResponse(true, ['contacts' => $finalDetails]);
         exit;
+    
     }
 
+    /**
+     * Holt einfach nur die Mails
+     */
     public function getMailTree() 
     {
         $hash = $_GET['hash'] ?? '';
-
-
-        if (empty($hash)) {
-            throw new Exception("Kein gültiger Mail-Hash übergeben.");
-        }
-
-        $mailDetails = $this->mail->getMailByHash($hash); 
-        if (empty($mailDetails)) {
-            throw new Exception("Mail existiert nicht in der lokalen DB.");
-        }
         
-        $paperlessId = $this->paperless->getPaperlessIdByHash($hash);
-        if (!$paperlessId) {
-            throw new Exception("Diese E-Mail ist noch nicht mit Paperless verknüpft.");
-        }
+        $mailDetails = $this->mailProcess->getMailByHash($hash); 
 
-        
-        $correspondentId = $this->paperless->getCorrespondentIdFromDocument($paperlessId);
-        
-        if (!$correspondentId) {
-            throw new Exception("Kein Korrespondent für dieses Dokument in Paperless hinterlegt.");
-        }
+        //Kontakte ermitteln
+        $contacts = $this->contactProcess->getContactById($hash, $mailDetails["contact_id"]); 
 
-        $paperlessDocs = $this->paperless->fetchDocumentsByCorrespondentId($correspondentId);
-        if (empty($paperlessDocs)) {
-            throw new Exception("Keine Dokumente vom Paperless-Server zurückgegeben.");
-        }
+        $paperlessCorres = $contacts[0]["paperless_id"];
 
-        // Dynamische Ermittlung der Basis-URL aus den Mandanteneinstellungen
-        $settings = $this->dashboard->getTenantSettings($this->tenantId);
-        $baseUrl  = rtrim($settings['paperless_url'] ?? 'http://192.168.0.72:8030', '/');
+        $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
 
-        $tree = [];
-        $monthsDe = [
-            '01' => 'Januar', '02' => 'Februar', '03' => 'März', '04' => 'April',
-            '05' => 'Mai', '06' => 'Juni', '07' => 'Juli', '08' => 'August',
-            '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Dezember'
-        ];
 
-        foreach ($paperlessDocs as $doc) {
-            $dateString = $doc['created'] ?? $doc['created_date'] ?? $doc['added'] ?? null;
-            $timestamp  = $dateString ? strtotime($dateString) : time();
-
-            $year      = date('Y', $timestamp);
-            $monthNum  = date('m', $timestamp);
-            $monthName = $monthsDe[$monthNum] ?? date('F', $timestamp);
-
-            $docId = $doc['id'] ?? null;
-            if (!$docId) continue;
-
-            $tree[$year][$monthName][] = [
-                'id'    => $docId,
-                'title' => $doc['title'] ?? 'Unbenanntes Dokument',
-                'link'  => $baseUrl . "/documents/" . $docId
-            ];
-        }
-
-        krsort($tree);
-        $this->cleanBuffer();
-        \App\Dashboard::sendResponse(true, ['tree' => $tree]);
-        exit;     
+        return $ret;    
     }
 
+
+    /**
+     * obsolete
+     */
     public function getTree() {
         $sender = $_GET['sender'] ?? '';
         if (empty($sender)) {
-            throw new Exception("Kein Absender übergeben");
+            throw new \Exception("Kein Absender übergeben");
         }
 
-
-        $paperlessDocs = $this->paperless->fetchDocumentsFromPaperless($sender); 
+        $paperlessDocs = $this->paperlessProcess->fetchDocumentsFromPaperless($sender); 
 
         // Auch hier die URL dynamisch beziehen
         $settings = $this->dashboard->getTenantSettings($this->tenantId);

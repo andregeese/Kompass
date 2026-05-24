@@ -8,7 +8,7 @@ try {
     $pdo = getPDO();
     $uid = $_POST['uid'] ?? null;
     
-    if (!$uid) throw new Exception("UID fehlt.");
+    if (!$uid) throw new \Exception("UID fehlt.");
 
     // PDF Logik hier... (wie zuvor besprochen)
     

@@ -61,6 +61,28 @@
                         </div>
                         <div class="space-y-2.5">
                             <div>
+                                <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
+                                    Paperless-Kontakt Verknüpfung
+                                </label>
+
+                                <!-- Eingabefeld mit Debounce bei der Suche -->
+                                <input 
+                                    type="text" 
+                                    list="paperless-contacts-list"
+                                    placeholder="Tippen zum Suchen..."
+                                    x-model="formData.name"
+                                    @input.debounce.300ms="searchPaperlessContacts($el.value)"
+                                    class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200"
+                                >
+
+                                <!-- Die dynamisch befüllte Datalist -->
+                                <datalist id="paperless-contacts-list">
+                                    <template x-for="item in paperlessContacts" :key="item.id">
+                                        <option :value="item.name"></option>
+                                    </template>
+                                </datalist>
+                            </div>
+                            <div>
                                 <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">E-Mail-Adresse</label>
                                 <input type="email" x-model="formData.email" class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500">
                             </div>
@@ -68,7 +90,11 @@
                                 <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">Name / Firma</label>
                                 <input type="text" x-model="formData.name" class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500">
                             </div>
-                            <button @click="saveCRMContact(); showManualForm = false;" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm">Kontakt Speichern</button>
+                            <button @click="saveContact(); showManualForm = false;" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm">Kontakt Speichern</button>
+                            <a :href="'?view=contacts&id=' + contactState?.contact?.id" x-show="contactState?.contact?.id"
+                                class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm flex items-center justify-center space-x-1">
+                                <span>✏️</span> <span>Im CRM bearbeiten</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -117,7 +143,7 @@
                                                             }">
                                                             <span x-show="item.type === 'mail'">✉️</span>
                                                             <span x-show="item.type === 'appointment'">📅</span>
-                                                            <span x-show="item.type === 'note'">📝</span>
+                                                            <span x-show="item.type === 'document'">📝</span>
                                                             <span x-show="item.type === 'paperless'">📄</span>
                                                             </span>
 

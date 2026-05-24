@@ -10,9 +10,8 @@ class MailController extends BaseController
         parent::__construct($dashboard); // Das ist entscheidend!
     }
     
-    public function listMails() {
-        //$processor = $this->getService('contact', MailProcessor::class);
-
+    public function listMails() 
+    {
         try{
             
 
@@ -27,7 +26,7 @@ class MailController extends BaseController
             }
             
 
-            $mails = $this->mail->getMailsPaginated($page, $limit, $folder, $search);
+            $mails = $this->mailProcess->getMailsPaginated($page, $limit, $folder, $search);
             
             
             return [
@@ -37,7 +36,7 @@ class MailController extends BaseController
                 ]
             ];
         } catch (\Throwable $e) {
-            throw new Exception($e->getMessage());
+            throw new \Exception($e->getMessage());
 
             return [
                 'success' => false,
@@ -58,11 +57,11 @@ class MailController extends BaseController
         
         // 2. Validierung: Suchbegriff darf nicht komplett leer sein
         if (empty($search)) {
-            throw new Exception("Kein Suchbegriff übergeben.");
+            throw new \Exception("Kein Suchbegriff übergeben.");
         }
 
         // 3. Aufruf des Processors mit den nun existierenden Variablen
-        $mailDetails = $this->mail->searchMail($folder, $search, $page, $limit); 
+        $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit); 
         
         if (!$mailDetails) {
             return ['success' => false, 'message' => "Keine Mails gefunden."];
@@ -85,13 +84,13 @@ class MailController extends BaseController
     public function viewMail() {
         $hash = $_GET['id'] ?? '';
         if (empty($hash)) {
-            throw new Exception("Kein Mail-Id-Hash übergeben.");
+            throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
 
-        $mailDetails = $this->mail->getMailByHash($hash); 
+        $mailDetails = $this->mailProcess->getMailByHash($hash); 
         
         if (!$mailDetails) {
-            throw new Exception("Mail existiert nicht in der lokalen Datenbank.");
+            throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
         }
 
         return [
@@ -115,7 +114,7 @@ class MailController extends BaseController
             return ['success' => false, 'error' => 'ID fehlt'];
         }
         try{
-            return $this->mail->deleteMailByHash($hash);
+            return $this->mailProcess->deleteMailByHash($hash);
 
         } catch (Exception $e) {
             error_log("Fehler bei moveToDms: " . $e->getMessage());
@@ -136,7 +135,7 @@ class MailController extends BaseController
 
         try {
             // 2. Logik delegieren (Kein method_exists mehr, wir vertrauen unserer IDE!)
-            $this->mail->moveToDMS($hash);
+            $this->mailProcess->moveToDMS($hash);
             
             // 3. Antwort zurückgeben
             return ['success' => true];
@@ -150,11 +149,11 @@ class MailController extends BaseController
 
     public function handlePdf() {
         $hash = $_POST['id'] ?? '';
-        $mail = $this->mail->getMailByHash($hash); 
+        $mail = $this->mailProcess->getMailByHash($hash); 
 
         $success = false;
-        if (method_exists($this->mail, 'moveToDMS')) {
-            $this->mail->moveToDMS($hash);
+        if (method_exists($this->mailProcess, 'moveToDMS')) {
+            $this->mailProcess->moveToDMS($hash);
             $success = true;
         }
         return [
@@ -176,11 +175,11 @@ class MailController extends BaseController
         $allowedFolders = ['INBOX', 'DMS', 'DMSDone'];
         
         if (!in_array($folder, $allowedFolders)) {
-            throw new Exception("Ungültiger Ordner-Name übergeben.");
+            throw new \Exception("Ungültiger Ordner-Name übergeben.");
         }
         try{
 
-            $syncResult = $this->mail->syncWithICloud(true, 200, $folder);
+            $syncResult = $this->mailProcess->syncWithICloud(true, 200, $folder);
             $this->cleanBuffer(); 
             return $syncResult; // Gibt das komplette Sync-Array direkt zurück
         } catch (Exception $e) {
@@ -195,7 +194,7 @@ class MailController extends BaseController
      */
     public function trackFolders() {
         ignore_user_abort(false);
-        $syncResult = $this->mail->trackAndSyncFolderStatus();
+        $syncResult = $this->mailProcess->trackAndSyncFolderStatus();
         return [
             'success' => true,
             'details' => [
@@ -211,21 +210,21 @@ class MailController extends BaseController
     public function streamHtml() {
         $hash = $_GET['hash'] ?? '';
         if (empty($hash)) {
-            throw new Exception("Fehler: Kein gültiger Mail-Hash übergeben.");
+            throw new \Exception("Fehler: Kein gültiger Mail-Hash übergeben.");
         }
 
-        $htmlContent = $this->mail->getDecryptedMailBody($hash);
+        $htmlContent = $this->mailProcess->getDecryptedMailBody($hash);
 
         if (empty($htmlContent)) {
-            $mailDetails = $this->mail->getMailByHash($hash); 
-            $htmlContent = $this->mail->getHtmlBody($hash); 
+            $mailDetails = $this->mailProcess->getMailByHash($hash); 
+            $htmlContent = $this->mailProcess->getHtmlBody($hash); 
 
             if (empty($htmlContent)) {
-                throw new Exception("Der IMAP-Server hat keinen Inhalt für diese E-Mail zurückgegeben.");
+                throw new \Exception("Der IMAP-Server hat keinen Inhalt für diese E-Mail zurückgegeben.");
             }
 
-            $plainText = $this->mail->getTxtBody($hash) ?? strip_tags($htmlContent);
-            $this->mail->saveMailWithContent($hash, $htmlContent, $plainText);
+            $plainText = $this->mailProcess->getTxtBody($hash) ?? strip_tags($htmlContent);
+            $this->mailProcess->saveMailWithContent($hash, $htmlContent, $plainText);
         }
         
         // Sonderfall: Direkter HTML-Stream an den Browser unterbricht JSON-Rückgabe

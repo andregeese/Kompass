@@ -67,38 +67,32 @@ async function safeFetch(url, options = {}) {
     try {
         const response = await fetch(url, options);
         
-        // 1. Authentifizierungs-Check (Cloudflare schickt uns bei Session-Ende oft auf eine HTML-Seite)
-        // Wir prüfen den Content-Type. Wenn es HTML ist, wo wir JSON erwarten -> Login-Redirect!
-        const contentType = response.headers.get("content-type");
-        /*if (contentType && contentType.indexOf("text/html") !== -1) {
-            console.warn("Cloudflare-Session abgelaufen. Redirect zum Login...");
-            window.location.href = '/age_web'; // Zurück auf die Startseite/Login-Root
-            return { success: false, error: 'Re-authenticating...' };
-        }*/
-
-        // 2. HTTP Status-Check (401/403 sind klassische Cloudflare-Blocker)
-        if (response.status === 401 || response.status === 403) {
-            window.location.href = '/age_web'; 
-            return { success: false, error: 'Unauthorized', status: response.status };
+        // Prüfen, ob wir überhaupt Text/JSON bekommen
+        const text = await response.text();
+        let data;
+        
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("API Antwort ist kein valides JSON:", text);
+            throw new Error("Server antwortete mit ungültigem Format.");
         }
 
+        // HTTP Status-Check
         if (!response.ok) {
-            throw new Error(`Server-Fehler: Status ${response.status}`);
+            throw new Error(data.error || `Server-Fehler: Status ${response.status}`);
         }
 
-        const data = await response.json();
-
-        // 3. Backend Business-Logik Fehler
+        // 3. Backend Business-Logik prüfen
         if (data && data.success === false) {
-            showNotify('API Fehler', data.error || 'Fehler in der Anfrage.', 'danger');
+            showNotify('Fehler', data.error || 'Unbekannter Fehler', 'danger');
         }
 
         return data;
 
     } catch (error) {
         console.error(`Fetch-Fehler bei ${url}:`, error);
-        // Netzwerkfehler werden hier abgefangen
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, details: [] };
     }
 
 }

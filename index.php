@@ -76,7 +76,7 @@ $viewJsMapping = [
     'paperless'    => 'paperless.js',
     'appointments' => 'appointments.js',
     'detail'       => 'detail.js',
-    'setting'      => 'setting.js',
+    'setting'      => 'settings.js',
     'contacts'     => 'contacts.js'
 ];
 $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
@@ -121,6 +121,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
     <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
 </head>
@@ -145,7 +146,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             // 1. HEADER (wird immer geladen)
             echo '<div class="shrink-0 z-50">';
             if (!@include __DIR__ . '/views/header.php') {
-                throw new Exception("Kritischer Fehler: Header-View ('views/header.php') konnte nicht geladen werden.");
+                throw new \Exception("Kritischer Fehler: Header-View ('views/header.php') konnte nicht geladen werden.");
             }
             echo '</div>';
 
@@ -153,27 +154,27 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
                 
                 // 2. SIDEBAR
                 if (!@include __DIR__ . '/views/sidebar.php') {
-                    throw new Exception("Kritischer Fehler: Sidebar-View ('views/sidebar.php') konnte nicht geladen werden.");
+                    throw new \Exception("Kritischer Fehler: Sidebar-View ('views/sidebar.php') konnte nicht geladen werden.");
                 }
 
                 // 3. MAIN DYNAMIC VIEW
                 echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
                 $viewPath = __DIR__ . "/views/{$currentView}_view.php";
                 if (!@include $viewPath) {
-                    throw new Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
+                    throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
                 }
                 echo '</main>';
 
                 // 4. RIGHT SIDEBAR
                 if (!@include __DIR__ . '/views/right_sidebar.php') {
-                    throw new Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
+                    throw new \Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
                 }
 
             echo '</div>';
 
             // 5. FOOTER (wird immer geladen)
             if (!@include __DIR__ . '/views/footer_nav.php') {
-                throw new Exception("Kritischer Fehler: Footer-Nav ('views/footer_nav.php') konnte nicht geladen werden.");
+                throw new \Exception("Kritischer Fehler: Footer-Nav ('views/footer_nav.php') konnte nicht geladen werden.");
             }
 
         } catch (Throwable $e) {
@@ -208,16 +209,16 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
                                     // Ein neues Update ist da! Wir leeren den Cache und laden neu.
                                     console.log('🔄 Neue App-Version gefunden. Cache wird erneuert...');
                                     
-                                    if ('caches' in window) {
+                                    /*if ('caches' in window) {
                                         caches.keys().then(names => {
                                             for (let name of names) caches.delete(name);
                                         });
-                                    }
+                                    }*/
                                     
                                     // Kurzer Delay, damit der Cache sicher leer ist, dann Reload
                                     setTimeout(() => {
-                                        window.location.reload(true);
-                                    }, 300);
+                                        //window.location.reload(true);
+                                    }, 2000);
                                 }
                             }
                         };

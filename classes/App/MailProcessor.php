@@ -1,21 +1,26 @@
 <?php
 namespace App;
 use Exception; // Falls du Exceptions nutzt
+use App\PaperlessProcessor;
 use Throwable;
 use PDO;
 
-// classes/MailProcessor.php
+
+/**
+ * @property \App\MailProcessor $mailProcess
+ */
 class MailProcessor extends Database
 {
+
+    use ServiceTrait;
+    protected $dashboard;
     private $imapStream = null;
 
-    private $dashboard; // Neu: Eigenschaft hinzufügen
-
-    // Konstruktor hinzufügen
-    public function __construct($dashboard, $dbConnection = null) {
-        parent::__construct($dbConnection);
+    public function __construct($dashboard) {
+        parent::__construct($dashboard);
         $this->dashboard = $dashboard;
     }
+
     
     /**
      * Destruktor: Schließt die Verbindung sauber.
@@ -50,7 +55,7 @@ class MailProcessor extends Database
         $this->imapStream = @imap_open($connectionString, $user, $password, OP_SILENT, 1);
 
         if (!$this->imapStream) {
-            throw new Exception("IMAP-Verbindung fehlgeschlagen: " . imap_last_error());
+            throw new \Exception("IMAP-Verbindung fehlgeschlagen: " . imap_last_error());
         }
     }
 
@@ -88,7 +93,7 @@ class MailProcessor extends Database
             );
             
             if (empty($rows)) {
-                throw new Exception("E-Mail mit diesem Hash wurde nicht gefunden.");
+                throw new \Exception("E-Mail mit diesem Hash wurde nicht gefunden.");
             }
 
 
@@ -244,7 +249,7 @@ class MailProcessor extends Database
             }
 
         }catch (Throwable $e) {
-            throw new Exception("Fehler in findPart: " . $e->getMessage());
+            throw new \Exception("Fehler in findPart: " . $e->getMessage());
         }
 
         return null;
@@ -271,7 +276,7 @@ class MailProcessor extends Database
             $moveSuccess = imap_mail_move($this->imapStream, $msgUid, $destFolder, CP_UID);
 
             if (!$moveSuccess) {
-                throw new Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
+                throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
             }
             
             // Wichtig, um die Mail aus der INBOX zu löschen
@@ -287,7 +292,7 @@ class MailProcessor extends Database
             ];
 
         } catch (Throwable $e) {
-            throw new Exception("Fehler in moveToDMS: " . $e->getMessage());
+            throw new \Exception("Fehler in moveToDMS: " . $e->getMessage());
         }
     }
 
@@ -308,7 +313,7 @@ class MailProcessor extends Database
         try {
             $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
             if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, MAIL_HOST . $folder)) {
-                throw new Exception("Konnte Ordner '$folder' nicht öffnen.");
+                throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
             }
 
             // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
@@ -347,6 +352,7 @@ class MailProcessor extends Database
                 $insertSql = "INSERT INTO mails (uid, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id, is_answered, is_read, is_flagged) 
                             VALUES (:uid, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id, :is_answered, :is_read, :is_flagged)
                             ON DUPLICATE KEY UPDATE
+                            subject_hash = VALUES(subject_hash),
                             is_read = VALUES(is_read), 
                             is_flagged = VALUES(is_flagged), 
                             is_answered = VALUES(is_answered)";
@@ -354,7 +360,7 @@ class MailProcessor extends Database
                 $this->queryIt($insertSql, [
                     'uid'           => (int)$uid,
                     'message_id'    => $ov->message_id ?? null,
-                    'subject_hash'  => $this->dashboard->encrypt($ov->subject ?? ''),
+                    'subject_hash'  => $this->dashboard->encrypt($this->decodeSubject(isset($ov->subject) ? $ov->subject : '') ?? ''),
                     'sender'        => $this->decodeMailHeader($ov->from ?? 'Unbekannt'),
                     'date_received' => date('Y-m-d H:i:s', strtotime($ov->date ?? 'now')),
                     'folder'        => $folder,
@@ -383,6 +389,15 @@ class MailProcessor extends Database
         return $result;
     }
 
+
+    private function decodeSubject($subject)
+    {
+        mb_internal_encoding("UTF-8");
+        
+        // Sichert ab, dass null zu einem leeren String wird
+        $decoded = mb_decode_mimeheader($subject ?? '');
+        return !empty($decoded) ? $decoded : $subject;
+    }
 
     /**
      * Holt die letzte erfolgreich gesyncte UID für diesen Ordner.
@@ -482,7 +497,7 @@ class MailProcessor extends Database
             $search = strtolower($search);
 
             foreach ($results as $row) {
-                $subject = strtolower($this->dashboard->decrypt($row['subject_hash']));
+                $subject = strtolower($this->dashboard->decrypt($row['hash']));
                 $sender = strtolower($row['sender']);
                 $contactName = strtolower($row['contact_name'] ?? '');
 
@@ -598,12 +613,14 @@ class MailProcessor extends Database
         $mail = $this->getMailByHash($hash);
         if (!$mail) return 'Inhalt nicht gefunden.';
         
-        // 1. Inhalt über das Dashboard entschlüsseln
+        // 1. Den verschlüsselten Müll in den rohen Mail-Body umwandeln
         $decryptedBody = $this->dashboard->decrypt($mail['body_hash']); 
         
-        // 2. --- HIER NEU: UTF-8 ABSICHERUNG FÜR DEN INHALT ---
-        // Repariert kaputte Zeichensätze (z.B. aus alten Outlook- oder ISO-Mails) vor dem JSON-Encoding
-        $cleanBody = mb_convert_encoding($decryptedBody, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        // 2. Den Mail-Body von MIME-Kodierungen (wie =C3=A4) befreien
+        $decodedBody = quoted_printable_decode($decryptedBody);
+        
+        // 3. Den nun dekodierten Text auf UTF-8 bügeln
+        $cleanBody = mb_convert_encoding($decodedBody, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
 
         return $cleanBody;
     }
@@ -631,7 +648,7 @@ class MailProcessor extends Database
             $moveSuccess = imap_mail_move($this->imapStream, $msgUid, $destFolder, CP_UID);
 
             if (!$moveSuccess) {
-                throw new Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
+                throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
             }
             
             // Wichtig, um die Mail aus der INBOX zu löschen
@@ -653,13 +670,17 @@ class MailProcessor extends Database
             ];
 
         } catch (Throwable $e) {
-            throw new Exception("Fehler in moveToDMS: " . $e->getMessage());
+            throw new \Exception("Fehler in moveToDMS: " . $e->getMessage());
         }
 
     }
 
     /**
-     * Holt Mails paginiert und durchsucht Betreff, Absender ODER den verschlüsselten Inhalt
+     * Holt eine paginierte Liste von Mails aus der Datenbank, basierend auf dem angegebenen Ordner. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind. Der Betreff wird entschlüsselt und sowohl Betreff als auch Sender werden mit mb_convert_encoding bereinigt, um sicherzustellen, dass sie korrekt im Dashboard angezeigt werden, selbst wenn sie ursprünglich in einem anderen Zeichensatz vorlagen.
+      * @param int $page Die Seite der Ergebnisse (1-basiert)
+      * @param int $limit Anzahl der Mails pro Seite
+      * @param string $folder Der IMAP-Ordner, aus dem die Mails gefiltert werden sollen (z.B. 'INBOX', 'DMS')
+      * @return array Eine Liste von Mails mit Hash, bereinigtem Betreff, bereinigtem Sender, Datum und Paperless-Status
      */
     public function getMailsPaginated(int $page, int $limit, string $folder, string $search): array 
     {
@@ -720,7 +741,10 @@ class MailProcessor extends Database
                         paperless_id,
                         imap_folder,
                         date_received as date,
-                        SHA2(CONCAT(id, :salt), 256) as hash 
+                        SHA2(CONCAT(id, :salt), 256) as hash,
+                        is_read,
+                        is_flagged,
+                        is_answered
                     FROM mails 
                     WHERE 
                     tenant_id = :tenant_id
@@ -813,6 +837,9 @@ class MailProcessor extends Database
                 'sender'       => $cleanSender,         
                 'date'         => date('d.m.Y H:i', strtotime($row['date'])),
                 'paperless_id' => $row['paperless_id'], 
+                'unread'       => $row['is_read'],
+                'flagged'       => $row['is_flagged'],
+                'answered'       => $row['is_answered'],
             ];
 
         } catch (\Exception $e) {
@@ -825,120 +852,7 @@ class MailProcessor extends Database
         }
     }
 
-    /**
-     * Holt eine paginierte Liste von Mails aus der Datenbank, basierend auf dem angegebenen Ordner. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind. Der Betreff wird entschlüsselt und sowohl Betreff als auch Sender werden mit mb_convert_encoding bereinigt, um sicherzustellen, dass sie korrekt im Dashboard angezeigt werden, selbst wenn sie ursprünglich in einem anderen Zeichensatz vorlagen.
-      * @param int $page Die Seite der Ergebnisse (1-basiert)
-      * @param int $limit Anzahl der Mails pro Seite
-      * @param string $folder Der IMAP-Ordner, aus dem die Mails gefiltert werden sollen (z.B. 'INBOX', 'DMS')
-      * @return array Eine Liste von Mails mit Hash, bereinigtem Betreff, bereinigtem Sender, Datum und Paperless-Status
-     */
-    public function getMailsPaginatedOLD(int $page = 1, int $limit = 15, string $folder = 'INBOX', string $search = '') {
-        $offset = ($page - 1) * $limit;
-        $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-        
-        // Nutze das im Objekt hinterlegte Salt, passend zu den Params
-        $params = [
-            'salt'   => $salt,
-            'folder' => '%'
-        ];
-        
-        $search = trim($search);
-
-        if (!empty($search)) {
-            $page = 1;
-        }
-
-        // 1. Der Basis-String für beide Fälle
-        $sql = "SELECT 
-                    id, 
-                    sender, 
-                    subject_hash, 
-                    paperless_id,
-                    imap_folder,
-                    date_received as date,
-                    SHA2(CONCAT(id, :salt), 256) as hash 
-                FROM mails 
-                WHERE tenant_id = :tenant_id
-                  AND imap_folder Like :folder
-                  AND (status NOT IN('deleted') OR status IS NULL)";
-        
-        $searchLower = mb_strtolower($search, 'UTF-8');
-
-        // 2. Fall-Unterscheidung für die SQL-Ebene
-        if (!empty($search)) {
-            $searchTerm = "%" . $searchLower . "%";
-            $params['search_sender']  = $searchTerm;
-            $params['search_date']    = $searchTerm;
-            
-            $sql .= " AND (
-                LOWER(sender) LIKE :search_sender";
-
-            // Das Datum durchsuchen wir NUR, wenn der Suchbegriff Zahlen oder Datums-Trennzeichen enthält
-            if (preg_match('/[0-9.\-:]/', $search)) {
-                $params['search_date'] = $searchTerm;
-                $sql .= " OR date_received LIKE :search_date";
-            }
-            
-            if (is_numeric($search)) {
-                $params['search_id'] = intval($search);
-                $sql .= " OR id = :search_id";
-            }
-
-            $sql .= " )";
-            
-            // Bei Suche KEIN SQL-Limit, da wir erst nach dem Entschlüsseln in PHP filtern können!
-            $sql .= " ORDER BY date_received DESC";
-
-        } else {
-            // Normaler Ablauf mit nativer SQL-Paginierung
-            $params['limit']  = intval($limit);
-            $params['offset'] = intval($offset);
-            $sql .= " ORDER BY date_received DESC LIMIT :limit OFFSET :offset";
-        }
-
-        $mailsFromDb = $this->queryIt($sql, $params, $limit, $offset);
-        $returnMails = []; // ✅ Ein frisches Array für die sauberen Rückgabedaten
-
-        foreach ($mailsFromDb as $row) { // ✅ Korrekte foreach-Syntax
-            
-            // Betreff entschlüsseln
-            $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
-
-            // UTF-8 Absicherung
-            $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            $cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-
-            // --- FILTER-LOGIK IN PHP ---
-            if (!empty($searchLower)) {
-                $senderLower  = mb_strtolower($cleanSender, 'UTF-8');
-                $subjectLower = mb_strtolower($cleanSubject, 'UTF-8');
-                $dateLower    = mb_strtolower($row['date'], 'UTF-8');
-                $idLower      = mb_strtolower($row['id'], 'UTF-8');
-
-                if (
-                    mb_strpos($senderLower, $searchLower) === false && 
-                    mb_strpos($subjectLower, $searchLower) === false &&
-                    mb_strpos($dateLower, $searchLower) === false &&
-                    mb_strpos($idLower, $searchLower) === false
-                ) {
-                    continue; // Begriff nicht gefunden -> Überspringen
-                }
-            }
-
-            // Mail für die Rückgabe vorbereiten (Keys matchen exakt mit JavaScript!)
-            $returnMails[] = [
-                'hash'          => $row['hash'],         // ✅ Korrekt aus SQL (as hash)
-                'subject'       => $cleanSubject,        // ✅ Damit klappt mail.subject im JS!
-                'sender'        => $cleanSender,         // ✅ Wieder 'sender' statt 'mail'
-                'date'          => date('d.m.Y H:i', strtotime($row['date'])),
-                'paperless_id'  => $row['paperless_id'], 
-            ];
-        }
-
-        // Bei manueller Suche eventuell künstlich paginieren (falls du das später implementierst)
-        // Aktuell geben wir einfach die gesammelten Treffer zurück
-        return $returnMails;
-    }
+    
 
     /**
      * Holt Mails, die für Paperless bereit sind, basierend auf einem optionalen Hash oder dem Alter der Mails. Wenn ein Hash übergeben wird, wird gezielt nach dieser Mail gesucht. Ansonsten werden die ältesten unverarbeiteten Mails zurückgegeben, basierend auf dem Limit. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind und noch keinen Paperless-Eintrag haben. Der Betreff wird entschlüsselt und bereinigt, um sicherzustellen, dass er korrekt im Dashboard angezeigt wird.
@@ -973,7 +887,7 @@ class MailProcessor extends Database
                 ];
             }
 
-            $paperless = new Paperless($this->dashboard);
+            $paperless = new \App\Paperless($this->dashboard);
 
             foreach ($result as $row) {
                 $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);

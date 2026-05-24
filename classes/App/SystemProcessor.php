@@ -1,32 +1,74 @@
 <?php
-namespace App\Api;
 
-class SystemController extends \App\Database
+namespace App;
+use App\ContactProcessor;
+use Exception; // Falls du Exceptions nutzt
+use Throwable;
+use PDO;
+
+class SystemProcessor extends Database
 {
-    // Wir speichern die zusätzlichen Abhängigkeiten als Eigenschaften
-    protected $mailProc;
-    protected $tenantId;
-    protected $tenantConfig;
+    use ServiceTrait;
+    protected $dashboard;
 
-    public function __construct($dashboard, $mailProc, $tenantId, $tenantConfig) 
-    {
-        // Übergabe des Dashboards an die Database-Klasse
+    public function __construct($dashboard) {
         parent::__construct($dashboard);
-        
-        // Eigene Eigenschaften setzen
-        $this->mailProc = $mailProc;
-        $this->tenantId = $tenantId;
-        $this->tenantConfig = $tenantConfig;
+        $this->dashboard = $dashboard;
     }
 
-    public function status() {
-        $system = new \App\System();
-        $status = $system->isSystemReady();
+    /**
+     * Prüft, ob die PHP-Installation die benötigten Erweiterungen und Funktionen für das Dashboard unterstützt.
+     * @return array Eine Liste von Fehlermeldungen, falls Anforderungen nicht erfüllt sind. Leeres Array bedeutet "alles gut".
+     */
+    public function checkRequirements(): array
+    {
+        $errors = [];
 
+        // Überprüfen der PHP-Version
+        if (version_compare(PHP_VERSION, '8.0.0', '<')) {
+            $errors[] = "PHP 8.0 oder höher wird benötigt. Aktuelle Version: " . PHP_VERSION;
+        }
+
+        // Benötigte Erweiterungen
+        $requiredExtensions = ['pdo_mysql', 'mbstring', 'openssl'];
+        foreach ($requiredExtensions as $ext) {
+            if (!extension_loaded($ext)) {
+                $errors[] = "Die PHP-Erweiterung '$ext' ist nicht installiert oder aktiviert.";
+            }
+        }
+
+        return $errors;
+    }
+
+    public function getPhpInfo(): string
+    {
+        ob_start();
+        phpinfo();
+        return ob_get_clean();
+    }
+
+    public function getSystemInfo(): array
+    {
         return [
-            'success' => true,
-            'details' => ['status' => $status]
+            'php_version' => PHP_VERSION,
+            'extensions' => get_loaded_extensions(),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unbekannt',
+            'os' => PHP_OS,
         ];
+    }
+
+    public function isSystemReady($maxLoad = 2.5): bool
+    {
+        // sys_getloadavg() ist unter Linux/Ubuntu standardmäßig verfügbar
+        if (function_exists('sys_getloadavg')) {
+            $load = sys_getloadavg();
+            
+            // $load[0] ist der Schnitt der letzten 1 Minute
+            if (isset($load[0]) && $load[0] > $maxLoad) {
+                return false; // Server ist zu beschäftigt!
+            }
+        }
+        return true; // Alles im grünen Bereich
     }
 
     /**
@@ -39,6 +81,7 @@ class SystemController extends \App\Database
         header('Content-Type: application/json');
 
         $tenantId = $_SESSION['tenant_id'] ?? null; 
+
 
         if (!$tenantId) {
             echo json_encode([
@@ -90,6 +133,9 @@ class SystemController extends \App\Database
             $repairedCount = 0;
             $createdCount = 0;
 
+            $contact = new ContactProcessor($this->dashboard);
+
+
             // 4. Verwaiste Einträge verarbeiten
             foreach ($unlinkedMails as $mail) {
                 // Name und E-Mail sauber aus "Max Mustermann <max@firma.de>" extrahieren
@@ -128,7 +174,7 @@ class SystemController extends \App\Database
                 } else {
                     // Fall B: Kontakt ist komplett neu -> Über vererbte insertContact() anlegen!
                     // Erzeugt den Eintrag in 'contacts' und 'contact_emails'
-                    $newContactId = $this->insertContact($name, $email, 'company');
+                    $newContactId = $contact->insertContact($name, $email, 'company');
                     
                     if ($newContactId) {
                         $contactId = $newContactId;
@@ -160,37 +206,4 @@ class SystemController extends \App\Database
         }
         exit;
     }
-
-
-    /**
-     * Synchronisiert im Hintergrund Mails für einen spezifischen Ordner.
-     * Aufrufbar via: api.php?action=sync_folder&folder=dms
-     */
-    public function syncFolder(): void 
-    {
-        header('Content-Type: application/json');
-        
-        // Folder aus dem Request holen, Standard ist INBOX
-        $folder = $_GET['folder'] ?? 'INBOX';
-        
-        // Sicherheit: Folder bereinigen (nur erlaubte Zeichen)
-        $folder = preg_replace('/[^a-zA-Z0-9]/', '', $folder);
-        if (empty($folder)) $folder = 'INBOX';
-
-        try {
-            // Aufruf der Sync-Methode
-            $result = $this->mailProc->syncWithICloud(true, 1, $folder);
-            echo json_encode($result);
-
-        } catch (\Throwable $e) {
-            error_log(__FUNCTION__.": Sync Fehler: " . $e->getMessage()); // WICHTIG!
-            echo json_encode([
-                'success' => false, 
-                'error' => $e->getMessage()
-            ]);
-        }
-        exit;
-    }
-
-
 }

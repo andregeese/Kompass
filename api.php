@@ -10,7 +10,7 @@ $tenantId = $_SESSION['tenant_id'] ?? null;
 //Debug?
 $isDebugMode = isset($_GET['debug']) && $_GET['debug'] === 'true';
 
-//throw new Exception ("ende");
+//throw new \Exception ("ende");
 
 $action = $_REQUEST['action'] ?? ''; 
 
@@ -23,6 +23,7 @@ ini_set('error_log', __DIR__ . '/php_debug.log');
 
 require_once __DIR__ . '/vendor/autoload.php'; 
 require_once __DIR__ . '/config.php'; 
+
 
 // --- Virtueller Log-Stream ---
 class DeinesystemsLogStream {
@@ -38,7 +39,21 @@ if (!in_array("logdb", stream_get_wrappers())) {
 //ini_set('error_log', 'logdb://output');
 
 set_error_handler([\App\ErrorLogs::class, 'handleNotification']);
-set_exception_handler([\App\ErrorLogs::class, 'handleException']);
+//set_exception_handler([\App\ErrorLogs::class, 'handleException']);
+// ZENTRALER ERROR-HANDLER
+set_exception_handler(function ($e) {
+    // 1. Logge den Fehler für dich
+    error_log("Globaler API Fehler: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+
+    // 2. Sende immer ein korrektes JSON an das Frontend
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error'   => 'Ein Serverfehler ist aufgetreten: ' . $e->getMessage()
+    ]);
+    exit;
+});
+
 register_shutdown_function([\App\ErrorLogs::class, 'handleShutdown']);
 
 error_log("=== API aufgerufen am " . date('Y-m-d H:i:s') . " ===");
@@ -63,7 +78,7 @@ header('Content-Type: application/json');
 //if ($_SESSION['user_agent'] !== $_SERVER['HTTP_USER_AGENT']) {
     // Alarm! Die Session wurde vermutlich auf ein anderes Gerät kopiert.
 //    session_destroy();
-//    throw new Exception("Session-Sicherheitsfehler. Bitte neu einloggen.");
+//    throw new \Exception("Session-Sicherheitsfehler. Bitte neu einloggen.");
 //}
 
 $response = [
@@ -109,7 +124,7 @@ try {
         'save_settings'                 => [App\Api\SettingsController::class, 'save'],
         
         // Mails
-        'list'                          => [App\Api\MailController::class, 'listMails'],
+        'list_mails'                    => [App\Api\MailController::class, 'listMails'],
         'view'                          => [App\Api\MailController::class, 'viewMail'],
         'delete'                        => [App\Api\MailController::class, 'deleteMail'],
         'dms'                           => [App\Api\MailController::class, 'moveToDms'],
@@ -126,16 +141,19 @@ try {
         'syncPaperless'                 => [App\Api\PaperlessController::class, 'sync'],
         'paperless_search'              => [App\Api\PaperlessController::class, 'search'],
         'paperless_match'               => [App\Api\PaperlessController::class, 'match'],
-        'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondent'], //mail als 
+        'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondents'], //mail als 
         'paperless_mail_tree'           => [App\Api\PaperlessController::class, 'getMailTree'],
         'paperless_tree'                => [App\Api\PaperlessController::class, 'getTree'],
         'link_mail_to_paperless'        => [App\Api\PaperlessController::class, 'linkMail'],
         'get_correspondet'              => [App\Api\PaperlessController::class, 'getCorrespondentById'],
+        'get_correspondets'             => [App\Api\PaperlessController::class, 'getCorrespondents'],
         'link_contact_item'             => [App\Api\PaperlessController::class, 'linkContact'],
         
         // Contacts
-        'search_contact'                => [App\Api\ContactController::class, 'search'],
+        'search_contact'                => [App\Api\ContactController::class, 'getContactByHashMail'],
         'insert_contact'                => [App\Api\ContactController::class, 'insert'],
+        'save_contact_manual'           => [App\Api\ContactController::class, 'saveSmallContact'],
+        'save_contact'                  => [App\Api\ContactController::class, 'saveContact'],
         'get_contact_context'           => [App\Api\ContactController::class, 'getContactContext'],
         'auto_link_contact'             => [App\Api\ContactController::class, 'autoLinkContact'],
         'get_contact_timeline'          => [App\Api\ContactController::class, 'getTimeLineContact'],
@@ -150,7 +168,7 @@ try {
     ];
 
     if (!array_key_exists($action, $routes)) {
-        throw new Exception("Aktion '$action' ist unbekannt.");
+        throw new \Exception("Aktion '$action' ist unbekannt.");
     }
 
 
@@ -170,7 +188,7 @@ try {
     // Wenn der Controller Daten zurückgibt, weise sie der Response zu
     if (is_array($result)) {
         $response = array_merge($response, $result);
-        //throw new Exception (print_r($response, true));
+        //throw new \Exception (print_r($response, true));
     }
 
 } catch (Throwable $e) { 

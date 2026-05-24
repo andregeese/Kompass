@@ -28,8 +28,9 @@ const rightSidebarComponent = () => ({
     selectedCorrespondents: [],
     currentSearchQuery: '',
     timelineData: [],
+    paperlessContacts: [],
 
-    initSidebar() {
+    async initSidebar() {
 
         console.log("Smart Context Hub erfolgreich initialisiert.");
 
@@ -55,7 +56,7 @@ const rightSidebarComponent = () => ({
                 this.formData.email = e.detail.email || '';
                 if (e.detail.hash) {
                     this.checkCRMStatus(e.detail.hash);
-                    this.getTimelineofContact(); //NICHT LÖSCHEN
+                    this.getTimelineofContact(); //NICHT LÖSCHEN                    
                 }
             }
         });
@@ -76,6 +77,12 @@ const rightSidebarComponent = () => ({
         document.addEventListener('system:low_memory', () => {
             this.handleLowMemoryShutdown();
         });
+        
+            
+        // Automatische Vorauswahl, wenn der CRM-Kontakt bereits eine Zuweisung hat
+        if (this.contactState?.contact?.paperless_id) {
+            this.selectedPaperlessId = this.contactState.contact.paperless_id;
+        }
     },
 
     // 🛠️ Hilfsfunktion: Füllt alle Sidebar-Felder radikal aus dem Mail-Objekt vor
@@ -109,7 +116,7 @@ const rightSidebarComponent = () => ({
 
         // Starte DMS & CRM Abfragen im Hintergrund
         this.searchDMS();
-        this.loadPaperlessTree(mail);
+        //this.loadPaperlessTree(mail);
         this.getTimelineofContact();
         if (mail.hash) {
             this.checkCRMStatus(mail.hash);
@@ -299,6 +306,45 @@ const rightSidebarComponent = () => ({
             this.haStatus = 'Offline (Gestoppt)';
         }
     },
+    async searchPaperlessContacts(searchTerm) {
+        // Wenn das Feld leer ist, müssen wir nicht suchen
+        if (!searchTerm || searchTerm.trim().length < 2) {
+            return; 
+        }
+
+        try {
+            // Ersetze 'query' durch den Parameter, den deine api.php erwartet
+            const data = await safeFetch(`api.php?action=get_correspondets&force_query=${encodeURIComponent(searchTerm)}`);
+            
+            if (data && data.sucess === true) {
+                this.paperlessContacts = data.details?.contacts || [];
+
+                // ID-Zuordnung: Automatisches Finden beim Tippen
+                const match = this.paperlessContacts.find(c => 
+                    c.name?.toLowerCase() === searchTerm.toLowerCase()
+                );
+                
+                if (match) {
+                    this.selectedPaperlessId = match.id;
+                    if (match.email) this.formData.email = match.email;
+                } else {
+                    this.selectedPaperlessId = '';
+                }
+            }
+        } catch (error) {
+            console.error('Fehler bei der Live-Suche:', error);
+        }
+    },
+
+    updateFormFromPaperless() {
+        // Wenn im Dropdown ein Kontakt gewählt wird, befüllen wir das Formular automatisch
+        const selected = this.paperlessContacts.find(c => c.id == this.selectedPaperlessId);
+        if (selected) {
+            this.formData.name = selected.name;
+            // Falls deine API auch E-Mails liefert:
+            if (selected.email) this.formData.email = selected.email;
+        }
+    },
 
     /* Prüft, ob der Absender bereits im CRM existiert oder ein DMS-Vorschlag vorliegt
     @param hash = mail.id gehasht
@@ -312,31 +358,31 @@ const rightSidebarComponent = () => ({
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
             const data = await safeFetch(`api.php?action=search_contact&hash=${hash}`);
             
-            if (data && data.success) {
+            if (data?.success && data?.details?.contact && data.details.contact.contact_id) {
+                const c = data.details.contact;
+
                 this.contactState = {
                     success: true,
                     contact: {
-                        id: data.details.contact.contact_id,
-                        display_name: data.details.contact.display_name,
-                        type: data.details.contact.type,
+                        id: c.contact.contact_id,
+                        display_name: c.contact.display_name,
+                        type: c.contact.type,
                         // Macht aus dem kommagetrennten String ein echtes JS-Array für spätere Zwecke
-                        emails: data.details.contact.additional_emails 
-                            ? data.details.contact.additional_emails.split(', ') 
-                            : []
+                        emails: c.additional_emails ? c.additional_emails.split(', ') : []
                     }
                 };  
 
                 // 2. Formular-Daten befüllen, aber Formular ZU lassen (da Kontext existiert)
-                this.formData.name = data.details.contact.display_name;
-                this.formData.email = data.details.contact.additional_emails ? c.additional_emails.split(', ')[0] : '';
-                this.formData.type = data.details.contact.type;
+                this.formData.name = c.display_name;
+                this.formData.email = c.additional_emails ? c.additional_emails.split(', ')[0] : '';
+                this.formData.type = c.type;
                 
                 // Correspondents setzen (für dein Paperless-Matching)
                 this.selectedCorrespondents = [c.display_name];
                 
                 // 🚪 Gefunden? Dann Formular standardmäßig ZU
                 this.showManualForm = false;
-
+             
             }else{
                 // ❌ Nichts im CRM gefunden -> Fallback auf Mail-Daten & Formular AUFKLAPPEN
                 this.contactState = { success: false, contact: null };
@@ -367,12 +413,13 @@ const rightSidebarComponent = () => ({
             this.dmsLoading = false;
         }
     },
+
     // Hilfsfunktion für den eigentlichen API-Fetch an Paperless
     async fetchDMSCorrespondents(hash, queryTerm) {
         try {
             // Wir encoden den QueryTerm, falls der User Leerzeichen oder Sonderzeichen eingibt
-            const response = await safeFetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
-            const data = await response.json();
+            const data = await safeFetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
+            //const data = await response.json();
             
             // HIER DIE NEUE PRÜFUNG: Auf "status === 'success'" checken!
             if (data.status === 'success' && data.details && data.details.contacts) {
@@ -431,8 +478,8 @@ const rightSidebarComponent = () => ({
                 })
             });
             
-            const json = await res.json();
-            if (json.success) {
+            //const json = await res.json();
+            if (res.success) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const hash = urlParams.get('hash') || this.$data.currentMail.hash || '';
                 if (hash) await this.checkCRMStatus(hash);

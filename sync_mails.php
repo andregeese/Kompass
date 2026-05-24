@@ -14,7 +14,7 @@ try {
     $mbox = imap_open(MAIL_HOST, MAIL_USER, MAIL_PASS);
     
     if (!$mbox) {
-        throw new Exception("iCloud-Verbindung fehlgeschlagen: " . imap_last_error());
+        throw new \Exception("iCloud-Verbindung fehlgeschlagen: " . imap_last_error());
     }
 
     // Suche Mails der letzten 14 Tage (etwas Puffer für eBons)
