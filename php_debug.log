@@ -111373,3 +111373,13 @@ Stacktrace:
 [25-May-2026 14:55:23 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2034 | Letzte UID in DB: 3502 | Höchste UID Server: 4942
 [25-May-2026 14:55:23 Europe/Berlin] Sync: Verarbeite 200 neue Mails.
 [25-May-2026 14:55:43 Europe/Berlin] === API aufgerufen am 2026-05-25 14:55:43 ===
+[25-May-2026 14:56:13 Europe/Berlin] === API aufgerufen am 2026-05-25 14:56:13 ===
+[25-May-2026 14:56:15 Europe/Berlin] === API aufgerufen am 2026-05-25 14:56:15 ===
+[25-May-2026 14:56:17 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6415 | Letzte UID in DB: 87667 | Höchste UID Server: 130564
+[25-May-2026 14:56:17 Europe/Berlin] Sync: Verarbeite 200 neue Mails.
+[25-May-2026 14:56:19 Europe/Berlin] === API aufgerufen am 2026-05-25 14:56:19 ===
+[25-May-2026 14:56:21 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
+[25-May-2026 14:56:21 Europe/Berlin] Sync: Keine neuen Mails gefunden.
+[25-May-2026 14:56:21 Europe/Berlin] === API aufgerufen am 2026-05-25 14:56:21 ===
+[25-May-2026 14:56:23 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 2034 | Letzte UID in DB: 3703 | Höchste UID Server: 4942
+[25-May-2026 14:56:23 Europe/Berlin] Sync: Verarbeite 200 neue Mails.
