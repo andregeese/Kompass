@@ -149,7 +149,7 @@ class ContactController extends BaseController {
                 'details' => $result
             ];
         }catch (Throwable $e) {   
-            $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
+            $this->dashboard->sendResponse(false, "", "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
     }
 

@@ -75,12 +75,21 @@
                                     class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200"
                                 >
 
-                                <!-- Die dynamisch befüllte Datalist -->
-                                <datalist id="paperless-contacts-list">
-                                    <template x-for="item in paperlessContacts" :key="item.id">
-                                        <option :value="item.name"></option>
-                                    </template>
-                                </datalist>
+                                <div class="relative mt-2">
+                                    <ul class="absolute z-50 w-full bg-white dark:bg-gray-800 border border-slate-200 shadow-lg rounded-lg max-h-40 overflow-y-auto"
+                                        x-show="paperlessContacts.length > 0">
+                                        <template x-for="item in paperlessContacts" :key="item.id">
+                                            <li @click="
+                                                    formData.name = item.name;            // WICHTIG: Name für das Input-Feld aktualisieren
+                                                    formData.paperless_id = item.id;      // Achte darauf, ob deine API 'id' oder 'paperless_id' liefert!
+                                                    paperlessContacts = [];
+                                                " 
+                                                class="...">    
+                                                <span x-text="item.name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">E-Mail-Adresse</label>
@@ -90,7 +99,7 @@
                                 <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">Name / Firma</label>
                                 <input type="text" x-model="formData.name" class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500">
                             </div>
-                            <button @click="saveContact(); showManualForm = false;" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm">Kontakt Speichern</button>
+                            <button @click="saveContact();" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm">Kontakt Speichern</button>
                             <a :href="'?view=contacts&id=' + contactState?.contact?.id" x-show="contactState?.contact?.id"
                                 class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm flex items-center justify-center space-x-1">
                                 <span>✏️</span> <span>Im CRM bearbeiten</span>

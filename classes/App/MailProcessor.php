@@ -4,6 +4,8 @@ use Exception; // Falls du Exceptions nutzt
 use App\PaperlessProcessor;
 use Throwable;
 use PDO;
+use HTMLPurifier;
+use HTMLPurifier_Config;
 
 
 /**
@@ -64,11 +66,19 @@ class MailProcessor extends Database
      */
     private function encryptContent(string $data): string {
         $encryption_key = defined('HASH_SALT') ? HASH_SALT : 'fallback_key_32_chars_long!!';
-        // Sicherstellen, dass der Key lang genug ist
-        $key = substr(hash('sha256', $encryption_key), 0, 32);
-        $iv = substr(hash('sha256', $encryption_key), 0, 16);
+    
+        // 1. Schlüssel als 32-Byte Raw-Binary generieren (echtes AES-256)
+        $key = hash('sha256', $encryption_key, true);
         
-        return base64_encode(openssl_encrypt($data, 'AES-256-CBC', $key, 0, $iv));
+        // 2. Einen echten, zufälligen IV erzeugen (16 Bytes für AES-CBC)
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-CBC'));
+        
+        // 3. Verschlüsseln
+        $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+        
+        // 4. IV und verschlüsselte Daten zusammenführen
+        // Wir speichern den IV einfach vor den Daten, damit wir ihn beim Entschlüsseln wieder haben
+        return base64_encode($iv . $encrypted);
     }
 
 
@@ -84,7 +94,7 @@ class MailProcessor extends Database
             $sql = "SELECT * FROM mails 
                     WHERE 
                       tenant_id=:tenant_id
-                      AND SHA2(CONCAT(id, :salt), 256) = :hash 
+                      AND id_hash = UNHEX(:hash) 
                       AND (status NOT IN('deleted') OR status IS NULL) 
                       LIMIT 1";
 
@@ -112,68 +122,66 @@ class MailProcessor extends Database
      */
     public function getHtmlBody($hash) 
     {
+        $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+        $mail = $this->getMailByHash($hash);
+
+        if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
+            $this->dashboard->sendResponse(false, "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
+            return false;
+        }
         
-        try {
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
-            $mail = $this->getMailByHash($hash);
+        $uid = (int)$mail['uid'];
+        
+        // Welcher Ordner gehört zur Mail?
+        $folder = !empty($mail['imap_folder']) ? $mail['imap_folder'] : 'INBOX';
 
-            if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
-                throw new \Exception("Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
-            }
-
-           
-            $uid = (int)$mail['uid'];
+        // 🚀 SICHERHEITSMASSNAHME: Nur reopen aufrufen, wenn wir NICHT in der INBOX sind!
+        // Da connectIMAP standardmäßig in der INBOX landet, sparen wir uns den fehleranfälligen Schritt.
+        if (strtoupper($folder) !== 'INBOX') {
             
-            // Welcher Ordner gehört zur Mail?
-            $folder = !empty($mail['imap_folder']) ? $mail['imap_folder'] : 'INBOX';
+            // WICHTIG: Prüfe, ob deine connectIMAP den Host-String bereits mit geschweiften Klammern speichert!
+            // Wir bauen ihn hier absolut sauber und standardkonform zusammen:
+            $fullFolderString = MAIL_HOST . $folder;
 
-            // 🚀 SICHERHEITSMASSNAHME: Nur reopen aufrufen, wenn wir NICHT in der INBOX sind!
-            // Da connectIMAP standardmäßig in der INBOX landet, sparen wir uns den fehleranfälligen Schritt.
-            if (strtoupper($folder) !== 'INBOX') {
+            // Lautlos versuchen zu öffnen
+            if (!imap_reopen($this->imapStream, $fullFolderString)) {
+                // Falls iCloud zickt (z.B. weil der Ordner auf dem Server "INBOX.DMSDone" statt "DMSDone" heißt):
+                // Probieren wir den iCloud-Standard-Präfix "INBOX." als Fallback
+                $fallbackFolderString =  MAIL_HOST . $folder;
                 
-                // WICHTIG: Prüfe, ob deine connectIMAP den Host-String bereits mit geschweiften Klammern speichert!
-                // Wir bauen ihn hier absolut sauber und standardkonform zusammen:
-                $fullFolderString = MAIL_HOST . $folder;
-
-                // Lautlos versuchen zu öffnen
-                if (!imap_reopen($this->imapStream, $fullFolderString)) {
-                    // Falls iCloud zickt (z.B. weil der Ordner auf dem Server "INBOX.DMSDone" statt "DMSDone" heißt):
-                    // Probieren wir den iCloud-Standard-Präfix "INBOX." als Fallback
-                    $fallbackFolderString =  MAIL_HOST . $folder;
-                    
-                    if (!imap_reopen($this->imapStream, $fallbackFolderString)) {
-                        throw new \Exception(" Der IMAP-Ordner '$folder' konnte auf dem iCloud-Server nicht gefunden oder geöffnet werden.");
-                    }
+                if (!imap_reopen($this->imapStream, $fallbackFolderString)) {
+                    $this->dashboard->sendResponse(false, "Der IMAP-Ordner '$folder' konnte auf dem iCloud-Server nicht gefunden oder geöffnet werden.");
+                    return false;
                 }
             }
-            
-            
-            // Jetzt wandeln wir die UID in die fortlaufende msgNo um
-            $msgNumber = imap_msgno($this->imapStream, $uid);
-
-            if (!$msgNumber || $msgNumber <= 0) {
-                throw new \Exception("Mail existiert nicht mehr im Ordner '$folder' auf dem Server.");
-            }
-
-            $structure = imap_fetchstructure($this->imapStream, $msgNumber);
-            if (!$structure) {
-                throw new \Exception(" Mail-Struktur konnte nicht gelesen werden.");
-            }
-
-            
-            // 1. Gezielte Suche nach HTML
-            $htmlPart = $this->findPart($msgNumber, $structure, 'TEXT/HTML');
-            if ($htmlPart) {
-                return mb_convert_encoding($htmlPart, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            }
-            
-            
-            // 2. Fallback auf Plaintext
-            //return $this->getTxtBody($hash);
-
-        } catch (Throwable $e) {
-            throw new \Exception("166: Fehler beim Laden des Mail-Bodys: " . $e->getMessage());
         }
+        
+        
+        // Jetzt wandeln wir die UID in die fortlaufende msgNo um
+        $msgNumber = imap_msgno($this->imapStream, $uid);
+
+        if (!$msgNumber || $msgNumber <= 0) {
+            $this->dashboard->sendResponse(false, "Mail existiert nicht mehr im Ordner '$folder' auf dem Server.");
+            return false;
+        }
+
+        $structure = imap_fetchstructure($this->imapStream, $msgNumber);
+        if (!$structure) {
+            $this->dashboard->sendResponse(false, "Mail-Struktur konnte nicht gelesen werden.");
+            return false;
+        }
+
+        
+        // 1. Gezielte Suche nach HTML
+        $htmlPart = $this->findPart($msgNumber, $structure, 'TEXT/HTML');
+        if ($htmlPart) {
+            return mb_convert_encoding($htmlPart, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        }
+        
+        
+        // 2. Fallback auf Plaintext
+        return $this->getTxtBody($hash);
+
     }
 
     /**
@@ -347,28 +355,37 @@ class MailProcessor extends Database
                 if (empty($overview)) continue;
 
                 $ov = $overview[0];
+                // E-Mail-Datum konvertieren
+                $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
 
-                // SQL mit korrektem ON DUPLICATE KEY UPDATE
-                $insertSql = "INSERT INTO mails (uid, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id, is_answered, is_read, is_flagged) 
-                            VALUES (:uid, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id, :is_answered, :is_read, :is_flagged)
-                            ON DUPLICATE KEY UPDATE
-                            subject_hash = VALUES(subject_hash),
-                            is_read = VALUES(is_read), 
-                            is_flagged = VALUES(is_flagged), 
-                            is_answered = VALUES(is_answered)";
-                
-                $this->queryIt($insertSql, [
-                    'uid'           => (int)$uid,
-                    'message_id'    => $ov->message_id ?? null,
-                    'subject_hash'  => $this->dashboard->encrypt($this->decodeSubject(isset($ov->subject) ? $ov->subject : '') ?? ''),
-                    'sender'        => $this->decodeMailHeader($ov->from ?? 'Unbekannt'),
-                    'date_received' => date('Y-m-d H:i:s', strtotime($ov->date ?? 'now')),
-                    'folder'        => $folder,
-                    'tenant_id'     => 6,
-                    'is_answered'   => (int)($ov->answered ?? 0),
-                    'is_read'       => (int)($ov->seen ?? 0),
-                    'is_flagged'    => (int)($ov->flagged ?? 0)
-                ]);
+                // 1. Mail anlegen und ID zurückholen
+                $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
+                                    VALUES (:uid, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id)
+                                    ON DUPLICATE KEY UPDATE
+                                    date_received = VALUES(date_received),
+                                    sender = VALUES(sender),
+                                    imap_folder = VALUES(imap_folder),
+                                    status = 'active'";
+
+                $mailId = $this->queryIt($sqlInsert, [
+                    'uid'           => $ov->uid,
+                    'message_id'    => $ov->message_id ?? '',
+                    'subject_hash'  => md5($ov->subject), // Falls du das so berechnest
+                    'sender'        => $ov->from,
+                    'date_received' => $formattedDate,
+                    'folder'        => $folder // Stelle sicher, dass $folder hier verfügbar ist
+                ], true, true); 
+
+                // 2. Hash berechnen und ID-Spalte aktualisieren
+                if ($mailId) {
+                    $salt = defined('HASH_SALT') ? HASH_SALT : '';
+                    $updateSql = "UPDATE mails SET id_hash = UNHEX(SHA2(CONCAT(:id, :salt), 256)) WHERE id = :id";
+                    
+                    $this->queryIt($updateSql, [
+                        'id'   => $mailId,
+                        'salt' => $salt
+                    ]);
+                }
                 
                 $added++;
                 $highestUid = max($highestUid, (int)$uid);
@@ -585,20 +602,37 @@ class MailProcessor extends Database
     /**
      * Entschlüsselt den Mail-Inhalt für das Iframe
      */
-    public function getDecryptedMailBody(string $hash): ?string {
-        $sql = "SELECT body_encrypted FROM mails WHERE SHA2(CONCAT(id, :salt), 256) = :hash";
+    public function getDecryptedMailBody(string $hash): ?string 
+    {
+        $sql = "SELECT mb.body_encrypted 
+            FROM mail_bodies AS mb 
+            INNER JOIN mails AS m ON m.id = mb.mail_id 
+            WHERE id_hash = UNHEX(:hash)
+            AND m.tenant_id = :tenant_id;";
+
         $rows = $this->queryIt($sql, [
             'salt' => defined('HASH_SALT') ? HASH_SALT : '',
             'hash' => $hash
         ]);
 
-        if (empty($rows) || !$rows[0]['body_encrypted']) return null;
+        if (empty($rows) || empty($rows[0]['body_encrypted'])) return null;
 
+        // 1. Daten dekodieren
+        $decoded = base64_decode($rows[0]['body_encrypted']);
+        
+        // 2. IV-Länge für AES-256-CBC bestimmen (üblicherweise 16 Bytes)
+        $ivSize = openssl_cipher_iv_length('AES-256-CBC');
+        
+        // 3. IV und verschlüsselte Daten trennen
+        $iv = substr($decoded, 0, $ivSize);
+        $data = substr($decoded, $ivSize);
+        
+        // 4. Schlüssel ableiten
         $encryption_key = defined('HASH_SALT') ? HASH_SALT : 'fallback_key_32_chars_long!!';
-        $key = substr(hash('sha256', $encryption_key), 0, 32);
-        $iv = substr(hash('sha256', $encryption_key), 0, 16);
+        $key = hash('sha256', $encryption_key, true);
 
-        return openssl_decrypt(base64_decode($rows[0]['body_encrypted']), 'AES-256-CBC', $key, 0, $iv);
+        // 5. Entschlüsseln mit OPENSSL_RAW_DATA
+        return openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
     }
 
     /**
@@ -657,7 +691,7 @@ class MailProcessor extends Database
             // Lokalen DB Status aktualisieren
             
             //$res = $this->queryIt("DELETE FROM mails WHERE tenant_id = :tenant_id AND id = :id", 
-            $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND SHA2(CONCAT(id, :salt), 256) = :hash", 
+            $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = UNHEX(:hash)", 
             [
                 'id' => $mail['id'],
                 'salt' => defined('HASH_SALT') ? HASH_SALT : '', 
@@ -1068,17 +1102,43 @@ class MailProcessor extends Database
      */
     public function saveMailWithContent(string $hash, string $htmlBody, string $plainText): void 
     {
-        $sql = "UPDATE mails 
-                SET body_encrypted = :encrypted_body, 
-                    body_search_index = :search_index 
-                WHERE SHA2(CONCAT(id, :salt), 256) = :hash AND tenant_id = :tenant_id";
-                
-        $this->queryIt($sql, [
-            'encrypted_body' => $this->encryptContent($htmlBody),
-            'search_index'   => $this->buildSearchIndex($plainText),
-            'salt'           => defined('HASH_SALT') ? HASH_SALT : '',
-            'hash'           => $hash
-        ]);
+
+
+        // 2. Daten in mail_bodies einfügen oder aktualisieren
+        // Wir nutzen hier INSERT ... ON DUPLICATE KEY UPDATE
+        $sqlBody = "INSERT INTO mail_bodies (mail_id, body_encrypted, body_search_index, body_hash) 
+                    VALUES (:mail_id, :encrypted_body, :search_index, :body_hash)
+                    ON DUPLICATE KEY UPDATE 
+                    body_encrypted = :encrypted_body,
+                    body_search_index = :search_index,
+                    body_hash = :body_hash";
+
+        $this->queryIt($sqlBody, [
+            'mail_id'          => $mailId,
+            'encrypted_body'   => $this->encryptContent($saveHTML),
+            'search_index'     => $this->buildSearchIndex($plainText),
+            'body_hash'        => $this->calculateBodyHash($plainText) // Falls du einen Body-Hash nutzt
+        ], true);
+    }
+
+    private function calculateBodyHash(string $plainText): string 
+    {
+        // Wir normalisieren den Text vorher leicht (Trimmen), 
+        // um bei identischen Inhalten mit unterschiedlichen Leerzeichen 
+        // denselben Hash zu erhalten.
+        $hexHash = hash('sha256', trim($plainText));
+        return hex2bin($hexHash);
+    }
+
+    private function sanitizeEmailBody($rawHtml) {
+        $config = \HTMLPurifier_Config::createDefault();
+        
+        // Konfiguration für E-Mails:
+        // Erlaube Bilder, aber keine gefährlichen Attribute
+        $config->set('HTML.Allowed', 'p,b,i,u,br,a[href],table,tr,td,img[src|alt]');
+        
+        $purifier = new \HTMLPurifier($config);
+        return $purifier->purify($rawHtml);
     }
 
 

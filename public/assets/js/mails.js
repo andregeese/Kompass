@@ -115,7 +115,6 @@ const mailViewComponent = () => ({
                     this.mails = [];
                     this.mails = fetchedMails;
                     console.log("Liste wurde für neue Suche geleert und neu befüllt.");
-                    console.log(this.mails);
                 }
 
                 // Paging Logik: Nur bei normaler Liste erhöhen, Suche hat kein Paging

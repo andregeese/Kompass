@@ -367,7 +367,7 @@ class PaperlessProcessor extends Database
             return $paperlessData['correspondent']; // Gibt die numerische ID des Korrespondenten zurück
         }
 
-        return null;
+        return false;
     }
 
     /**
@@ -376,7 +376,7 @@ class PaperlessProcessor extends Database
     public function fetchDocumentsByCorrespondentId($correspondentId=null)
     {            
         if (!$correspondentId) {
-            return ["kein Korrespondent eingegeben!!"];
+            return false;
         }
 
         $idString = is_array($correspondentId) 
@@ -455,7 +455,7 @@ class PaperlessProcessor extends Database
     public function linkMailToPaperless(string $hash, int $paperlessId): void {
         $sql = "UPDATE mails 
                 SET status = 'archived', paperless_id = :p_id 
-                WHERE tenant_id=:tenant_id AND SHA2(CONCAT(id, :salt), 256) = :hash";
+                WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash)";
                 
         $this->queryIt($sql, [
             'p_id' => $paperlessId,
@@ -473,7 +473,7 @@ class PaperlessProcessor extends Database
      * @return int|null Die zugehörige Paperless-ID oder null, wenn nicht gefunden
      */
     public function getPaperlessIdByHash(string $hash): ?int {
-        $sql = "SELECT paperless_id FROM mails WHERE tenant_id=:tenant_id AND SHA2(CONCAT(id, :salt), 256) = :hash";
+        $sql = "SELECT paperless_id FROM mails WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash)";
         
         $rows = $this->queryIt($sql, [
             'salt' => defined('HASH_SALT') ? HASH_SALT : '',

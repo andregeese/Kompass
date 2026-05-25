@@ -152,19 +152,24 @@ class PaperlessController extends BaseController {
      */
     public function getMailTree() 
     {
-        $hash = $_GET['hash'] ?? '';
+        try{
+            $hash = $_GET['hash'] ?? '';
         
-        $mailDetails = $this->mailProcess->getMailByHash($hash); 
+            $mailDetails = $this->mailProcess->getMailByHash($hash); 
 
-        //Kontakte ermitteln
-        $contacts = $this->contactProcess->getContactById($hash, $mailDetails["contact_id"]); 
+            //Kontakte ermitteln
+            $contacts = $this->contactProcess->getContactById($hash, $mailDetails["contact_id"]); 
 
-        $paperlessCorres = $contacts[0]["paperless_id"];
+            $paperlessCorres = $contacts[0]["paperless_id"];
 
-        $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
+            $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
 
-
-        return $ret;    
+            $this->dashboard->sendResponse("true", $ret);
+        }catch (Throwable $e) {   
+            $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
+        }
+        
+        //return $ret;    
     }
 
 

@@ -316,8 +316,11 @@ const rightSidebarComponent = () => ({
             // Ersetze 'query' durch den Parameter, den deine api.php erwartet
             const data = await safeFetch(`api.php?action=get_correspondets&force_query=${encodeURIComponent(searchTerm)}`);
             
-            if (data && data.sucess === true) {
-                this.paperlessContacts = data.details?.contacts || [];
+            if (data && data.success === true) {
+                this.paperlessContacts = []; // Erst leeren
+                this.$nextTick(() => {       // Warten bis DOM verarbeitet wurde
+                    this.paperlessContacts = data.details.contacts;
+                });
 
                 // ID-Zuordnung: Automatisches Finden beim Tippen
                 const match = this.paperlessContacts.find(c => 
@@ -462,20 +465,11 @@ const rightSidebarComponent = () => ({
         if (!this.formData.name) return alert('Bitte einen Namen eingeben.');
         this.crmLoading = true;
 
-        const bodyData = new FormData();
-        bodyData.append('name', this.formData.name);
-        bodyData.append('email', this.formData.email);
-        bodyData.append('type', this.formData.type);
-
         try {
             const res = await safeFetch('api.php?action=insert_contact', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: this.formData.name,
-                    email: this.formData.email,
-                    type: this.formData.type
-                })
+                body: JSON.stringify(this.formData)
             });
             
             //const json = await res.json();

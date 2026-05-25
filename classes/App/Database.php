@@ -79,9 +79,9 @@ class Database
      * tenant_id wird hier mit reingeladen
      * @param string $query Das SQL-Query mit benannten Platzhaltern (z.B. :id, :name)
      * @param array $params Ein assoziatives Array mit den Werten für die Platzhalter (z.B. ['id' => 5, 'name' => 'Test'])  
-     * @return array Das Ergebnis als Array (leeres Array bei Fehlern oder wenn nichts gefunden wurde)
+     * @return $return 
      */
-    public function queryIt(string $query, array $params = [], bool $isTransactional = false): array 
+    public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
     {
         //$this->getCallerInfo();
 
@@ -150,10 +150,16 @@ class Database
             $stmt->execute(); 
             $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             $stmt->closeCursor();
+            $result = null;
 
-            if ($isTransactional) {
-                $pdo->commit();
+            if ($returnInsertID) {
+                $result = $pdo->lastInsertId();
+            } else {
+                $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
+
+            if ($isTransactional) $pdo->commit();
+            return $result;
 
             //error_log($this->getDebugSql($query, $params));
             return $result;

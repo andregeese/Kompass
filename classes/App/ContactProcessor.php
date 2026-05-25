@@ -37,7 +37,7 @@ class ContactProcessor extends Database
         // 2. Verknüpfung in mails über den sender_hash
         if ($idHash) {
             $ret = $this->queryIt(
-                "UPDATE mails SET contact_id = :cid WHERE SHA2(CONCAT(id, :salt), 256) = :hash AND tenant_id = :tenant_id",
+                "UPDATE mails SET contact_id = :cid WHERE id_hash = UNHEX(:hash) AND tenant_id = :tenant_id",
                 [
                     'salt' => defined('HASH_SALT') ? HASH_SALT : '',
                     'hash' => $idHash,
@@ -123,7 +123,7 @@ class ContactProcessor extends Database
                 FROM contacts AS c
                 INNER JOIN mails AS m ON c.id = m.contact_id
                 LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-                WHERE SHA2(CONCAT(m.id, :salt), 256) = :hash 
+                WHERE id_hash = UNHEX(:hash)
                 AND m.tenant_id = :tenant_id
                 GROUP BY c.id, c.display_name, c.type";
 
@@ -220,7 +220,7 @@ class ContactProcessor extends Database
             -- INNER JOIN mails AS m ON c.id = m.contact_id
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
             WHERE c.tenant_id =:tenant_id 
-            -- AND SHA2(CONCAT(m.id, :salt), 256) = :hash 
+            -- AND id_hash = UNHEX(:hash)
             AND contact_id=:contact_id
             GROUP BY c.id, ce.id, c.is_active, ce.email, c.display_name, c.paperless_id, c.type;";
 
@@ -246,7 +246,7 @@ class ContactProcessor extends Database
             -- INNER JOIN mails AS m ON c.id = m.contact_id
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
             WHERE c.tenant_id =:tenant_id 
-            -- AND SHA2(CONCAT(m.id, :salt), 256) = :hash 
+            -- AND id_hash = UNHEX(:hash)
             AND (ce.email LIKE :search OR c.display_name LIKE :search)
             GROUP BY c.id, ce.id, c.is_active, ce.email, c.display_name, c.paperless_id, c.type;";
 
@@ -322,7 +322,7 @@ class ContactProcessor extends Database
                         m.sender AS detail
                     FROM mails AS m
                     INNER JOIN (
-                        SELECT contact_id, paperless_id FROM mails WHERE SHA2(CONCAT(id, :salt), 256) = :hash LIMIT 1
+                        SELECT contact_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
                     ) AS ref ON m.contact_id = ref.contact_id
                     WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
                     ORDER BY m.date_received DESC LIMIT 100"; // Dein SQL von oben
@@ -340,7 +340,7 @@ class ContactProcessor extends Database
         $sql = "SELECT DISTINCT c.paperless_id 
                 FROM contacts as c
                 INNER JOIN mails m ON c.id = m.contact_id
-                WHERE SHA2(CONCAT(m.id, :salt), 256) = :hash 
+                WHERE id_hash = UNHEX(:hash)
                 AND m.tenant_id = :tenant_id";
 
         $result = $this->queryIt($sql, ['hash' => $hash, 'salt' => $salt, 'tenant_id' => $tenantId]);
@@ -365,7 +365,7 @@ class ContactProcessor extends Database
             INNER JOIN mails AS m ON c.id = m.contact_id
             /* 2. Schritt: Verknüpfe alle E-Mails, die zu DIESEM Kontakt gehören */
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-            WHERE SHA2(CONCAT(m.id, :salt), 256) = :hash 
+            WHERE id_hash = UNHEX(:hash)
             AND m.tenant_id = :tenant_id
             GROUP BY c.id, c.display_name, c.type;";
 
