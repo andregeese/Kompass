@@ -359,6 +359,11 @@ class MailProcessor extends Database
                 if (empty($overview)) continue;
 
                 $ov = $overview[0];
+                
+                if (empty($ov->from)) {
+                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
+                    $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                }
                 // E-Mail-Datum konvertieren
                 $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
 

@@ -43,7 +43,7 @@ class ContactProcessor extends Database
                     'hash' => $idHash,
                     'cid'  => $contactId
                 ]
-            );
+            ,true, false);
         }
     
         return ['success' => true, 'contact_id' => $contactId, "details"=> $ret];
@@ -160,7 +160,7 @@ class ContactProcessor extends Database
             $sqlClear = "UPDATE contact_emails SET contact_id = :ce_id WHERE tenant_id = :tenant_id AND contact_id = :contact_id";
             $this->queryIt(
                 $sqlClear, ["contact_id" => $contact_id, 'ce_id' => $_email['ceid']]
-            );
+            ,true, false);
         };
 
         $ids_string = implode(',', array_map('intval', $contact_ids));
@@ -181,12 +181,12 @@ class ContactProcessor extends Database
                     WHERE tenant_id = :tenant_id 
                     AND email IN ($mails_string)";
             
-            $this->queryIt($sqlCE, ["contact_id" => $contact_id]);
+            $this->queryIt($sqlCE, ["contact_id" => $contact_id],true, false);
         }
 
         //3. contct aktualisieren
         $sqlC = "UPDATE contacts SET is_active =0 WHERE tenant_id=:tenant_id AND id IN ($ids_string);";
-        $this->queryIt($sqlC, []);
+        $this->queryIt($sqlC, [],true, false);
         //error_log("idstring:" . print_r($ids_string, true));
 
 
@@ -197,7 +197,7 @@ class ContactProcessor extends Database
         $mails_string = implode(',', $quoted_emails); // Ergebnis: 'a@b.com','c@d.com'
 
         $sqlCE = "UPDATE contact_emails SET contact_id =:contact_id WHERE tenant_id=:tenant_id AND email IN($mails_string);";
-        $ret = $this->queryIt($sqlCE, ["contact_id" => $contact_id]);
+        $ret = $this->queryIt($sqlCE, ["contact_id" => $contact_id], true, false);
 
         return [
             'success' => true, 

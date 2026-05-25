@@ -85,8 +85,8 @@ class Database
     public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
     {
         //$this->getCallerInfo();
-        error_log(__FUNCTION__ . ": " . $query);
-        error_log(print_r($params, true));
+        //error_log(__FUNCTION__ . ": " . $query);
+        //error_log(print_r($params, true));
 
         try {
             $pdo = self::getConnection();

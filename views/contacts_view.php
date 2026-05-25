@@ -10,13 +10,14 @@
 
     <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <template x-for="contact in filteredContacts" :key="contact.id">
+            <template x-for="contact in filteredContacts" :key="contact.ceid">
                 <div x-data="{ isEditing: false }" 
                     class="bg-white p-5 rounded-2xl border transition-all duration-300 relative shadow-sm hover:shadow-md"
                     :class="Number(contact.is_connected) === 1 ? 'border-emerald-400 bg-emerald-50/20' : 'border-slate-200'">
 
                     <div class="absolute top-4 right-4 flex gap-1 z-10">
                         <button type="button" 
+                                x-show="contact.is_connected!==1"
                                 @click.stop="openMatchModal(contact)" 
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors">
                             🔗
