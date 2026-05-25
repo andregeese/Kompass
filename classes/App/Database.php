@@ -49,6 +49,7 @@ class Database
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_PERSISTENT         => false // Schutz vor "Too many connections"
             ]);
+            self::$pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
         }
         return self::$pdo;
     }
@@ -84,11 +85,11 @@ class Database
     public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
     {
         //$this->getCallerInfo();
+        error_log(__FUNCTION__ . ": " . $query);
+        error_log(print_r($params, true));
 
         try {
             $pdo = self::getConnection();
-
-            //$isTransactional = (bool) preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', $query);
 
             // Transaktion starten, falls angefordert
             if ($isTransactional) {
@@ -148,21 +149,21 @@ class Database
 
             // 🚀 Ausführen - Wenn hier ein Fehler auftritt, MUSS PDO jetzt eine Exception werfen!
             $stmt->execute(); 
-            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            $stmt->closeCursor();
-            $result = null;
 
+            // Erst HIER entscheiden, was zurückgegeben wird
             if ($returnInsertID) {
                 $result = $pdo->lastInsertId();
             } else {
                 $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
+            
+            $stmt->closeCursor(); // Erst nach dem Fetch schließen
 
+            //error_log($this->getDebugSql($query, $params));
             if ($isTransactional) $pdo->commit();
             return $result;
 
-            //error_log($this->getDebugSql($query, $params));
-            return $result;
+
             
         } catch (\PDOException $e) {
             error_log("Zentraler Datenbankfehler: " . $e->getMessage());

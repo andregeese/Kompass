@@ -14,7 +14,6 @@ class MailController extends BaseController
     {
         try{
             
-
             $page   = isset($_GET['page'])   ? (int)$_GET['page']   : 1;
             $limit  = isset($_GET['limit'])  ? (int)$_GET['limit']  : 20;
             $folder = isset($_GET['folder']) ? $_GET['folder']      : 'INBOX';
@@ -27,12 +26,12 @@ class MailController extends BaseController
             
 
             $mails = $this->mailProcess->getMailsPaginated($page, $limit, $folder, $search);
-            
+            $cleanMails = $this->recursiveUtf8Encode($mails);
             
             return [
                 'success' => true,
                 'details' => [
-                    'mails' => $mails
+                    'mails' => $cleanMails
                 ]
             ];
         } catch (\Throwable $e) {
@@ -43,6 +42,20 @@ class MailController extends BaseController
                 'error'   => 'Fehler beim Laden der E-Mails: ' . $e->getMessage()
             ];
         }
+    }
+
+    private function recursiveUtf8Encode(array $data) {
+            array_walk_recursive($data, function (&$item, $key) {
+            // Falls das Feld 'hash' (oder 'id_hash') heißt und binär ist:
+            if (($key === 'hash' || $key === 'id_hash') && !mb_check_encoding($item, 'UTF-8')) {
+                $item = bin2hex($item); // Binär -> Hex (jetzt ist es ein druckbarer String)
+            } 
+            // Standard UTF-8 Sanitisierung
+            elseif (is_string($item)) {
+                $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
+            }
+        });
+        return $data;
     }
 
     /**
@@ -207,7 +220,8 @@ class MailController extends BaseController
     /**
      * stream die Mail
      */
-    public function streamHtml() {
+    public function streamHtml() 
+    {
         $hash = $_GET['hash'] ?? '';
         if (empty($hash)) {
             throw new \Exception("Fehler: Kein gültiger Mail-Hash übergeben.");

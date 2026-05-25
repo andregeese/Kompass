@@ -164,7 +164,7 @@ const mailViewComponent = () => ({
         }
 
         //hast ist die ID gehasht
-        this.autoLinkContact(parsedName, parsedEmail, hash);
+        //this.autoLinkContact(parsedName, parsedEmail, hash);
     },
 
     // wird von viewMails aufgerufen, um mail in db zu speichen

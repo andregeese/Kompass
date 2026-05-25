@@ -60,37 +60,40 @@ class ContactProcessor extends Database
     public function insertContact(string $name, string $email, string $type = 'company') {
         $name = trim($name);
         $email = strtolower(trim($email));
-        $type = trim($type);
+        $tenantId = $_SESSION['tenant_id'] ?? null;
         $salt = defined('HASH_SALT') ? HASH_SALT : '';
 
-        if (empty($name) || empty($email)) {
+        if (empty($name) || empty($email) || !$tenantId) {
             return false;
         }
-            
-        // 1. Kontakt suchen (falls vorhanden) oder neu anlegen
-        // Wir nutzen INSERT oder prüfen vorher, um den Unique-Constraint zu respektieren
-        $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id) VALUES (:name, :type, :tenant_id) ON DUPLICATE KEY UPDATE type = VALUES(type), display_name = VALUES(display_name)";
-        $this->queryIt($sqlContact, ['name' => $name, 'type' => $type]);
+                
+        // 1. Kontakt anlegen
+        // Nutze LAST_INSERT_ID() oder PDO::lastInsertId(), um die ID sofort zu bekommen
+        $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id) 
+                    VALUES (:name, :type, :tenant_id) 
+                    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)";
         
-        $getNewId = $this->queryIt("SELECT id FROM contacts WHERE display_name = :name AND tenant_id = :tenant_id LIMIT 1", [
-            'name' => $name
-        ]);
+        $this->queryIt($sqlContact, ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId]);
+        
+        // Die ID des Kontakts (neu oder bestehend) direkt vom PDO-Objekt holen
+        // Hinweis: Deine queryIt müsste hierfür den PDO-Zugriff auf lastInsertId() erlauben
+        $contactId = $this->getLastInsertId(); 
 
-        $contactId = $getNewId[0]['id'] ?? null;
-
-        // 2. E-Mail-Adresse mit Hash speichern
+        // 2. E-Mail-Adresse speichern
         $emailHash = hash('sha256', $email . $salt);
         
-        $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) VALUES (:cid, :email, :hash, :tenant_id)  ON DUPLICATE KEY UPDATE email =(email)";
+        $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) 
+                    VALUES (:cid, :email, :hash, :tenant_id)  
+                    ON DUPLICATE KEY UPDATE email = VALUES(email)";
+                    
         $this->queryIt($sqlEmail, [
-            'cid'   => $contactId,
-            'email' => $email, // Optional: Nur wenn du Klartext-E-Mails speichern willst
-            'hash'  => $emailHash
+            'cid'       => $contactId,
+            'email'     => $email,
+            'hash'      => $emailHash,
+            'tenant_id' => $tenantId
         ]);
 
         return $contactId;
-
-    
     }
 
 

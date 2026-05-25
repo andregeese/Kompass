@@ -2,6 +2,7 @@
 namespace App;
 use Exception; // Falls du Exceptions nutzt
 use App\PaperlessProcessor;
+use App\ContactProcessor;
 use Throwable;
 use PDO;
 use HTMLPurifier;
@@ -103,14 +104,17 @@ class MailProcessor extends Database
             );
             
             if (empty($rows)) {
-                throw new \Exception("E-Mail mit diesem Hash wurde nicht gefunden.");
+                $this->dashboard->sendResponse(false, "", "E-Mail mit diesem Hash wurde nicht gefunden.");
+                return false;
             }
 
 
             return $rows[0];
 
-        }catch (Throwable $e) {            
-            return "94: Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage();
+        }catch (Throwable $e) {      
+            $this->dashboard->sendResponse(false, "", "Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage());
+            return false;      
+            //return "94: Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage();
         }
     }
 
@@ -126,7 +130,7 @@ class MailProcessor extends Database
         $mail = $this->getMailByHash($hash);
 
         if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
-            $this->dashboard->sendResponse(false, "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
+            $this->dashboard->sendResponse(false, "", "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
             return false;
         }
         
@@ -370,8 +374,8 @@ class MailProcessor extends Database
                 $mailId = $this->queryIt($sqlInsert, [
                     'uid'           => $ov->uid,
                     'message_id'    => $ov->message_id ?? '',
-                    'subject_hash'  => md5($ov->subject), // Falls du das so berechnest
-                    'sender'        => $ov->from,
+                    'subject_hash'  => $this->decodeMimeHeader($ov->subject), // Falls du das so berechnest
+                    'sender'        => $this->decodeMimeHeader($ov->from),
                     'date_received' => $formattedDate,
                     'folder'        => $folder // Stelle sicher, dass $folder hier verfügbar ist
                 ], true, true); 
@@ -385,6 +389,14 @@ class MailProcessor extends Database
                         'id'   => $mailId,
                         'salt' => $salt
                     ]);
+                }
+
+                // PROAKTIVE Kontaktverknüpfung / anlage:
+                if ($mailId) {
+                    $this->linkMailToContact((int)$mailId, $ov->from);
+                    
+                    // Dann erst den Hash updaten
+                    $this->queryIt($updateSql, ['id' => $mailId, 'salt' => $salt]);
                 }
                 
                 $added++;
@@ -407,13 +419,21 @@ class MailProcessor extends Database
     }
 
 
-    private function decodeSubject($subject)
+    private function decodeMimeHeader($subject)
     {
-        mb_internal_encoding("UTF-8");
-        
-        // Sichert ab, dass null zu einem leeren String wird
-        $decoded = mb_decode_mimeheader($subject ?? '');
-        return !empty($decoded) ? $decoded : $subject;
+        if (empty($subject)) return '';
+        //Decode Mime-Header
+        $decoded = mb_decode_mimeheader($subject);
+
+        // 2. Prüfung, ob wir ein sauberes UTF-8 Ergebnis haben
+        // Falls mb_check_encoding fehlschlägt, ist der String vermutlich 
+        // in einer anderen Kodierung (z.B. ISO-8859-1) "verkleidet".
+        if (!mb_check_encoding($decoded, 'UTF-8')) {
+            // Versuche, den kaputten String als ISO-8859-1 zu interpretieren und nach UTF-8 zu wandeln
+            $decoded = mb_convert_encoding($decoded, 'UTF-8', 'ISO-8859-1');
+        }
+
+        return $decoded;
     }
 
     /**
@@ -724,11 +744,10 @@ class MailProcessor extends Database
 
             // 1. SQL und Parameter dynamisch generieren lassen
             [$sql, $params] = $this->buildSearchSQLAndParams($folder, $search, $limit, $offset);
-
+        
             // 2. Datenbank abfragen
             $mailsFromDb = $this->queryIt($sql, $params);
             $returnMails = []; 
-
 
             // 3. Daten filtern und für das Frontend aufbereiten
             foreach ($mailsFromDb as $row) {
@@ -755,74 +774,54 @@ class MailProcessor extends Database
     /**
      * Baut das dynamische SQL-Statement und die zugehörigen PDO-Parameter.
      */
-    private function buildSearchSQLAndParams(string $folder, string $search, int $limit, int $offset): array
+    private function buildSearchSQLAndParams(string $folder, string $search, int $limit, int $offset, ?string $targetHash = null): array
     {
-        try {
-            $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-            
-            $params = [
-                'salt'   => $salt,
-                'folder' => $folder,
-                'limit'  => intval($limit),
-                'offset' => intval($offset)
-            ];
-            
-            $sql = "SELECT 
-                        id, 
-                        uid,
-                        sender, 
-                        subject_hash, 
-                        paperless_id,
-                        imap_folder,
-                        date_received as date,
-                        SHA2(CONCAT(id, :salt), 256) as hash,
-                        is_read,
-                        is_flagged,
-                        is_answered
-                    FROM mails 
-                    WHERE 
-                    tenant_id = :tenant_id
-                    AND imap_folder = :folder
-                    AND (status NOT IN('deleted') OR status IS NULL)";
+        $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
+        
+        $params = [
+            'folder' => $folder,
+            'limit'  => $limit,
+            'offset' => $offset
+        ];
+        
+        $sql = "SELECT 
+                    id, uid, sender, subject_hash, paperless_id, imap_folder,
+                    date_received as date, id_hash as hash,
+                    is_read, is_flagged, is_answered
+                FROM mails 
+                WHERE tenant_id = :tenant_id
+                AND imap_folder = :folder
+                AND (status NOT IN('deleted') OR status IS NULL)";
 
-            if (!empty($search)) {
-                
-                $searchNormalized = $this->normalizeString($search);
-                $hashedSearch = substr(hash('sha256', $searchNormalized . $salt), 0, 12);
-
-                $sql .= " AND (
-                    LOWER(sender) LIKE :like_q 
-                    OR body_search_index LIKE :hash_q";
-
-                $params['like_q'] = mb_strtolower($search, 'UTF-8');
-                $params['hash_q'] = '%' . $hashedSearch . '%';
-                
-                if (preg_match('/[0-9.\-:]/', $search)) {
-                    $params['search_date'] = mb_strtolower($search, 'UTF-8');
-                    $sql .= " OR date_received LIKE :search_date";
-                }
-                
-                if (is_numeric($search)) {
-                    $params['search_id'] = intval($search);
-                    $sql .= " OR id = :search_id";
-                }
-
-                $sql .= " )";
-            }
-
-            $sql .= " ORDER BY date_received DESC LIMIT :limit OFFSET :offset";
-
-            
-            return [$sql, $params];
-
-        } catch (\Throwable $e) {
-            error_log(__FUNCTION__);
-            return [
-                'success' => false,
-                'error'   => 'Fehler in ' . __FUNCTION__ .': ' . $e->getMessage(),
-                'matches' => []
-            ];
+        // Fall A: Zugriff auf eine spezifische Mail (Detailansicht)
+        if ($targetHash !== null) {
+            $sql .= " AND id_hash = UNHEX(:hash)";
+            $params['hash'] = $targetHash;
         }
+        // Fall B: Suche in einer Liste (Übersicht)
+        elseif (!empty($search)) {
+            $sql .= " AND (";
+            $searchNormalized = $this->normalizeString($search);
+            $hashedSearch = substr(hash('sha256', $searchNormalized . $salt), 0, 12);
+
+            $sql .= "LOWER(sender) LIKE :like_q OR body_search_index LIKE :hash_q";
+            $params['like_q'] = '%' . mb_strtolower($search, 'UTF-8') . '%';
+            $params['hash_q'] = '%' . $hashedSearch . '%';
+            
+            if (preg_match('/[0-9.\-:]/', $search)) {
+                $params['search_date'] = '%' . mb_strtolower($search, 'UTF-8') . '%';
+                $sql .= " OR date_received LIKE :search_date";
+            }
+            if (is_numeric($search)) {
+                $params['search_id'] = intval($search);
+                $sql .= " OR id = :search_id";
+            }
+            $sql .= ")";
+        }
+
+        $sql .= " ORDER BY date_received DESC LIMIT :limit OFFSET :offset";
+        
+        return [$sql, $params];
     }
     
     
@@ -1102,7 +1101,21 @@ class MailProcessor extends Database
      */
     public function saveMailWithContent(string $hash, string $htmlBody, string $plainText): void 
     {
+        // 1. Erst die ID zur Hash-Referenz finden
+        $sql = "SELECT id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1";
+        $result = $this->queryIt($sql, ['hash' => $hash]);
+        
+        if (empty($result)) {
+            $this->dashboard->sendResponse(false, "", "Keine Mail gefunden für diesen Hash, kann body nicht speichern.");
+            throw new \Exception("Keine Mail gefunden für diesen Hash, kann body nicht speichern. $hash");
+        }
+        $mailId = $result[0]['id'];
 
+        // 1. HTML Sanitization (Sicherheits-Layer)
+        $cleanHTML = $this->sanitizeEmailBody($htmlBody);
+        
+        // 2. Verschlüsselung der bereinigten Daten
+        $encryptedBody = $this->encryptContent($cleanHTML);
 
         // 2. Daten in mail_bodies einfügen oder aktualisieren
         // Wir nutzen hier INSERT ... ON DUPLICATE KEY UPDATE
@@ -1115,10 +1128,50 @@ class MailProcessor extends Database
 
         $this->queryIt($sqlBody, [
             'mail_id'          => $mailId,
-            'encrypted_body'   => $this->encryptContent($saveHTML),
+            'encrypted_body'   => $encryptedBody,
             'search_index'     => $this->buildSearchIndex($plainText),
             'body_hash'        => $this->calculateBodyHash($plainText) // Falls du einen Body-Hash nutzt
         ], true);
+
+        
+    }
+
+    public function linkMailToContact(int $mailId, string $senderRaw): void 
+    {
+        // 1. Sender extrahieren (dein bestehender Regex-Block)
+        $email = $senderRaw;
+        $name = $senderRaw;
+        if (preg_match('/^([^<]*)\s*<([^>]+)>/', $senderRaw, $matches)) {
+            $name = trim($matches[1]);
+            $email = trim($matches[2]);
+        }
+        $email = strtolower(trim($email));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return;
+
+        // 2. Kontakt suchen
+        $sqlFindContact = "SELECT ce.contact_id 
+                            FROM contact_emails ce
+                            INNER JOIN contacts c ON ce.contact_id = c.id
+                            WHERE ce.email = :email 
+                            AND c.tenant_id = :tenant_id 
+                            LIMIT 1";
+        
+        $contactResult = $this->queryIt($sqlFindContact, ['email' => $email]);
+        $contactId = !empty($contactResult) ? $contactResult[0]['contact_id'] : null;
+
+        // 3. Wenn nicht gefunden -> Neu anlegen
+        if (!$contactId) {
+            $contact = new ContactProcessor($this->dashboard);
+            $contactId = $contact->insertContact($name, $email, 'company');
+        }
+
+        // 4. Verknüpfen, falls wir eine ID haben
+        if ($contactId) {
+            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE id = :mail_id", [
+                'contact_id' => (int)$contactId,
+                'mail_id'    => $mailId
+            ]);
+        }
     }
 
     private function calculateBodyHash(string $plainText): string 
