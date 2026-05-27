@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hub-v2.11'; 
+const CACHE_NAME = 'hub-v2.15'; 
 
 const ASSETS = [
     './index.php',
@@ -8,6 +8,7 @@ const ASSETS = [
     './public/assets/js/login.js',
     './public/assets/js/mails.js',
     './public/assets/js/notes.js',
+    './public/assets/js/contacts.js',
     './public/assets/js/paperless.js',
     './public/assets/js/appointments.js',
     './public/assets/js/detail.js',

@@ -132,6 +132,7 @@ const mailViewComponent = () => ({
                 this.hasMore = false;
             }
         } catch (err) {
+            console.error(data);
             console.error("Fehler beim Laden:", err);
         } finally {
             this.loading = false;

@@ -99,7 +99,19 @@
                         <button @click="showMobilePreview = false" class="px-2 py-1 text-sm bg-slate-100 dark:bg-gray-700 rounded-lg">⬅️</button>
                         <div>
                             <h3 class="text-sm font-bold text-slate-800 dark:text-white line-clamp-1" x-text="currentMail.subject"></h3>
-                            <p class="text-[11px] text-slate-400" x-text="'Von: ' + currentMail.sender"></p>
+                            <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+                                <span x-text="'Von: ' + currentMail.sender"></span>
+                                <span>•</span>
+                                <span x-text="currentMail.date"></span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+                                <template x-if="currentMail.emailhash">
+                                    <a target="_blank" :href="'index.php?view=contacts&hash=' + currentMail.emailhash" 
+                                    class="text-indigo-500 hover:underline hover:text-indigo-600 font-medium">
+                                    👤 Kontaktprofil
+                                    </a>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center space-x-1.5">                        

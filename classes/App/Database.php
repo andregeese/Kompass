@@ -16,6 +16,10 @@ class Database
         $this->dashboard = $dashboard;
     }
 
+    public function prepareHash(string $hex): string {
+        return hex2bin($hex);
+    }
+
     public function __destruct() {
         self::closeConnection();
     }
@@ -80,7 +84,7 @@ class Database
      * tenant_id wird hier mit reingeladen
      * @param string $query Das SQL-Query mit benannten Platzhaltern (z.B. :id, :name)
      * @param array $params Ein assoziatives Array mit den Werten für die Platzhalter (z.B. ['id' => 5, 'name' => 'Test'])  
-     * @return $return 
+     * @return array|int of values or lastInsertId
      */
     public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
     {
@@ -147,6 +151,8 @@ class Database
                 }
             }
 
+            //error_log($this->getDebugSql($query, $params));
+            
             // 🚀 Ausführen - Wenn hier ein Fehler auftritt, MUSS PDO jetzt eine Exception werfen!
             $stmt->execute(); 
 

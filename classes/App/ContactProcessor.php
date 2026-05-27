@@ -5,7 +5,9 @@ use Throwable;
 use DateTime;
 use PDO;
 
-// classes/MailProcessor.php
+/**
+ * @method void contactProcess() 
+ */
 class ContactProcessor extends Database
 {
     use ServiceTrait;
@@ -24,9 +26,6 @@ class ContactProcessor extends Database
         $email = strtolower(trim($data['email']));
         $emailHash = hash('sha256', $email . HASH_SALT);
         
-        // Suche Absender-Hash der Mail aus dem POST-Body
-        $idHash = $data['hash'] ?? null;
-
         // 1. Kontakt suchen oder erstellen (wie gehabt)
         $check = $this->queryIt("SELECT contact_id FROM contact_emails WHERE email_hash = :hash AND tenant_id = :tenant_id", [
             'hash' => $emailHash
@@ -36,12 +35,12 @@ class ContactProcessor extends Database
 
         // 2. Verknüpfung in mails über den sender_hash
         if ($idHash) {
+            $binHash = hex2bin($data['hash']);
+            $searchHash = hash('sha256', $messageId . $salt, true);
             $ret = $this->queryIt(
-                "UPDATE mails SET contact_id = :cid WHERE id_hash = UNHEX(:hash) AND tenant_id = :tenant_id",
+                "UPDATE mails SET contact_id = :cid WHERE id_hash = :hash AND tenant_id = :tenant_id",
                 [
-                    'salt' => defined('HASH_SALT') ? HASH_SALT : '',
-                    'hash' => $idHash,
-                    'cid'  => $contactId
+                    'hash' => $binHash
                 ]
             ,true, false);
         }
@@ -55,13 +54,14 @@ class ContactProcessor extends Database
     * * @param string $name Der Anzeigename des Kontakts
     * @param string $email Die E-Mail-Adresse
     * @param string $type Typ des Kontakts ('company' oder 'person')
+    * @param int $paperless_id Paperless-Verknüpfung
     * @return int|bool Die neue Contact-ID bei Erfolg, sonst false
     */
-    public function insertContact(string $name, string $email, string $type = 'company') {
+    public function insertContact(string $name, string $email, string $type = 'company', int $paperless_id=null) {
         $name = trim($name);
         $email = strtolower(trim($email));
         $tenantId = $_SESSION['tenant_id'] ?? null;
-        $salt = defined('HASH_SALT') ? HASH_SALT : '';
+        $salt = $this->dashboard->getHashSalt();
 
         if (empty($name) || empty($email) || !$tenantId) {
             return false;
@@ -69,23 +69,47 @@ class ContactProcessor extends Database
                 
         // 1. Kontakt anlegen
         // Nutze LAST_INSERT_ID() oder PDO::lastInsertId(), um die ID sofort zu bekommen
-        $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id) 
-                    VALUES (:name, :type, :tenant_id) 
-                    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)";
+        $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, paperless_id) 
+                VALUES (:name, :type, :tenant_id, :paperless_id) 
+                ON DUPLICATE KEY UPDATE 
+                    paperless_id = VALUES(paperless_id),
+                    type = VALUES(type);";
         
-        $this->queryIt($sqlContact, ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId]);
+        $contactId = $this->queryIt(
+            $sqlContact, 
+            ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId, 'paperless_id' => $paperless_id]
+            ,false
+            , true
+        );
+
+        error_log("contact ID nach speichern 1:" . print_r($contactId, true));
+        if (empty($contactId)) {
+            $sqlGetId = "SELECT id FROM contacts WHERE display_name = :name AND tenant_id = :tenant_id LIMIT 1";
+            $result = $this->queryIt($sqlGetId, ['name' => $name, 'tenant_id' => $tenantId]);
+            
+            // Angenommen, queryIt gibt bei Selects ein Array zurück
+            $contactId = $result[0]['id'] ?? null;
         
+        }
+
+        if (!$contactId) {
+            throw new Exception("Kontakt konnte weder angelegt noch gefunden werden.");
+        }
+
+        error_log("contact ID nach speichern 2:" . print_r($contactId, true));
         // Die ID des Kontakts (neu oder bestehend) direkt vom PDO-Objekt holen
         // Hinweis: Deine queryIt müsste hierfür den PDO-Zugriff auf lastInsertId() erlauben
-        $contactId = $this->getLastInsertId(); 
+        //$contactId = $this->getLastInsertId(); 
 
         // 2. E-Mail-Adresse speichern
         $emailHash = hash('sha256', $email . $salt);
         
         $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) 
                     VALUES (:cid, :email, :hash, :tenant_id)  
-                    ON DUPLICATE KEY UPDATE email = VALUES(email)";
-                    
+                    ON DUPLICATE KEY UPDATE 
+                    contact_id = VALUES(contact_id),
+                    email = VALUES(email);";
+
         $this->queryIt($sqlEmail, [
             'cid'       => $contactId,
             'email'     => $email,
@@ -97,48 +121,35 @@ class ContactProcessor extends Database
     }
 
 
-    public function getContactById($hash, $id) // Name korrigiert
+    /**
+     * Kontakte anhand von hashed ID
+     * wird benötigt um den Tree in right_sidebar zu erstellen
+     */
+    public function getEmailsAndContactsByHash($hash)
     {
-        
-        // Hinweis: Prüfe dein SQL! :tenant_id fehlt im Array
-        $sql = "SELECT * FROM contacts WHERE tenant_id=:tenant_id AND id=:contactId";
-        return $this->queryIt($sql, [
-            "tenant_id" => $_SESSION['tenant_id'], // Wichtig: Tenant beachten
-            "contactId" => $id
-        ]);
+        $sql ="SELECT 
+                c.id AS contact_id,
+                c.display_name,
+                c.type,
+                GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails
+            FROM contacts AS c
+            INNER JOIN mails AS m ON c.id = m.contact_id
+            LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
+            WHERE id_hash = UNHEX(:hash)
+            AND m.tenant_id = :tenant_id
+            GROUP BY c.id, c.display_name, c.type";
+
+        $ret = $this->queryIt($sql,
+            ["hash" =>"%" . $hash . "%"]
+        );
+
+        return $ret;
     }
 
     /**
-     * Kontakte anhand von hashed ID
+     * Speicher die Kontakte und Mails
+     * 1 Konakt n Emails
      */
-    public function getEmailsByContact($contact)
-    {
-            /*$sql = "SELECT ce.display_name FROM contact_emails as ce
-                  LEFT JOIN contacts as c ON c.id = ce.contact_id 
-                  where c.tenant_id=:tenant_id AND 
-                  (ce.email like :search OR c.display_name like :search);";
-                  */
-            $sql ="SELECT 
-                    c.id AS contact_id,
-                    c.display_name,
-                    c.type,
-                    GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails
-                FROM contacts AS c
-                INNER JOIN mails AS m ON c.id = m.contact_id
-                LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-                WHERE id_hash = UNHEX(:hash)
-                AND m.tenant_id = :tenant_id
-                GROUP BY c.id, c.display_name, c.type";
-
-            $ret = $this->queryIt($sql,
-                ["search" =>"%" . $query . "%"]
-            );
-            return $ret;
-        
-       
-        
-    }
-
     public function saveContactEmails($contact_id, $emails)
     {
         
@@ -165,9 +176,6 @@ class ContactProcessor extends Database
 
         $ids_string = implode(',', array_map('intval', $contact_ids));
         
-        // --- SCHRITT 1: ALLES "CLEAREN" ---
-        // Setze für diesen Kontakt alle bisherigen E-Mail-Verknüpfungen zurück
-        
 
         // --- SCHRITT 2: NEU ZUORDNEN ---
         if (!empty($email_list)) {
@@ -187,7 +195,7 @@ class ContactProcessor extends Database
         //3. contct aktualisieren
         $sqlC = "UPDATE contacts SET is_active =0 WHERE tenant_id=:tenant_id AND id IN ($ids_string);";
         $this->queryIt($sqlC, [],true, false);
-        //error_log("idstring:" . print_r($ids_string, true));
+        error_log("idstring:" . print_r($ids_string, true));
 
 
         $quoted_emails = array_map(function($email) {
@@ -207,26 +215,28 @@ class ContactProcessor extends Database
         
     }
 
-    public function getContactListByContactID(int $contact_id=null)
+    /**
+     * Bekommt eine Liste von Kontakten und dessen Verknüpfungen
+     */
+    public function getContactListByContactID(int $contact_id)
     {
         $sql = "SELECT 
-                c.id AS id,
-                ce.id as ceid,
-                c.is_active as is_active,
-                ce.email as email,
-                c.display_name as displayname,
-                c.paperless_id as paperless_id,
-                c.type as type, 
-                GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
-                COUNT(ce.id) OVER (PARTITION BY c.id) > 1 AS is_connected
-            FROM contacts AS c
-            -- INNER JOIN mails AS m ON c.id = m.contact_id
-            LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-            WHERE c.tenant_id =:tenant_id 
-            -- AND id_hash = UNHEX(:hash)
-            AND contact_id=:contact_id
-            GROUP BY c.id, ce.id, c.is_active, ce.email, c.display_name, c.paperless_id, c.type;";
-
+                    c.id AS id,
+                    c.is_active AS is_active,
+                    c.display_name AS displayname,
+                    c.paperless_id AS paperless_id,
+                    c.type AS type, 
+                    GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
+                    -- Logik: 1, wenn es Einträge in contact_emails gibt, 
+                    -- deren contact_id nicht mit der c.id übereinstimmt 
+                    -- (oder eine andere Bedingung deiner Wahl)
+                    MAX(CASE WHEN ce.contact_id IS NOT NULL AND ce.id != c.id THEN 1 ELSE 0 END) AS is_connected
+                FROM contacts AS c
+                LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
+                WHERE c.tenant_id = :tenant_id
+                AND c.id = :contact_id
+                GROUP BY ce.id, c.is_active, c.display_name, c.paperless_id, c.type";
+                            
         $ret = $this->queryIt($sql,
             ["contact_id" => $contact_id]
         );
@@ -236,15 +246,18 @@ class ContactProcessor extends Database
     public function getContactList(string $query="", int $contact_id=null)
     {
         $sql = "SELECT 
-                c.id AS id,
-                ce.id as ceid,
-                c.is_active as is_active,
-                ce.email as email,
-                c.display_name as displayname,
-                c.paperless_id as paperless_id,
-                c.type as type, 
-                GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
-                COUNT(ce.id) OVER (PARTITION BY c.id) > 1 AS is_connected
+                    c.id AS id,
+                    ce.id AS ceid,
+                    c.is_active AS is_active,
+                    c.display_name AS displayname,
+                    c.paperless_id AS paperless_id,
+                    ce.email,
+                    c.type AS type, 
+                    -- GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
+                    -- Logik: 1, wenn es Einträge in contact_emails gibt, 
+                    -- deren contact_id nicht mit der c.id übereinstimmt 
+                    -- (oder eine andere Bedingung deiner Wahl)
+                    MAX(CASE WHEN ce.contact_id IS NOT NULL AND ce.id != c.id THEN 1 ELSE 0 END) AS is_connected
             FROM contacts AS c
             -- INNER JOIN mails AS m ON c.id = m.contact_id
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
@@ -262,12 +275,18 @@ class ContactProcessor extends Database
     /**
      * Erzeugt die TimeLine von Kontakten
      */
-    public function getTimelineData($hash, $salt, $tenantId)
+    public function getTimelineData(mixed $hash, string $salt, int $tenantId)
     {
+        if ($salt===null)
+        {
+            $salt = $this->dashboard->getHashSalt();
+        }
         
         // 1. Daten aus allen Quellen sammeln und normalisieren
         $items = [];
-        $mailItems = array_merge($items, $this->getMailItems($hash, $salt, $tenantId));
+        //Holt alle Mails
+        $mails = $this->getMailItems($hash, $salt, $tenantId);
+        $mailItems = array_merge($items, $mails);
         
         $timeline = [];
 
@@ -285,26 +304,61 @@ class ContactProcessor extends Database
         }
 
         //hole die Correspondenten aus der DB contact
-        $correspondentIds = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
-        //prüfe welche Dokumente es dazu gibt
-        $docs = $this->getDocumentItems($correspondentIds);
+        $PaperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
 
+        //prüfe welche Dokumente es zu den Paperless-IDs gibt
+        $corres = $this->getDocumentItemsByCorrespondent($PaperlessIDs['korrespondenten']);
 
-        // 2. Paperless Dokumente mappen (hier machst du das gleiche für $docs)
-        foreach ($docs as $doc) {
-            $datumString = $doc['created'] ?? $doc['created_date'] ?? date('Y-m-d');
-            $timeline[] = [
-                'type'      => 'document',
-                'id'        => $doc['id'],
-                'date'      => date('d.m.Y', strtotime($datumString)),
-                'title'     => $doc['title'],
-                'detail'    => 'Paperless Dokument',
-                'is_recent' => false,
-                'hash'      => '',
-                'link'      => '/dms/document/' . $doc['id']
-            ];
+        // 2. Prüfung: Ist es ein Array und enthält es Daten?
+        if (is_array($corres) && !empty($corres)) {
+            // 2. Paperless Dokumente mappen (hier machst du das gleiche für $docs)
+            foreach ($corres as $_cor) {
+                $datumString = $_cor['created'] ?? $_cor['created_date'] ?? date('Y-m-d');
+                $timeline[] = [
+                    'type'      => 'document',
+                    'id'        => $_cor['id'],
+                    'date'      => date('d.m.Y', strtotime($datumString)),
+                    'title'     => $_cor['title'],
+                    'detail'    => 'Paperless Dokument',
+                    'is_recent' => false,
+                    'hash'      => '',
+                    'link'      => '/dms/document/' . $_cor['id']
+                ];
+            }
+        }else{
+            error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Korrespondenten gefunden");
         }
 
+        //prüfe welche Dokumente es zu den Paperless-IDs gibt
+        $dokumenteIds = $PaperlessIDs['dokumente'] ?? [];
+
+        // 2. Prüfung: Ist es ein Array und enthält es Daten?
+        if (!empty($dokumenteIds)) {
+            $cleanIdsD = implode(",", array_map('intval', $dokumenteIds));
+
+            $resDocs = $this->getDocumentsById($cleanIdsD);
+
+            foreach ($resDocs as $_doc) {
+                $datumString = $_doc['created'] ?? $_doc['created_date'] ?? '';
+                $timeline[] = [
+                    'type'      => 'document',
+                    'id'        => $_doc['id'],
+                    'date'      => date('d.m.Y', strtotime($datumString)),
+                    'title'     => $_doc['title'],
+                    'detail'    => 'Paperless Dokument',
+                    'is_recent' => false,
+                    'hash'      => '',
+                    'link'      => '/dms/document/' . $_doc['id']
+                ];
+            }
+        }else{
+            error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Dokumente gefunden");
+        }
+
+        usort($timeline, function($a, $b) {
+            return $b['date'] <=> $a['date'];
+        });
+        
         // 2. Timeline aufbauen
         return $this->buildTimeline($timeline);
     }
@@ -314,23 +368,25 @@ class ContactProcessor extends Database
      */
     private function getMailItems($hash, $salt, $tenantId)
     {
-        $sql = "SELECT 
-                        'mail' AS type,
-                        m.id AS item_id,
-                        ref.paperless_id as paperlesscontact,
-                        -- ce.paperless_id as paperlesscorrespondent
-                        m.paperless_id as paperlessdocument,
-                        m.date_received AS event_date,
-                        m.subject_hash AS title,
-                        m.sender AS detail
-                    FROM mails AS m
-                    INNER JOIN (
-                        SELECT contact_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
-                    ) AS ref ON m.contact_id = ref.contact_id
-                    WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
-                    ORDER BY m.date_received DESC LIMIT 100"; // Dein SQL von oben
-        $rawMails = $this->queryIt($sql, ["hash" => $hash, "salt" => $salt, "tenant_id" => $tenantId]);
         
+        $sql = "SELECT 
+                    'mail' AS type,
+                    m.id AS item_id,
+                    ref.paperless_id as paperlesscontact,
+                    -- ce.paperless_id as paperlesscorrespondent
+                    m.paperless_id as paperlessdocument,
+                    m.date_received AS event_date,
+                    m.subject_hash AS title,
+                    m.sender AS detail
+                FROM mails AS m
+                INNER JOIN (
+                    SELECT contact_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
+                ) AS ref ON m.contact_id = ref.contact_id
+                WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
+                ORDER BY m.date_received DESC LIMIT 100"; // Dein SQL von oben
+        $rawMails = $this->queryIt($sql, ["hash" => $hash, "salt" => $salt, "tenant_id" => $tenantId]);
+        //error_log(print_r($rawMails,true));
+
         $items = [];
         foreach ($rawMails as $row) {
             $items[] = $this->formatItem($row, 'mail', $row['event_date'], $row['detail'], $hash);
@@ -340,23 +396,46 @@ class ContactProcessor extends Database
 
     private function getPaperlessIdsByMailHash(string $hash, string $salt, int $tenantId): array
     {
-        $sql = "SELECT DISTINCT c.paperless_id 
-                FROM contacts as c
-                INNER JOIN mails m ON c.id = m.contact_id
-                WHERE id_hash = UNHEX(:hash)
-                AND m.tenant_id = :tenant_id";
+        $salt = $this->dashboard->getHashSalt();
+
+        $sql = "SELECT 
+                GROUP_CONCAT(DISTINCT m.paperless_id) as dokumente,
+                GROUP_CONCAT(DISTINCT c.paperless_id) AS korrespondenten
+                -- CASE 
+                --     WHEN m.paperless_id IS NOT NULL THEN 'linked' 
+                --     ELSE 'standalone' 
+                -- END AS relation_type
+            FROM mails AS m
+            -- 1. Von Mail zu der E-Mail-Adresse, von der sie kam
+            INNER JOIN contact_emails ce ON m.contact_id = ce.id
+            -- 2. Von der E-Mail-Adresse zum Kontakt
+            INNER JOIN contacts c ON ce.contact_id = c.id
+            -- 3. Vom Kontakt zu den Paperless-Mappings
+            -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
+            WHERE m.id_hash = UNHEX(:hash) AND m.tenant_id=:tenant_id;";
 
         $result = $this->queryIt($sql, ['hash' => $hash, 'salt' => $salt, 'tenant_id' => $tenantId]);
-        
+        // 1. Prüfen, ob überhaupt ein Ergebnis da ist
+        if (!empty($result) && is_array($result)) {
+            // Da GROUP_CONCAT nur eine Zeile liefert, nehmen wir den ersten Index [0]
+            $row = $result[0];
+
+            // Filtert leere Strings (falls nur NULL vorhanden war) und gibt ein sauberes Array
+            $resAr['dokumente'] = array_filter(explode(',', $row['dokumente'] ?? ''));
+            $resAr['korrespondenten'] = array_filter(explode(',', $row['korrespondenten'] ?? ''));
+        } else {
+            $resAr['dokumente'] = [];
+            $resAr['korrespondenten'] = [];
+        }
+
+        error_log(print_r($resAr, true));
         // Wandle das Ergebnis-Array in ein flaches Array von IDs um
-        return array_column($result, 'paperless_id');
+        return $resAr;
     }
 
 
     public function getContactByMail(string $hash)
     {
-        $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-
         $sql="SELECT 
                 c.id AS contact_id,
                 c.display_name,
@@ -374,7 +453,7 @@ class ContactProcessor extends Database
 
         $ret = $this->queryIt($sql,
             ["hash" => $hash,
-            "salt" =>  defined('HASH_SALT') ? HASH_SALT : '']
+            "salt" =>  $this->dashboard->getHashSalt()]
         );
 
         if (is_array($ret) && count($ret)>0){
@@ -386,37 +465,40 @@ class ContactProcessor extends Database
     }
     
     /**
-     * Dokumente by Korrespondent
+     * Dokumente aus Paperless (TimeLineData)
+     * @param int $docIDs (holt alle Dokumente zu einem Korrespondenten)
+     * return array of Documents
      */
-    private function getDocumentItems($correspondentID)
+    private function getDocumentItemsByCorrespondent($docIDs)
     {
-        error_log("DEBUG: Typ und inhaltvon correspondentid: " . gettype($correspondentID) . ':' . print_r($correspondentID, true));
+        if (empty($docIDs)) {
+            return [];
+        }
 
         // Hier logik für Paperless API
         $paperless = new PaperlessProcessor($this->dashboard);
-        $docs = $paperless->fetchDocumentsByCorrespondentId($correspondentID);
-        error_log("DEBUG: Inhalt von docs: " . print_r($docs, true));
+        $docs = $paperless->fetchDocumentsByCorrespondentId($docIDs);
 
-        $items = [];
-        foreach ($docs as $doc) { 
-            $items[] = [
-                'type'      => 'document',
-                'id'        => $doc['id'],
-                // Nutze 'created_date' direkt für das Format
-                'date'      => date('d.m.Y', strtotime($doc['created_date'])),
-                'title'     => $doc['title'],
-                'detail'    => 'DMS: ' . ($doc['original_file_name'] ?? 'Dokument'),
-                'is_recent' => false,
-                'hash'      => '', // Paperless-Docs haben keinen Mail-Hash
-                'critical'  => '', // Hier kannst du bei Bedarf Logik für 'tags' einbauen
-                'link'      => '' //$this->getPaperlessUrl() . '/dms/document/' . $doc['id']
-            ];
-        } 
+        return $docs;
+    }
 
-        error_log("DEBUG: Typ von items: " . gettype($items));
-        error_log("DEBUG: Inhalt von items: " . print_r($items, true));
+    /**
+     * Dokumente aus Paperless (TimeLineData) anhand der DokumentenID
+     * @param any $docIds (holt alle Dokumente anhand des $docids)
+     */
+    private function getDocumentsById($docIds)
+    {
+        if (empty($docIds)) {
+            error_log(__FUNCTION__ . "keine docIds");
+            return [];
+        }
+        
+        $docs= array();
+         // Hier logik für Paperless API
+        $paperless = new PaperlessProcessor($this->dashboard);
+        $docs = $paperless->getDocumentById($docIds);
 
-        return $items;
+        return $docs;
     }
 
     private function formatItem($row, $type, $dateString, $detail, $hash)
@@ -449,7 +531,6 @@ class ContactProcessor extends Database
         $monthsDe = [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
 
         foreach ($items as $item) {
-            //error_log("FICK DICH: " . print_r($item,true));
 
             $dateRaw = $item['date'] ?? ''; 
     

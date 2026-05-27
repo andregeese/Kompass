@@ -41,7 +41,50 @@
         <div class="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar pb-24">
             
             <div x-show="activeTab === 'context'" class="space-y-4">
+                <!-- Dokument -->
+                <div class="space-y-2">
+                    <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+                        <input 
+                            type="text" 
+                            placeholder="Dokument suchen..."
+                            x-model="manualSearchQuery"
+                            @input.debounce.300ms="searchDMS();"
+                            class="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200"
+                        >
 
+                        <div class="space-y-1 overflow-y-auto max-h-[180px] pr-1 custom-scrollbar" x-show="paperlessDMSMatches.length > 0">
+                            <template x-for="item in paperlessDMSMatches" :key="item.id">
+                                <div class="relative group pl-4 py-1.5 flex items-center hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                                    @click="linkToPaperless(item.id)">
+                                    
+                                    <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
+                                    <div class="absolute left-[-3px] top-2.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-emerald-500"></div>
+
+                                    <div class="flex items-center gap-3 w-full text-[11px]">
+                                        <span class="w-8 text-[9px] font-bold shrink-0 text-center"
+                                            :class="{
+                                                'text-emerald-600': item.score >= 0.8,
+                                                'text-amber-500': item.score >= 0.5 && item.score < 0.8,
+                                                'text-rose-500': item.score < 0.5
+                                            }" 
+                                            x-text="(item.score * 100).toFixed(0) + '%'">
+                                        </span>
+
+                                        <span class="flex-1 font-medium text-slate-700 dark:text-gray-300 truncate"
+                                            :title="item.title"
+                                            x-text="item.title">
+                                        </span>
+
+                                        <span class="text-slate-400 font-mono text-[10px] shrink-0" 
+                                            x-text="item.created">
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <!--Kontakte -->
                 <div class="space-y-2">
                     <div @click="showManualForm = !showManualForm" 
                          class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all select-none shadow-sm">

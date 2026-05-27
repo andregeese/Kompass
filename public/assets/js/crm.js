@@ -74,12 +74,13 @@ async function safeFetch(url, options = {}) {
         try {
             data = JSON.parse(text);
         } catch (e) {
-            console.error("API Antwort ist kein valides JSON:", text);
+            showNotify("API Antwort (" + url + ") ist kein valides JSON:", text, "danger");
             throw new Error("Server antwortete mit ungültigem Format.");
         }
 
         // HTTP Status-Check
         if (!response.ok) {
+            showNotify("Server-Fehler: ", esponse.status, "danger");
             throw new Error(data.error || `Server-Fehler: Status ${response.status}`);
         }
 

@@ -123,6 +123,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
 
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 
 </head>
 <body x-data="crmEngine()" 

@@ -66,11 +66,6 @@ class ContactController extends BaseController {
         ];
     }
 
-    public function getKorrespondentById()
-    {
-
-        
-    }
     
     public function getContactByHashMail() {
         $hash = trim($_REQUEST['hash'] ?? '');
@@ -79,49 +74,36 @@ class ContactController extends BaseController {
             return ['success' => false, 'error' => 'Kein Mail-Hash übergeben.'];
         }
         
-        //$email = $this->dashboard->getContactMailsBySelMail($hash); 
         $email = $this->contactProcess->getContactByMail($hash); 
 
         return [
             'success' => true,
             'details' => ['contact' => $email]
         ];
-        
-        if (!$email) {
-            return ['success' => false, 'error' => 'Absender zur Mail nicht gefunden.'];
-        }
-        
-        $contactState = $this->contactProcess->findContactByEmail($email);
-        return [
-            'success' => true,
-            'details' => $contactState
-        ];
     }
 
 
     /**
-     * 
+     * Holt alle Mails und Paperless verknüpfungen
      */
     public function getTimeLineContact()
     {
         try{
             $rawInput = file_get_contents('php://input');
             $data = json_decode($rawInput, true);
+            $salt = $this->dashboard->getHashSalt();
+            $hash = $data['hash'] ?? '';
 
             // 2. Validierung
             if (!isset($data['hash'])) {
                 return ['success' => false, 'error' => 'Kein Hash übergeben'];
             }
-            
-            $salt = defined('HASH_SALT') ? HASH_SALT : '';
-            $hash = $data['hash'] ?? '';
-
 
             $ret = $this->contactProcess->getTimelineData($hash, $salt, 6);
-
             
             $this->dashboard->sendResponse(true, $ret);
-        }catch (Throwable $e) {   
+
+        } catch (\Throwable $e) {   
             $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
     }
@@ -148,7 +130,7 @@ class ContactController extends BaseController {
                 'success' => true,
                 'details' => $result
             ];
-        }catch (Throwable $e) {   
+        } catch (\Throwable $e) {   
             $this->dashboard->sendResponse(false, "", "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
     }
@@ -183,7 +165,8 @@ class ContactController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rawInput = file_get_contents('php://input');
             $decoded = json_decode($rawInput, true);
-            
+            error_log(__FILE__.":".__LINE__."=> " . print_r($decoded, true));
+
             // Wenn $decoded ein Array ist, haben wir JSON empfangen
             if (is_array($decoded)) {
                 $data = $decoded;
@@ -197,6 +180,7 @@ class ContactController extends BaseController {
         $name  = trim($data['name'] ?? '');
         $email = trim($data['email'] ?? '');
         $type  = trim($data['type'] ?? 'company');
+        $paperless_id  = trim($data['paperless_id'] ?? '??');
 
         // 3. Validierung
         if (empty($name) || empty($email)) {
@@ -204,7 +188,7 @@ class ContactController extends BaseController {
         }
 
         // 4. Kontakt speichern
-        $contactId = $this->contactProcess->insertContact($name, $email, $type);
+        $contactId = $this->contactProcess->insertContact($name, $email, $type, $paperless_id);
 
         if ($contactId) {
             return [
@@ -244,7 +228,7 @@ class ContactController extends BaseController {
             
             $this->dashboard->sendResponse(true, "Kontakt wurde aktualisiert");
 
-        }catch (Throwable $e) {   
+        } catch (\Throwable $e) {   
             $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
     }
@@ -279,7 +263,7 @@ class ContactController extends BaseController {
                 'success' => true,
                 'details'   => 'Kontakt wurde aktualisiert.'
             ];
-        }catch (Throwable $e) {   
+        } catch (\Throwable $e) {   
             //throw new \Exception("Fehler in " . __FUNCTION__. ":" . __LINE__);
             $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());            
         }

@@ -9,15 +9,19 @@
            class="w-full p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
 
     <div class="space-y-4">
+        <svg id="network" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" style="width: 100%; border:1px solid #ccc;"></svg>    
+    </div>
+
+    <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <template x-for="contact in filteredContacts" :key="contact.ceid">
+            <template x-for="contact in filteredContacts" :key="contact.ceid || 'temp-' + contact.id">
                 <div x-data="{ isEditing: false }" 
                     class="bg-white p-5 rounded-2xl border transition-all duration-300 relative shadow-sm hover:shadow-md"
-                    :class="Number(contact.is_connected) === 1 ? 'border-emerald-400 bg-emerald-50/20' : 'border-slate-200'">
+                    :class="contact && Number(contact.is_connected) === 1 ? 'border-emerald-400 bg-emerald-50/20' : 'border-slate-200'">
 
                     <div class="absolute top-4 right-4 flex gap-1 z-10">
                         <button type="button" 
-                                x-show="contact.is_connected!==1"
+                                x-show="contact && contact.is_connected!==1"
                                 @click.stop="openMatchModal(contact)" 
                                 class="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors">
                             🔗
@@ -77,7 +81,22 @@
                     </div>
                 </div>
             </template>
+
+             <template x-if="Number(contact.is_connected) === 1">
+                <div class="mt-3 pt-2 border-t border-slate-100">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Verknüpft mit:</p>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        <template x-for="mail in contact.additional_emails.split(', ')">
+                            <span class="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded" 
+                                x-text="mail">
+                            </span>
+                        </template>
+                    </div>
+                </div>
+            </template>
         </div>
+
+       
 
     <!--Modal -->
     <div x-show="isMatchPanelOpen" 
@@ -106,18 +125,18 @@
                 <div class="mb-4">
                     <button @click="openSection = (openSection === 'match' ? null : 'match')" 
                             class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                        <span>🔗 Dokumente verknüpfen</span>
+                        <span>🔗 Korrespondenten verknüpfen</span>
                         <span x-text="openSection === 'match' ? '−' : '+'"></span>
                     </button>
                     
                     <div x-show="openSection === 'match'" x-collapse class="mt-2 space-y-2">
                         <input type="text" x-model="matchSearchQuery" @input.debounce="performMatchSearch()"
-                            placeholder="Suche Dokument oder Mail..." 
+                            placeholder="Suche Korrespondent...." 
                             class="w-full p-2 border border-slate-200 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800">
                         
                         <template x-for="result in matchResults" :key="result.id">
                             <div class="p-3 bg-slate-50 dark:bg-gray-750 rounded-lg flex justify-between items-center text-xs">
-                                <span x-text="result.name"></span>
+                                <span x-text="result.displayname"></span>
                                 <button @click="linkToMatch(activeContact.id, result.id)" class="text-emerald-600 font-bold">🔗 Link</button>
                             </div>
                         </template>

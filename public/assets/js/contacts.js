@@ -22,8 +22,6 @@ const contactsViewComponent = () => ({
                 this.loadContacts(false);
             }, 300);
         });
-
-        //await this.loadContacts(false);
     },
 
     // FEHLENDER GETTER: Alpine braucht diesen, um das x-for im Template zu füllen
@@ -152,12 +150,110 @@ const contactsViewComponent = () => ({
             // Suche ausführen und die bereits ausgewählten beibehalten
             // Wir mischen die Suchergebnisse mit den bereits gewählten
             const searchResults = data.details?.contacts || [];
+
+            //this.drawNetwork(searchResults);
             
             // Mergen: Bestehende + Neue, dabei Duplikate vermeiden
             const combined = [...this.activeContact.emails, ...searchResults];
             this.matchResults = Array.from(new Map(combined.map(item => [item.ceid, item])).values());
             
         } catch (err) {
+            console.error("Suche fehlgeschlagen:", err);
+        } finally {
+            this.loadingMatch = false;
+        }
+    },
+
+    async drawNetwork(searchResults) {
+        //const query = encodeURIComponent(this.searchQueryContacts);
+        try{
+            console.log("Daten empfangen:", searchResults)
+            const contacts = searchResults;
+            d3.select("#network").selectAll("*").remove();
+
+            if (!Array.isArray(contacts)) {
+                console.error("Kein Array übergeben", contacts);
+                return;
+            }
+            // 1. Daten laden (deine Liste aus dem Backend)
+            
+            
+            // 2. Daten für D3 transformieren
+            const nodes = [];
+            const links = [];
+
+            contacts.forEach(c => {
+                console.log(c);
+                // Kontakt als Node
+                nodes.push({ id: 'c' + c.id, label: c.displayname, type: 'contact' });
+                
+                // E-Mail als Node
+                nodes.push({ id: 'e' + c.ceid, label: c.email, type: 'email' });
+                
+                // Link zwischen Kontakt und E-Mail
+                links.push({ source: 'c' + c.id, target: 'e' + c.ceid });
+            });
+
+            // 3. Simulation einrichten
+            const width = 600, height = 400;
+            const svg = d3.select("#network")
+                .attr("width", width)
+                .attr("height", height);
+            
+            
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+                .force("charge", d3.forceManyBody().strength(-100))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            // 4. Linien zeichnen
+            const link = svg.selectAll("line")
+                .data(links).enter().append("line")
+                .attr("stroke", "#999");
+
+            // 5. Kreise zeichnen
+            const node = svg.selectAll("circle")
+                .data(nodes).enter().append("circle")
+                .attr("r", 8)
+                .style("fill", d => d.type === 'contact' ? '#2563eb' : '#10b981')
+                .style("cursor", "pointer") // Zeigt an, dass es klickbar ist
+                
+                // --- HIER DIE KLICK-LOGIK ---
+                .on("click", (event, d) => {
+                    // 'd' enthält deine Knoten-Daten. 
+                    // Da du dich in der drawNetwork-Methode innerhalb der Alpine-Komponente befindest:
+                    const alpineComponent = this; 
+                    
+                    // Da deine Nodes 'id's haben wie 'c14', müssen wir die ID extrahieren
+                    const rawId = d.id.replace('c', '').replace('e', '');
+                    
+                    // Hier rufst du deine Alpine-Methode auf
+                    // Wir suchen das passende Kontakt-Objekt aus deinen Daten
+                    const contact = this.contacts.find(c => String(c.id) === String(rawId));
+                    
+                    if (contact) {
+                        alpineComponent.openMatchModal(contact);
+                    } else {
+                        console.warn("Kontakt nicht gefunden für ID:", rawId);
+                    }
+                });
+            
+            // NEU: Zeichne Text-Labels
+            const label = svg.selectAll("text")
+                .data(nodes).enter().append("text")
+                .text(d => d.label)
+                .attr("font-size", "10px")
+                .attr("dx", 12) // Abstand zum Kreis nach rechts
+                .attr("dy", 4);  // Vertikale Ausrichtung mittig zum Kreis
+
+            // 6. Animation der Positionen
+            simulation.on("tick", () => {
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("cx", d => d.x).attr("cy", d => d.y);
+                label.attr("x", d => d.x).attr("y", d => d.y);
+            });
+         } catch (err) {
             console.error("Suche fehlgeschlagen:", err);
         } finally {
             this.loadingMatch = false;
@@ -175,6 +271,7 @@ const contactsViewComponent = () => ({
 
             if (data?.success && data.details?.contacts) {
                 const newContacts = data.details.contacts;
+                this.drawNetwork(data.details.contacts);
                 this.contacts = append ? [...this.contacts, ...newContacts] : newContacts;
                 
                 this.hasMore = newContacts.length === this.limit;

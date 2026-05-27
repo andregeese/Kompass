@@ -77,44 +77,27 @@ class SystemProcessor extends Database
      */
     public function repairTenantContacts(): void 
     {
-        // Header für JSON-Antwort setzen
         header('Content-Type: application/json');
-
         $tenantId = $_SESSION['tenant_id'] ?? null; 
 
-
         if (!$tenantId) {
-            echo json_encode([
-                'success' => false, 
-                'error' => 'Nicht autorisiert oder keine valide Session.'
-            ]);
+            echo json_encode(['success' => false, 'error' => 'Keine Session.']);
             exit;
         }
 
         try {
-            // 1. Verwaiste Mails des aktuellen Tenants holen
-            $sqlGetUnlinked = "
-                SELECT id, sender 
-                FROM mails 
-                WHERE contact_id IS NULL 
-                  AND tenant_id = :tenant_id
-            ";
-            
-            $unlinkedMails = $this->queryIt($sqlGetUnlinked, []);
+            // 1. Alle verwaisten Mails holen
+            $sqlGetUnlinked = "SELECT id, sender FROM mails WHERE contact_id IS NULL AND tenant_id = :tenant_id";
+            $unlinkedMails = $this->queryIt($sqlGetUnlinked, ['tenant_id' => $tenantId]);
 
             if (empty($unlinkedMails)) {
-                echo json_encode([
-                    'success' => true, 
-                    'repaired_count' => 0,
-                    'created_count' => 0,
-                    'message' => 'Alles bereits sauber zugeordnet.'
-                ]);
+                echo json_encode(['success' => true, 'message' => 'Alles bereits zugeordnet.']);
                 exit;
             }
 
-            // 2. Query für die Bestandssuche (Haupt- und Zusatz-E-Mails)
-            $sqlFindContact = "
-                SELECT ce.contact_id 
+            // 2. Suche exakt die ID aus contact_emails (nicht contacts!)
+            $sqlFindEmailEntry = "
+                SELECT ce.id 
                 FROM contact_emails ce
                 INNER JOIN contacts c ON ce.contact_id = c.id
                 WHERE ce.email = :email 
@@ -122,87 +105,59 @@ class SystemProcessor extends Database
                 LIMIT 1
             ";
             
-            // 3. Update-Query für die mails-Tabelle
-            $sqlUpdateMail = "
-                UPDATE mails 
-                SET contact_id = :contact_id 
-                WHERE id = :mail_id 
-                  AND tenant_id = :tenant_id
-            ";
+            // 3. Update auf contact_emails.id (FOREIGN KEY Ziel)
+            $sqlUpdateMail = "UPDATE mails SET contact_id = :ce_id WHERE id = :mail_id";
 
             $repairedCount = 0;
             $createdCount = 0;
-
             $contact = new ContactProcessor($this->dashboard);
 
-
-            // 4. Verwaiste Einträge verarbeiten
             foreach ($unlinkedMails as $mail) {
-                // Name und E-Mail sauber aus "Max Mustermann <max@firma.de>" extrahieren
+                // Regex: Extrahiere E-Mail aus "Name <mail@test.de>" oder nur "mail@test.de"
                 $senderRaw = $mail['sender'];
-                $name = $senderRaw;
-                $email = $senderRaw;
-
-                if (preg_match('/^([^<]*)\s*<([^>]+)>/', $senderRaw, $matches)) {
-                    $name = trim($matches[1]);
-                    $email = trim($matches[2]);
+                if (preg_match('/<([^>]+)>/', $senderRaw, $matches)) {
+                    $email = trim($matches[1]);
+                } else {
+                    $email = trim($senderRaw);
                 }
+                $email = strtolower($email);
 
-                // Falls vor dem `<...>` kein Name stand (z.B. nur `<info@firma.de>`), nutzen wir die Mail als Name
-                if (empty($name)) {
-                    $name = $email;
-                }
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
 
-                $email = strtolower(trim($email));
-
-                // Validierung der E-Mail-Adresse
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    continue; 
-                }
-
-                // Prüfen, ob die E-Mail im CRM bekannt ist
-                $contactResult = $this->queryIt($sqlFindContact, [
-                    'email' => $email
+                // Suche nach der ID in contact_emails
+                $result = $this->queryIt($sqlFindEmailEntry, [
+                    'email' => $email,
+                    'tenant_id' => $tenantId
                 ]);
 
-                $contactId = null;
+                $ceId = !empty($result) ? $result[0]['id'] : null;
 
-                if (!empty($contactResult)) {
-                    // Fall A: Kontakt existiert bereits im CRM
-                    $contactId = $contactResult[0]['contact_id'];
-                    $repairedCount++;
-                } else {
-                    // Fall B: Kontakt ist komplett neu -> Über vererbte insertContact() anlegen!
-                    // Erzeugt den Eintrag in 'contacts' und 'contact_emails'
-                    $newContactId = $contact->insertContact($name, $email, 'company');
+                // Fall: E-Mail noch nicht im System -> Neu anlegen
+                if (!$ceId) {
+                    $name = preg_replace('/<.*?>/', '', $senderRaw);
+                    $newContactId = $contact->insertContact(trim($name), $email, 'company');
                     
-                    if ($newContactId) {
-                        $contactId = $newContactId;
-                        $createdCount++;
-                    }
+                    // Wir müssen die neue ID aus contact_emails holen
+                    $newResult = $this->queryIt("SELECT id FROM contact_emails WHERE email = :email LIMIT 1", ['email' => $email]);
+                    $ceId = !empty($newResult) ? $newResult[0]['id'] : null;
+                    $createdCount++;
+                } else {
+                    $repairedCount++;
                 }
 
-                // Wenn wir eine gültige ID haben (egal ob alt oder neu generiert) -> Mail verknüpfen
-                if ($contactId) {
+                // Update mit der ID aus contact_emails
+                if ($ceId) {
                     $this->queryIt($sqlUpdateMail, [
-                        'contact_id' => (int)$contactId,
-                        'mail_id'    => (int)$mail['id']
+                        'ce_id' => (int)$ceId,
+                        'mail_id' => (int)$mail['id']
                     ]);
                 }
             }
 
-            // Statistik ans Frontend zurückgeben
-            echo json_encode([
-                'success' => true, 
-                'repaired_count' => $repairedCount,
-                'created_count' => $createdCount
-            ]);
+            echo json_encode(['success' => true, 'repaired' => $repairedCount, 'created' => $createdCount]);
 
         } catch (\Exception $e) {
-            echo json_encode([
-                'success' => false, 
-                'error' => 'Fehler während der automatischen CRM-Verarbeitung: ' . $e->getMessage()
-            ]);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
     }

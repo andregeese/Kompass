@@ -3,12 +3,11 @@ namespace App\Api;
 use App\PaperlessProcessor; // Importiere den Prozessor
 use Exception;
 
-/**
- * @property \App\PaperlessProcessor $paperlessProcess
- */
+
 class PaperlessController extends BaseController {
     
-    public function sync() {
+    public function sync() 
+    {
         $hash = $_GET['hash'] ?? $_POST['hash'] ?? null;
         $id   = $_GET['id'] ?? $_POST['id'] ?? null;
 
@@ -107,22 +106,30 @@ class PaperlessController extends BaseController {
      */
     public function getCorrespondents() 
     {
+        error_log("getCorrespondents aufgerufen mit query: " . print_r($_REQUEST, true));
         $hash        = trim($_REQUEST['hash'] ?? '');
         $forceQuery  = trim($_REQUEST['force_query'] ?? '');
         $searchQuery = '';
 
-        if (!empty($forceQuery)) {
+        if (!empty($forceQuery) && empty($hash)) {
+            error_log("Suche nach Korrespondenten mit force_query: $forceQuery");
             $searchQuery = $forceQuery;
         } elseif (!empty($hash)) {
-            $email = $this->dashboard->getSenderByHash($hash);
-            if ($email) {
+            error_log("Suche nach Korrespondenten für Hash: $hash");
+            $email = $this->paperlessProcess->getSenderByHash($hash);
+            error_log("Gefundene E-Mail für Hash $hash: $email");
+
+            if (is_array($email) && count($email) === 0) {
+                error_log("Keine E-Mail für Hash $hash gefunden.");
+            }else{ 
+                error_log("E-Mail für Hash $hash: " . print_r($email, true));
                 $searchQuery = substr(strrchr($email, "@"), 1) ?: $email;
             }
         }
         
         // Hole alle Kontakt, wenn Suche leer
         if (empty($searchQuery)) {
-
+            error_log("Keine Sucheingabe, hole alle Korrespondenten");
             $correspondents = $this->paperlessProcess->getAllCorrespondents($searchQuery);
             return [
                 'success' => true, 
@@ -140,32 +147,28 @@ class PaperlessController extends BaseController {
             ];
 
         }
-
-        //$this->cleanBuffer();
-        //\App\Dashboard::sendResponse(true, ['contacts' => $finalDetails]);
-        exit;
-    
     }
 
     /**
-     * Holt einfach nur die Mails
+     * Holt die Mails und Korrespondeten zu einer mail
      */
     public function getMailTree() 
     {
         try{
             $hash = $_GET['hash'] ?? '';
-        
+
+            //Finde die Mail zu dem hash
             $mailDetails = $this->mailProcess->getMailByHash($hash); 
 
             //Kontakte ermitteln
-            $contacts = $this->contactProcess->getContactById($hash, $mailDetails["contact_id"]); 
+            $contacts = $this->contactProcess->getEmailsAndContactsByHash($hash, $mailDetails["contact_id"]); 
 
             $paperlessCorres = $contacts[0]["paperless_id"];
 
             $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
 
-            $this->dashboard->sendResponse("true", $ret);
-        }catch (Throwable $e) {   
+            $this->dashboard->sendResponse(true, $ret);
+        } catch (\Throwable $e) {   
             $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
         

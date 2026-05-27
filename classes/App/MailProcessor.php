@@ -95,7 +95,7 @@ class MailProcessor extends Database
             $sql = "SELECT * FROM mails 
                     WHERE 
                       tenant_id=:tenant_id
-                      AND id_hash = UNHEX(:hash) 
+                      AND id_hash = UNHEX(:hash)
                       AND (status NOT IN('deleted') OR status IS NULL) 
                       LIMIT 1";
 
@@ -296,7 +296,11 @@ class MailProcessor extends Database
 
             // Lokalen DB Status aktualisieren
             
-            $res = $this->queryIt("UPDATE mails SET status = 'archived' WHERE id = :id", ['id' => $mail['id']]);
+            $res = $this->queryIt(
+                "UPDATE mails SET status = 'archived' 
+                    WHERE tenant_id=:tenant_id 
+                    AND id_hash = :hash", 
+                ['hash' => hash('sha256', $messageId . $salt, true)]);
 
             return [
                 'success' => true,
@@ -354,7 +358,8 @@ class MailProcessor extends Database
 
             $highestUid = $lastUid;
 
-            foreach ($uidsToProcess as $uid) {
+            foreach ($uidsToProcess as $uid) 
+            {
                 $overview = imap_fetch_overview($this->imapStream, (string)$uid, FT_UID);
                 if (empty($overview)) continue;
 
@@ -367,9 +372,15 @@ class MailProcessor extends Database
                 // E-Mail-Datum konvertieren
                 $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
 
+                $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
+                $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
+
+                // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
+                $idHash = hash('sha256', $messageId . $salt, true);
+
                 // 1. Mail anlegen und ID zurückholen
-                $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
-                                    VALUES (:uid, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id)
+                $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
+                                    VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id)
                                     ON DUPLICATE KEY UPDATE
                                     date_received = VALUES(date_received),
                                     sender = VALUES(sender),
@@ -377,31 +388,18 @@ class MailProcessor extends Database
                                     status = 'active'";
 
                 $mailId = $this->queryIt($sqlInsert, [
+                    'id_hash'       => $idHash,
                     'uid'           => $ov->uid,
                     'message_id'    => $ov->message_id ?? '',
-                    'subject_hash'  => $this->decodeMimeHeader($ov->subject), // Falls du das so berechnest
+                    'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)), // Falls du das so berechnest
                     'sender'        => $this->decodeMimeHeader($ov->from),
                     'date_received' => $formattedDate,
                     'folder'        => $folder // Stelle sicher, dass $folder hier verfügbar ist
                 ], true, true); 
 
-                // 2. Hash berechnen und ID-Spalte aktualisieren
-                if ($mailId) {
-                    $salt = defined('HASH_SALT') ? HASH_SALT : '';
-                    $updateSql = "UPDATE mails SET id_hash = UNHEX(SHA2(CONCAT(:id, :salt), 256)) WHERE id = :id";
-                    
-                    $this->queryIt($updateSql, [
-                        'id'   => $mailId,
-                        'salt' => $salt
-                    ]);
-                }
-
                 // PROAKTIVE Kontaktverknüpfung / anlage:
                 if ($mailId) {
                     $this->linkMailToContact((int)$mailId, $ov->from);
-                    
-                    // Dann erst den Hash updaten
-                    $this->queryIt($updateSql, ['id' => $mailId, 'salt' => $salt]);
                 }
                 
                 $added++;
@@ -514,7 +512,7 @@ class MailProcessor extends Database
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
-        $sql = "SELECT m.uid, m.subject_hash as hash, m.sender, m.date_received, m.paperless_id, 
+        $sql = "SELECT m.uid, m.id_hash as hash, m.subject_hash as sHash, m.sender, m.date_received, m.paperless_id, 
                         c.email as contact_name
                     FROM mails m
                     LEFT JOIN contact_emails c ON m.contact_id = c.id
@@ -538,8 +536,15 @@ class MailProcessor extends Database
             $filtered = [];
             $search = strtolower($search);
 
-            foreach ($results as $row) {
-                $subject = strtolower($this->dashboard->decrypt($row['hash']));
+            error_log("Gefundene Mails vor Filterung: " . count($results));
+            error_log(print_r($results, true));
+
+            foreach ($results as $row) 
+            {
+                if (isset($row['hash'])) {
+                    $row['hash'] = bin2hex($row['hash']);
+                }
+                $subject = strtolower($this->dashboard->decrypt($row['sHash']));
                 $sender = strtolower($row['sender']);
                 $contactName = strtolower($row['contact_name'] ?? '');
 
@@ -716,11 +721,9 @@ class MailProcessor extends Database
             // Lokalen DB Status aktualisieren
             
             //$res = $this->queryIt("DELETE FROM mails WHERE tenant_id = :tenant_id AND id = :id", 
-            $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = UNHEX(:hash)", 
+            $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = :hash", 
             [
-                'id' => $mail['id'],
-                'salt' => defined('HASH_SALT') ? HASH_SALT : '', 
-                'hash' => $hash
+                'hash' => hash('sha256', $messageId . $salt, true)
             ] );
 
             return [
@@ -790,17 +793,19 @@ class MailProcessor extends Database
         ];
         
         $sql = "SELECT 
-                    id, uid, sender, subject_hash, paperless_id, imap_folder,
+                    m.id, uid, sender, subject_hash, m.paperless_id, imap_folder,
                     date_received as date, id_hash as hash,
-                    is_read, is_flagged, is_answered
-                FROM mails 
-                WHERE tenant_id = :tenant_id
+                    is_read, is_flagged, is_answered, c.display_name as displayname, cm.email_hash as emailhash
+                FROM mails as m
+                LEFT JOIN contact_emails as cm ON cm.id = m.contact_id
+                LEFT JOIN contacts as c ON c.id = cm.contact_id
+                WHERE m.tenant_id = :tenant_id
                 AND imap_folder = :folder
                 AND (status NOT IN('deleted') OR status IS NULL)";
 
         // Fall A: Zugriff auf eine spezifische Mail (Detailansicht)
         if ($targetHash !== null) {
-            $sql .= " AND id_hash = UNHEX(:hash)";
+            $sql .= " AND id_hash = :hash";
             $params['hash'] = $targetHash;
         }
         // Fall B: Suche in einer Liste (Übersicht)
@@ -876,8 +881,10 @@ class MailProcessor extends Database
                 'date'         => date('d.m.Y H:i', strtotime($row['date'])),
                 'paperless_id' => $row['paperless_id'], 
                 'unread'       => $row['is_read'],
-                'flagged'       => $row['is_flagged'],
-                'answered'       => $row['is_answered'],
+                'flagged'      => $row['is_flagged'],
+                'answered'     => $row['is_answered'],
+                'displayname'  => $row['displayname'],
+                'emailhash'    => $row['emailhash']
             ];
 
         } catch (\Exception $e) {
@@ -893,6 +900,7 @@ class MailProcessor extends Database
     
 
     /**
+     * OBSOLET
      * Holt Mails, die für Paperless bereit sind, basierend auf einem optionalen Hash oder dem Alter der Mails. Wenn ein Hash übergeben wird, wird gezielt nach dieser Mail gesucht. Ansonsten werden die ältesten unverarbeiteten Mails zurückgegeben, basierend auf dem Limit. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind und noch keinen Paperless-Eintrag haben. Der Betreff wird entschlüsselt und bereinigt, um sicherzustellen, dass er korrekt im Dashboard angezeigt wird.
       * @param string|null $hash Optionaler Hash der Mail, die gezielt gesucht werden soll. Wenn null, werden die ältesten Mails zurückgegeben.
       * @param int $limit Anzahl der Mails, die zurückgegeben werden sollen (nur relevant, wenn kein Hash übergeben wird)
@@ -949,8 +957,9 @@ class MailProcessor extends Database
                 if ($trefferAnzahl === 1) {
                     // Eindeutiger Treffer -> Sync und DB-Update
                     try {
-                        $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE id = :id";
-                        $this->queryIt($updateSql, ['id' => $row['id'], 'paperless_id' => $a[0]['id']]);
+                        $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE tenant_id=:tenant_id AND 
+                        id_hash = :hash";
+                        $this->queryIt($updateSql, ['hash' => hash('sha256', $messageId . $salt, true), 'paperless_id' => $a[0]['id']]);
 
                         $processedMails[] = [
                             'id'                 => $row['id'],
@@ -1075,8 +1084,8 @@ class MailProcessor extends Database
             $paperlessId = $a[0]['id'];
             $paperlessTitle = $a[0]['title'];
 
-            $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE tenant_id = :tenant_id AND id = :id";
-            $this->queryIt($updateSql, ['id' => $row['id'], 'paperless_id' => $paperlessId]);
+            $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE tenant_id = :tenant_id AND id_hash = :hash";
+            $this->queryIt($updateSql, ['hash' => $hash, 'paperless_id' => $paperlessId]);
 
             return [
                 'success'            => true,
@@ -1152,16 +1161,24 @@ class MailProcessor extends Database
         }
         $email = strtolower(trim($email));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return;
+        error_log($email . " : name". $name);
 
         // 2. Kontakt suchen
         $sqlFindContact = "SELECT ce.contact_id 
                             FROM contact_emails ce
                             INNER JOIN contacts c ON ce.contact_id = c.id
-                            WHERE ce.email = :email 
-                            AND c.tenant_id = :tenant_id 
-                            LIMIT 1";
+                            WHERE c.tenant_id = :tenant_id
+                              AND ce.email = :email 
+                              AND c.tenant_id = :tenant_id;";
         
         $contactResult = $this->queryIt($sqlFindContact, ['email' => $email]);
+        if (count($contactResult)>1)
+        {
+            error_log("mehr als eine E-Mail gefunden: " . $email);
+            exit;
+        }
+        
+        error_log(print_r($contactResult));
         $contactId = !empty($contactResult) ? $contactResult[0]['contact_id'] : null;
 
         // 3. Wenn nicht gefunden -> Neu anlegen
@@ -1172,9 +1189,9 @@ class MailProcessor extends Database
 
         // 4. Verknüpfen, falls wir eine ID haben
         if ($contactId) {
-            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE id = :mail_id", [
+            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE tenant_id=: tenant_id AND id = :mailId", [
                 'contact_id' => (int)$contactId,
-                'mail_id'    => $mailId
+                'mailId'    => $mailId
             ]);
         }
     }

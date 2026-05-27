@@ -10,6 +10,7 @@ const rightSidebarComponent = () => ({
     manualSearchQuery: '',
     paperlessLoading: false,
     paperlessMatches: [],
+    paperlessDMSMatches: [],
     paperlessTree: {},
 
     //CRM
@@ -56,7 +57,8 @@ const rightSidebarComponent = () => ({
                 this.formData.email = e.detail.email || '';
                 if (e.detail.hash) {
                     this.checkCRMStatus(e.detail.hash);
-                    this.getTimelineofContact(); //NICHT LÖSCHEN                    
+                    this.getTimelineofContact(); //NICHT LÖSCHEN  
+                    this.searchDMS(); // Dokumentensuche                  
                 }
             }
         });
@@ -115,7 +117,7 @@ const rightSidebarComponent = () => ({
         this.formData.type = 'company';
 
         // Starte DMS & CRM Abfragen im Hintergrund
-        this.searchDMS();
+        //this.searchDMS();
         //this.loadPaperlessTree(mail);
         this.getTimelineofContact();
         if (mail.hash) {
@@ -185,25 +187,31 @@ const rightSidebarComponent = () => ({
 
     // 🚀 DMS SUCHE (ACTION: paperless_search -> details.documents)
     async searchDMS() {
-        if (!this.manualSearchQuery.trim()) {
-            this.paperlessMatches = [];
+        console.log("SEARCH DMS:" + this.manualSearchQuery);
+
+        if (!this.manualSearchQuery.trim() || this.manualSearchQuery=="" ) {
+            console.log("Reset manualSearch");
+            this.paperlessDMSMatches = [];
             return;
         }
-        this.paperlessLoading = true;
+
+        //this.paperlessLoading = true;
         try {
             const url = `api.php?action=paperless_search&query=${encodeURIComponent(this.manualSearchQuery)}`;
             const data = await safeFetch(url);
             
             if (data?.success && data.details?.documents) {
-                this.paperlessMatches = data.details.documents;
+                console.log("SEARCH DMS RESPONSE");
+                console.log(data);
+                this.paperlessDMSMatches = data.details.documents;
             } else {
-                this.paperlessMatches = [];
+                this.paperlessDMSMatches = [];
             }
         } catch (err) {
             console.error("DMS-Suche fehlgeschlagen:", err);
-            this.paperlessMatches = [];
+            this.paperlessDMSMatches = [];
         } finally {
-            this.paperlessLoading = false;
+            //this.paperlessLoading = false;
         }
     },
 
@@ -306,6 +314,7 @@ const rightSidebarComponent = () => ({
             this.haStatus = 'Offline (Gestoppt)';
         }
     },
+
     async searchPaperlessContacts(searchTerm) {
         // Wenn das Feld leer ist, müssen wir nicht suchen
         if (!searchTerm || searchTerm.trim().length < 2) {
@@ -354,22 +363,25 @@ const rightSidebarComponent = () => ({
     */
     async checkCRMStatus(hash) 
     {
+        console.log("checkCRMStatus");
+
         this.crmLoading = true;
         this.dmsLoading = true;
 
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
             const data = await safeFetch(`api.php?action=search_contact&hash=${hash}`);
-            
-            if (data?.success && data?.details?.contact && data.details.contact.contact_id) {
-                const c = data.details.contact;
+            console.log(data);
+            if (data?.success && data?.details?.contact) {
+                const c = data.details.contact[0];
+                console.log(c);
 
-                this.contactState = {
+                this.$data.contactState = {
                     success: true,
                     contact: {
-                        id: c.contact.contact_id,
-                        display_name: c.contact.display_name,
-                        type: c.contact.type,
+                        id: c.contact_id,
+                        display_name: c.display_name,
+                        type: c.type,
                         // Macht aus dem kommagetrennten String ein echtes JS-Array für spätere Zwecke
                         emails: c.additional_emails ? c.additional_emails.split(', ') : []
                     }
@@ -388,7 +400,7 @@ const rightSidebarComponent = () => ({
              
             }else{
                 // ❌ Nichts im CRM gefunden -> Fallback auf Mail-Daten & Formular AUFKLAPPEN
-                this.contactState = { success: false, contact: null };
+                this.$data.contactState = { success: false, contact: null };
                 
                 const mail = this.$data?.currentMail;
                 this.formData.name = mail ? mail.sender_name : '';
@@ -399,40 +411,12 @@ const rightSidebarComponent = () => ({
                 // 📖 Nichts gefunden? Dann Formular automatisch AUFKLAPPEN
                 this.showManualForm = true;
             }
-
-
-            // 2. Default-Suche füttern: Wenn das manuelle Feld leer ist, nimm die Mailadresse aus dem CRM-State
-            if (!this.manualSearchQuery) {
-                this.manualSearchQuery = this.formData.email || this.contactState.email;
-            }
-
-            // 3. Erstmalige DMS-Suche ausführen
-            await this.fetchDMSCorrespondents(hash, this.manualSearchQuery);
-            
         } catch (err) {
             console.error("CRM-Abfrage fehlgeschlagen:", err);
         } finally {
             this.crmLoading = false;
             this.dmsLoading = false;
-        }
-    },
-
-    // Hilfsfunktion für den eigentlichen API-Fetch an Paperless
-    async fetchDMSCorrespondents(hash, queryTerm) {
-        try {
-            // Wir encoden den QueryTerm, falls der User Leerzeichen oder Sonderzeichen eingibt
-            const data = await safeFetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
-            //const data = await response.json();
-            
-            // HIER DIE NEUE PRÜFUNG: Auf "status === 'success'" checken!
-            if (data.status === 'success' && data.details && data.details.contacts) {
-                // Die Kontakte direkt in das reaktive Alpine-Array pushen
-                this.allCorrespondents = [...data.details.contacts];
-            } else {
-                this.allCorrespondents = [];
-            }
-        } catch (e) {
-            console.error("Fehler beim Holen der DMS-Korrespondenten:", e);
+            console.log(this.data?.contactState);
         }
     },
 
@@ -442,22 +426,6 @@ const rightSidebarComponent = () => ({
         if (this.manualSearchQuery.trim()) {
             this.searchDMS(); 
         }
-
-        // 2. Suche nach DMS-Korrespondenten (versucht einen Hash zu finden)
-        const urlParams = new URLSearchParams(window.location.search);
-        const hash = urlParams.get('hash') || this.$data.currentMail?.hash || '';
-        
-        // Wenn kein Hash da ist, leeren wir die Korrespondenten-Liste oder überspringen sie sauber
-        if (!hash) {
-            console.log("Autarker Modus: Korrespondenten-Suche übersprungen (kein Mail-Hash). Dokumenten-Suche lief.");
-            return; 
-        }
-        
-        if (!this.manualSearchQuery.trim()) return;
-        
-        this.dmsLoading = true;
-        await this.fetchDMSCorrespondents(hash, this.manualSearchQuery);
-        this.dmsLoading = false;
     },
 
     // Erstellt den neuen CRM-Kontakt über die Sidebar
@@ -476,7 +444,7 @@ const rightSidebarComponent = () => ({
             if (res.success) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const hash = urlParams.get('hash') || this.$data.currentMail.hash || '';
-                if (hash) await this.checkCRMStatus(hash);
+                if (hash) await this.checkCRMStatus(this.$data.currentMail.hash);
             } else {
                 alert(json.error);
             }

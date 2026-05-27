@@ -4,6 +4,9 @@ namespace App;
 use Exception;
 use Throwable;
 
+/**
+ * @property \App\PaperlessProcessor $paperlessProcess
+ */
 class PaperlessProcessor extends Database
 {
     use ServiceTrait;
@@ -49,7 +52,7 @@ class PaperlessProcessor extends Database
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        //error_log("PaperlessURL:" . $url);
+        error_log("PaperlessURL:" . $url);
 
         // Globale Fehlerprüfung für alle Endpunkte
         if ($httpCode === 0) {
@@ -70,6 +73,34 @@ class PaperlessProcessor extends Database
         return $result;
     }
 
+    public function getAllCorrespondentsBy()
+    {
+        $params = [
+            'page_size' => 5000 // Holt bis zu 5000 Korrespondenten auf einmal
+        ];
+
+        $url = '/api/correspondents/?' . http_build_query($params);
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+
+        //error_log(print_r($paperlessData, true));
+
+        $correspondents = [];
+
+        // Paperless liefert die Daten bei Pagination im Unterknoten 'results'
+        if (isset($paperlessData['results'])) {
+            foreach ($paperlessData['results'] as $item) {
+                //error_log(print_r($item, true));
+                $correspondents[] = [
+                    'id'   => $item['id'],
+                    'name' => $item['name']
+                ];
+            }
+        }
+
+        $this->dashboard->sendResponse(true, $correspondents);
+        //return $correspondents;
+    }
 
     public function getAllCorrespondents()
     {
@@ -81,14 +112,14 @@ class PaperlessProcessor extends Database
         $jsonResponse = $this->request($url);
         $paperlessData = json_decode($jsonResponse, true);
 
-        error_log(print_r($paperlessData, true));
+        //error_log(print_r($paperlessData, true));
 
         $correspondents = [];
 
         // Paperless liefert die Daten bei Pagination im Unterknoten 'results'
         if (isset($paperlessData['results'])) {
             foreach ($paperlessData['results'] as $item) {
-                error_log(print_r($item, true));
+                //error_log(print_r($item, true));
                 $correspondents[] = [
                     'id'   => $item['id'],
                     'name' => $item['name']
@@ -147,6 +178,39 @@ class PaperlessProcessor extends Database
     }
 
     /**
+     * Holt den bereinigten Absender (reine E-Mail-Adresse) einer E-Mail anhand des Mail-Hashes.
+     * * @param string $hash Der SHA-256 Hash der Mail-ID + Salt
+     * @return string|null Die isolierte E-Mail-Adresse (z.B. 'hans@mueller.de') oder null
+     */
+    public function getSenderByHash(string $hash): ?string 
+    {
+        //$sql = "SELECT sender FROM mails WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
+        $sql = "SELECT sender FROM mails as m
+                LEFT JOIN contact_emails as ce ON ce.contact_id=m.contact_id
+                WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
+        
+        $rows = $this->queryIt($sql, [
+            'salt' => $this->dashboard->getHashSalt(),
+            'hash' => $hash
+        ]);
+        
+        if (empty($rows) || !isset($rows[0]['sender'])) {
+            return null;
+        }
+
+        error_log("Rohdaten aus DB für Hash $hash: " . print_r($rows[0]['sender'], true));
+        $rawSender = $rows[0]['sender'];
+
+        // Regex: Filtert die E-Mail-Adresse heraus, falls Name + <mail@domain.de> drin steht
+        if (preg_match('/<([^>]+)>/', $rawSender, $matches)) {
+            return strtolower(trim($matches[1]));
+        }
+
+        // Falls nur die reine E-Mail-Adresse im Feld stand
+        return strtolower(trim($rawSender));
+    }
+
+    /**
      * Durchsucht die Paperless-Instanz nach einem Suchbegriff, mit optionaler Datumseins- oder -eingrenzung. Dokumente, deren Erstelldatum exakt mit dem Mail-Datum übereinstimmt, erhalten eine höhere Gewichtung für die Sortierung und werden im Frontend hervorgehoben. Das ermöglicht es, relevante Dokumente schneller zu erkennen, selbst wenn die Volltextsuche nicht perfekt ist.
       * @param string $query Der Suchbegriff für Titel und Inhalt
       * @param string $mailDate Optionales Datum der Mail (z.B. "2024-06-15"), um die Suche auf Dokumente mit diesem Erstelldatum zu fokussieren
@@ -154,9 +218,9 @@ class PaperlessProcessor extends Database
      */
     public function search(string $query, string $mailDate = ''): array
     {
-        // 'query' triggert die native OpenSearch-Volltextsuche inkl. __search_hit__ Score!
         $params = [
             'query'   => $query,
+            'sort'             => '-created',
             'page'    => '1',
             'page_size' => '30' // Begrenzung direkt an der API schont den RAM
         ];
@@ -168,7 +232,14 @@ class PaperlessProcessor extends Database
             $params['created__date__lte'] = date('Y-m-d', strtotime($mailDate . ' +1 days'));
         }
         
-        $url = '/api/documents/?' . http_build_query($params);
+        $url = '/api/documents/' . '?' . http_build_query($params);
+
+        // Wenn das immer noch 400er wirft, liegt es am Slash. 
+        // Probiere in diesem Fall:
+        //$url = '/api/documents/' . '?title__icontains=' . urlencode($query) . '&sort=created&page=1&page_size=30';
+
+
+        //$url = '/api/documents/?' . http_build_query($params);
         $jsonResponse = $this->request($url);
         $paperlessData = json_decode($jsonResponse, true);
         
@@ -233,6 +304,48 @@ class PaperlessProcessor extends Database
             });
         }
         
+        return $foundDocuments;
+    }
+
+    public function getDocumentById($docs)
+    {
+        // Fall A: Mehrere IDs (Batch-Abfrage über Filter)
+        if (is_array($docs) && !empty($docs)) {
+            $params = [
+                'id__in'    => implode(',', $docs),
+                'page'      => '1',
+                'page_size' => count($docs)
+            ];
+            
+            $url = '/api/documents/?' . http_build_query($params);
+        } 
+        // Fall B: Einzelne ID (Direkt-Abfrage)
+        else {
+            $url = '/api/documents/?id=' . $docs;
+        } 
+
+        $foundDocuments=[];
+        $jsonResponse = $this->request($url); //TBD
+        $paperlessData = json_decode($jsonResponse, true);
+
+        // Fallback auf die nackte 'all' Liste, falls die Volltextsuche 0 Ergebnisse lieferte
+        if (!empty($paperlessData['results'])) {
+            foreach ($paperlessData['results'] as $_res) { 
+                error_log("DOC:" . print_r($_res,true));// Auch hier direkt slicen!
+                $foundDocuments[] = [
+                    'id'            => (int)$_res['id'] ?? null,
+                    'title'         => 'Paperless Dokument #' . $_res['title'] ?? '',
+                    'created'       => $_res['created'] ?? '', 
+                    'link'          => $this->apiUrl . '/documents/' . $_res['docId'],
+                    'is_date_match' => false,
+                    'score'         => null
+                ];
+            }
+        }else{
+            error_log("typeof paperlessData: " . print_r($paperlessData));
+        }
+
+        error_log("## EOF" . __FUNCTION__. "##");
         return $foundDocuments;
     }
 
@@ -352,7 +465,7 @@ class PaperlessProcessor extends Database
 
 
     /**
-     * Holt ein einzelnes Dokument anhand seiner ID, um den Korrespondenten-ID zu erfahren
+     * Holt ein einzelnes Dokument anhand seiner ID aus Paperless, um den Korrespondenten-ID zu erfahren
      */
     public function getCorrespondentIdFromDocument($documentId)
     {
@@ -371,7 +484,7 @@ class PaperlessProcessor extends Database
     }
 
     /**
-     * Holt alle Dokumente eines Korrespondenten anhand seiner numerischen ID
+     * Holt alle Dokumente eines Korrespondenten aus Paperless anhand seiner numerischen ID
      */
     public function fetchDocumentsByCorrespondentId($correspondentId=null)
     {            
@@ -447,44 +560,29 @@ class PaperlessProcessor extends Database
     }
 
     /**
-     * Verknüpft eine Mail mit einer Paperless-ID und setzt den Status auf archived.
+     * Verknüpft eine Mail mit einem Paperless-Dokument und setzt den Status auf archived.
      * @param string $hash Der SHA-256 Hash der Mail-ID + Salt
      * @param int $paperlessId Die ID des zugeordneten Paperless-Dok
      * @return void
      */
-    public function linkMailToPaperless(string $hash, int $paperlessId): void {
+    public function linkMailToPaperless(string $hash, int $paperlessId): void 
+    {
         $sql = "UPDATE mails 
                 SET status = 'archived', paperless_id = :p_id 
                 WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash)";
                 
         $this->queryIt($sql, [
             'p_id' => $paperlessId,
-            'salt' => defined('HASH_SALT') ? HASH_SALT : '',
+            'salt' => $this->dashboard->getHashSalt(),
             'hash' => $hash
         ]);
     }
-
 
 
     /**
-     * Holt exakt eine Paperless-ID anhand des Mail-Hashes.
-     * Gibt die ID zurück oder null, wenn kein Treffer gefunden wurde.
-     * @param string $hash Der SHA-256 Hash der Mail-ID + Salt
-     * @return int|null Die zugehörige Paperless-ID oder null, wenn nicht gefunden
+     * Verknüpft Korrespondent mit Kontakt
      */
-    public function getPaperlessIdByHash(string $hash): ?int {
-        $sql = "SELECT paperless_id FROM mails WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash)";
-        
-        $rows = $this->queryIt($sql, [
-            'salt' => defined('HASH_SALT') ? HASH_SALT : '',
-            'hash' => $hash
-        ]);
-        
-        return (!empty($rows) && isset($rows[0]['paperless_id'])) ? intval($rows[0]['paperless_id']) : null;
-    }
-
-
-    public function linkContact($contact_id, $paperless_id)
+    public function linkContact(int $contact_id, int $paperless_id):array
     {
         $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
         
@@ -496,17 +594,9 @@ class PaperlessProcessor extends Database
         return $rows;
     }
 
-    /*public function getDocumentsByCorrespondent($contact_id) {
-        $url = "/api/documents/?correspondent__id=" . intval($correspondentId);
-        error_log($url);
-        $RAWResponse = $this->request($url);
-        $result = json_decode($RAWResponse, true);
-
-        error_log(print_r($result, true));
-
-        return $result;
-    }*/
-
+    /**
+     * erstellt den MailTree von Paperless und Mails
+     */
     public function getMailTree($hash, $correspondentid= null)
     {
 
