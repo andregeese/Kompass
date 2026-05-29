@@ -5,26 +5,31 @@ class Crypto {
     private static $cipher = 'aes-256-gcm';
 
     public static function encrypt($pureText, $key) {
-        $iv_length = openssl_cipher_iv_length(self::$cipher);
-        $iv = openssl_random_pseudo_bytes($iv_length);
-        $ciphertext = openssl_encrypt($pureText, self::$cipher, $key, $options=0, $iv, $tag);
+        $keyHash = hash('sha256', $key, true);
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length(self::$cipher));
         
-        // Verpacke Ciphertext, IV und den GCM-Tag als JSON oder Base64
+        $ciphertext = openssl_encrypt($pureText, self::$cipher, $keyHash, OPENSSL_RAW_DATA, $iv, $tag);
+        
         return base64_encode(json_encode([
-            'c' => $ciphertext,
+            'c' => base64_encode($ciphertext),
             'i' => base64_encode($iv),
             't' => base64_encode($tag)
         ]));
     }
 
     public static function decrypt($encryptedData, $key) {
-        $data = json_decode(base64_decode($encryptedData), true);
-        if (!$data) return false;
+        $keyHash = hash('sha256', $key, true);
+        $decoded = json_decode(base64_decode($encryptedData), true);
         
-        $iv = base64_decode($data['i']);
-        $tag = base64_decode($data['t']);
+        if (!$decoded || !isset($decoded['c'], $decoded['i'], $decoded['t'])) return false;
         
-        return openssl_decrypt($data['c'], self::$cipher, $key, $options=0, $iv, $tag);
+        return openssl_decrypt(
+            base64_decode($decoded['c']), 
+            self::$cipher, 
+            $keyHash, 
+            OPENSSL_RAW_DATA, 
+            base64_decode($decoded['i']), 
+            base64_decode($decoded['t'])
+        );
     }
-
 }

@@ -6,6 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Api\\AppointmentsController' => $baseDir . '/classes/App/Api/AppointmentsController.php',
     'App\\Api\\AuthController' => $baseDir . '/classes/App/Api/AuthController.php',
     'App\\Api\\BaseController' => $baseDir . '/classes/App/Api/BaseController.php',
     'App\\Api\\ContactController' => $baseDir . '/classes/App/Api/ContactController.php',
@@ -13,6 +14,7 @@ return array(
     'App\\Api\\PaperlessController' => $baseDir . '/classes/App/Api/PaperlessController.php',
     'App\\Api\\SettingsController' => $baseDir . '/classes/App/Api/SettingsController.php',
     'App\\Api\\SystemController' => $baseDir . '/classes/App/Api/SystemController.php',
+    'App\\AppointmentsProcessor' => $baseDir . '/classes/App/AppointmentsProcessor.php',
     'App\\ContactProcessor' => $baseDir . '/classes/App/ContactProcessor.php',
     'App\\Crypto' => $baseDir . '/classes/App/Crypto.php',
     'App\\Dashboard' => $baseDir . '/classes/App/Dashboard.php',
@@ -24,7 +26,6 @@ return array(
     'App\\ServiceTrait' => $baseDir . '/classes/App/ServiceTrait.php',
     'App\\SettingProcessor' => $baseDir . '/classes/App/SettingProcessor.php',
     'App\\SystemProcessor' => $baseDir . '/classes/App/SystemProcessor.php',
-    'App\\Tenant' => $baseDir . '/classes/App/Tenant.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'Dompdf\\Adapter\\CPDF' => $vendorDir . '/dompdf/dompdf/src/Adapter/CPDF.php',
     'Dompdf\\Adapter\\GD' => $vendorDir . '/dompdf/dompdf/src/Adapter/GD.php',

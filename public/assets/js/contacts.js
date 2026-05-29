@@ -397,7 +397,13 @@ const contactsViewComponent = () => ({
     }
 });
 
-// Registrierung
-document.addEventListener('alpine:init', () => {
-    Alpine.data('contactsView', contactsViewComponent);
-});
+// Sicherheits-Registrierung am Ende von mail.js
+if (window.Alpine) {
+    // Falls Alpine bereits voll geladen ist
+    window.Alpine.data('contactsView', contactsViewComponent);
+} else {
+    // Falls Alpine noch auf den Start wartet
+    document.addEventListener('alpine:init', () => {
+        window.Alpine.data('mailViecontactsVieww', contactsViewComponent);
+    });
+}

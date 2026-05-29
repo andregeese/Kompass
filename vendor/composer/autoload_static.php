@@ -154,6 +154,7 @@ class ComposerStaticInit8908dcda0aea048a3f54efca937939ef
     );
 
     public static $classMap = array (
+        'App\\Api\\AppointmentsController' => __DIR__ . '/../..' . '/classes/App/Api/AppointmentsController.php',
         'App\\Api\\AuthController' => __DIR__ . '/../..' . '/classes/App/Api/AuthController.php',
         'App\\Api\\BaseController' => __DIR__ . '/../..' . '/classes/App/Api/BaseController.php',
         'App\\Api\\ContactController' => __DIR__ . '/../..' . '/classes/App/Api/ContactController.php',
@@ -161,6 +162,7 @@ class ComposerStaticInit8908dcda0aea048a3f54efca937939ef
         'App\\Api\\PaperlessController' => __DIR__ . '/../..' . '/classes/App/Api/PaperlessController.php',
         'App\\Api\\SettingsController' => __DIR__ . '/../..' . '/classes/App/Api/SettingsController.php',
         'App\\Api\\SystemController' => __DIR__ . '/../..' . '/classes/App/Api/SystemController.php',
+        'App\\AppointmentsProcessor' => __DIR__ . '/../..' . '/classes/App/AppointmentsProcessor.php',
         'App\\ContactProcessor' => __DIR__ . '/../..' . '/classes/App/ContactProcessor.php',
         'App\\Crypto' => __DIR__ . '/../..' . '/classes/App/Crypto.php',
         'App\\Dashboard' => __DIR__ . '/../..' . '/classes/App/Dashboard.php',
@@ -172,7 +174,6 @@ class ComposerStaticInit8908dcda0aea048a3f54efca937939ef
         'App\\ServiceTrait' => __DIR__ . '/../..' . '/classes/App/ServiceTrait.php',
         'App\\SettingProcessor' => __DIR__ . '/../..' . '/classes/App/SettingProcessor.php',
         'App\\SystemProcessor' => __DIR__ . '/../..' . '/classes/App/SystemProcessor.php',
-        'App\\Tenant' => __DIR__ . '/../..' . '/classes/App/Tenant.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Dompdf\\Adapter\\CPDF' => __DIR__ . '/..' . '/dompdf/dompdf/src/Adapter/CPDF.php',
         'Dompdf\\Adapter\\GD' => __DIR__ . '/..' . '/dompdf/dompdf/src/Adapter/GD.php',

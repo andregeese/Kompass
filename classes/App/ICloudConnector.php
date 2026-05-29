@@ -3,20 +3,23 @@ namespace App;
 
 use Sabre\DAV\Client;
 
-class ICloudConnector {
+class ICloudConnector extends Database{
     private $tenantId;
     private $settings;
 
-    public function __construct($tenantId) {
+    use ServiceTrait;
+    protected $dashboard;
+
+    public function __construct($tenantId, $dashboard) {
         $this->tenantId = $tenantId;
-        $settingManager = new \App\Setting();
-        $this->settings = $settingManager->getTenantSettings($tenantId);
+        parent::__construct($dashboard);
+        $this->dashboard = $dashboard;
     }
 
     public function getAppointments() {
         // Daten aus der DB holen
-        $user = $this->settings['icloud_user'] ?? null;
-        $pass = $this->settings['icloud_password'] ?? null;
+        $user = $this->systemProcess->getRequiredEnv(['IMAP_USER'], $tenantId) ?? null;
+        $pass = $this->systemProcess->getRequiredEnv(['IMAP_PASSWORD'], $tenantId) ?? null;
 
         if (!$user || !$pass) {
             throw new \Exception("iCloud Zugangsdaten fehlen.");

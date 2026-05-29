@@ -128,6 +128,9 @@ $routes = [
     'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
 
+    //Appointment
+    'get_appointments'                   => [App\Api\AppointmentsController::class, 'getAppointments'],
+
     //Sidebar
     
     

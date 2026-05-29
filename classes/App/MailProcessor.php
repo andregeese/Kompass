@@ -45,17 +45,34 @@ class MailProcessor extends Database
      * @param string $user Benutzername
      * @param string $password Passwort
      */
-    private function connectIMAP($host, $user, $password) {
+    private function connectIMAP() 
+    {
+        error_log(__FILE__ . ": " . __FUNCTION__);
         // Falls der Stream schon existiert und noch antwortet, nichts tun
         if ($this->imapStream && @imap_ping($this->imapStream)) {
             return;
         }
 
-        $connectionString = $host;
+        error_log("Hole IMAP aus der DB / ENV");
+        $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+        $port = $this->systemProcess->getRequiredEnv('IMAP_PORT');
+        $user = $this->systemProcess->getRequiredEnv('IMAP_USER');
+        $pw = $this->systemProcess->getRequiredEnv('IMAP_PASSWORD');
         
-        // WICHTIG: Konstanten ohne $, imap_open nutzt die Parameter
+        //error_log("Habe erhalten");
+        $ssl = ($port == 993) ? '/imap/ssl' : '';
+        $connectionString = "{" . $host . ":" . $port . $ssl . "}INBOX";
+    
+        //error_log("connectionstring: ". $connectionString);
         
-        $this->imapStream = @imap_open($connectionString, $user, $password, OP_SILENT, 1);
+        //error_log("IMAP-DEBUG: User: " . $user);
+        //error_log("IMAP-DEBUG: Password length: " . strlen($pw));
+
+        if (strlen($pw) > 100) {
+            error_log("ACHTUNG: Passwort scheint noch verschlüsselt zu sein!");
+        }
+
+        $this->imapStream = @imap_open($connectionString, $user, $pw, OP_SILENT, 1);
 
         if (!$this->imapStream) {
             throw new \Exception("IMAP-Verbindung fehlgeschlagen: " . imap_last_error());
@@ -329,11 +346,15 @@ class MailProcessor extends Database
         try {
             $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
 
-            $tenant = new Tenant($_SESSION['tenant_id'], $encryptionKey);
-            $imap_host = $tenant->get('IMAP_HOST');
-            error_log(print_r($imap_host, true));
+            //$tenant = new Tenant($_SESSION['tenant_id'], $encryptionKey);
+            $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+            $port = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+            $user = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+            $pw = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+            
+            
+            $this->connectIMAP();
 
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
             if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, MAIL_HOST . $folder)) {
                 throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
             }

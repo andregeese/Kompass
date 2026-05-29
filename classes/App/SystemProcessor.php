@@ -198,10 +198,14 @@ class SystemProcessor extends Database
         return $folders; // Rückg
     }
 
-    public function getRequiredEnv(string $key, ?int $tenantId = null):string
+
+    /**
+     * tbd: $tenant_id = null
+     */
+    public function getRequiredEnv(string $key, ?int $tenantId = 6):string
     {
         $key = strtoupper($key);
-
+        
         // 1. Priorität: .env Datei
         $envPath = __DIR__ . '/../../.env';
         if (file_exists($envPath)) {
@@ -215,20 +219,72 @@ class SystemProcessor extends Database
                     }
                 }
             }
+        }else{
+            throw new \Exception("### .env nicht gefunden!! ###");
         }
 
         // 2. Priorität: Datenbank (tenant_config)
         if ($tenantId) {
+            error_log("search Key In DB: " . $key);
             $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tid LIMIT 1";
             $row = $this->queryit($sql, ['key' => $key, 'tid' => $tenantId], true);
             
-            if ($row && !empty($row['config_value'])) {
-                return $row['config_value'];
+            if (!empty($row)) {                
+                $value = isset($row[0]['config_value']) ? $row[0]['config_value'] : null;
+                // AUTOMATISCHE ENTSCHLÜSSELUNG
+                // Prüfe, ob dieser Schlüssel zu denen gehört, die wir verschlüsselt haben
+                $encryptedKeys = ['IMAP_PASSWORD', 'PAPERLESS_TOKEN', 'IMAP_USER', 'PAPERLESS_NAME'];
+                
+                if (in_array($key, $encryptedKeys)) {
+                    $masterKey = trim($this->getMasterKeyFromEnv()); 
+                    $decrypted = \App\Crypto::decrypt($value, $masterKey);
+                    
+                    // DEBUG: WICHTIG!
+                    if ($decrypted === false) {
+                        error_log("FEHLER: Entschlüsselung von {$key} hat FALSE zurückgegeben!");
+                        error_log("Value aus DB: " . $value);
+                        error_log("Master-Key Hash: " . bin2hex(hash('sha256', $masterKey, true)));
+                        throw new \Exception("Entschlüsselungs-Fehler für Key: " . $key);
+                    }
+                    
+                    return $decrypted;
+                }
+
+                return $value;
             }
         }
 
         // 3. Wenn nirgendwo gefunden -> Exception
         error_log("KRITISCHER FEHLER: Konfigurations-Key {$key} weder in .env noch in DB gefunden.");
         throw new \Exception("System-Konfiguration unvollständig: {$key} konnte nicht geladen werden.");
+    }
+
+    private function getMasterKeyFromEnv(): string 
+    {
+        $envPath = __DIR__ . '/../../.env';
+        
+        if (!file_exists($envPath)) {
+            throw new \Exception("Kritischer Fehler: .env Datei nicht gefunden.");
+        }
+
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            // Ignoriere Kommentare
+            if (strpos(trim($line), '#') === 0) continue;
+            
+            // Suche nach APP_KEY=...
+            if (strpos($line, '=') !== false) {
+                list($name, $value) = explode('=', $line, 2);
+                if (trim($name) === 'APP_KEY') {
+                    $key = trim($value);
+                    if (empty($key)) {
+                        throw new \Exception("APP_KEY in .env ist leer.");
+                    }
+                    return $key;
+                }
+            }
+        }
+
+        throw new \Exception("APP_KEY in .env Datei nicht definiert.");
     }
 }

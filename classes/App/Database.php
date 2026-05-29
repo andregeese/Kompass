@@ -10,7 +10,7 @@ class Database
     private static ?PDO $instance = null;
 
     private static ?PDO $pdo = null;
-    private $dashboard;
+    protected $dashboard;
 
     public function __construct($dashboard) {
         $this->dashboard = $dashboard;

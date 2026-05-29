@@ -9,6 +9,7 @@ trait ServiceTrait {
         'paperlessProcess' => \App\PaperlessProcessor::class,
         'systemProcess'    => \App\SystemProcessor::class,
         'settingProcess'   => \App\SettingProcessor::class,
+        'appointProcess'   => \App\AppointmentsProcessor::class,
     ];
 
     // Greift auf die Eigenschaft $this->dashboard zu

@@ -5,16 +5,10 @@ abstract class BaseController {
     use \App\ServiceTrait; // Trait liefert jetzt alles via __get
 
     protected $dashboard;
-    protected $tenantConfig;
 
     public function __construct($dashboard) {
         $this->dashboard = $dashboard;
         
-        // Tenant Logik hier nur, wenn unbedingt nötig
-        if ($tid = $_SESSION['tenant_id'] ?? null) {
-            $masterKey = $this->systemProcess->getRequiredEnv('APP_KEY');
-            $this->tenantConfig = new \App\Tenant($tid, $masterKey);
-        }
     }
 
     /**

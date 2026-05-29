@@ -13,8 +13,8 @@ class SettingProcessor extends Database
 
     public function __construct($dashboard)
     {
-        parent::__construct($dashboard);
         $this->dashboard = $dashboard;
+        parent::__construct($dashboard);
     }
 
     public function getTenantSettings($tenantId, $encryptionKey=null): array
@@ -33,7 +33,7 @@ class SettingProcessor extends Database
                 $val = $row['config_value'];
 
                 // Sensible Werte für das Frontend entschlüsseln
-                if (in_array($key, ['paperless_name', 'paperless_token', 'imap_password', 'imap_user'])) {
+                if (in_array($key, ['PAPERLESS_NAME', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
                     $settings[$key] = \App\Crypto::decrypt($val, $encryptionKey);
                 } else {
                     $settings[$key] = $val;
@@ -47,6 +47,7 @@ class SettingProcessor extends Database
      */
     public function saveTenantSettings($tenantId, $data, $encryptionKey=null): bool
     {
+        error_log(__FILE__ . ": " . "aufgerufen");
         // Falls kein Key übergeben wurde, greifen wir auf die globale Konstante zurück
         if (!$encryptionKey || $encryptionKey == null || trim($encryptionKey) =="") {
             $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
@@ -58,23 +59,27 @@ class SettingProcessor extends Database
                 VALUES (:tenant_id, :config_key, :config_value)
                 ON DUPLICATE KEY UPDATE config_value = :config_value_update";
 
-        //error_log(print_r($data, true));
+        error_log(print_r($sql, true));
 
         foreach ($data as $key => $val) {
+            // 1. Key normieren: Alles groß
+            $key = strtoupper($key); 
+            
             if (!in_array($key, $allowedKeys)) continue;
 
-            // Wenn Passwörter leer übertragen werden, überspringen (nicht überschreiben)
-            if (in_array($key, ['imap_password', 'paperless_token']) && empty($val)) {
+            // 2. Jetzt funktionieren alle in_array Checks sicher
+            if (in_array($key, ['IMAP_PASSWORD', 'PAPERLESS_TOKEN']) && empty($val)) {
                 continue;
             }
 
-            // Verschlüsselungs-Weiche
-            if (in_array($key, ['paperless_name', 'paperless_token', 'imap_password', 'imap_user'])) {
+            if (in_array($key, ['PAPERLESS_NAME', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
+                error_log($key . ": VOR DER VERSCHLÜSSELUNG");
                 $finalValue = \App\Crypto::encrypt($val, $encryptionKey);
             } else {
+                error_log($key . ": IM KLARTEXT");
                 $finalValue = $val;
             }
-
+            
             $this->queryIt($sql, [
                 'tenant_id'           => $tenantId,
                 'config_key'          => $key,
