@@ -46,6 +46,30 @@
                     <p class="text-[10px] text-slate-500 mt-1">Wird verschlüsselt gespeichert. Leer lassen, um es nicht zu ändern.</p>
                 </div>
             </div>
+
+            <div class="mt-4">
+                <button type="button" 
+                        @click="fetchImapFolders()"
+                        :disabled="loadingFolders"
+                        class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50">
+                    <span x-text="loadingFolders ? 'Verbinde...' : 'Verbindung testen & Ordner laden'"></span>
+                </button>
+            </div>
+
+            <div class="mt-4" x-show="folders.length > 0">
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Sync-Ordner auswählen</div>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                    <template x-for="folder in folders" :key="folder">
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-900 rounded-lg transition-all">
+                            <input type="checkbox" 
+                                :value="folder" 
+                                x-model="form.sync_folders"
+                                class="accent-blue-500 w-4 h-4">
+                            <span class="text-sm text-slate-300" x-text="folder"></span>
+                        </label>
+                    </template>
+                </div>
+            </div>
         </div>
 
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
@@ -83,62 +107,3 @@
         </div>
     </form>
 </div>
-
-<script>
-function settingsComponent() {
-    return {
-        loading: false,
-        message: { text: '', type: 'success' },
-        form: {
-            imap_host: '', imap_port: '993', imap_user: '', imap_password: '',
-            paperless_url: '', paperless_name: '', paperless_token: ''
-        },
-        async initSettings() {
-            try {
-                let res = await fetch('api.php?action=get_settings').then(r => r.json());
-                if (res.success) {
-                    this.form = { ...this.form, ...res.details.settings };
-                    // Passwörter leeren, da wir sie zur Sicherheit nicht im Klartext zurückgeben
-                    this.form.imap_password = '';
-                    this.form.paperless_token = '';
-                } else {
-                    this.showMsg(res.error, 'error');
-                }
-            } catch (err) {
-                this.showMsg('Fehler beim Laden der Einstellungen.', 'error');
-            }
-        },
-        async saveSettings() {
-            this.loading = true;
-            this.message.text = '';
-            try {
-                let fd = new FormData();
-                fd.append('action', 'save_settings');
-                for (let key in this.form) {
-                    fd.append(key, this.form[key]);
-                }
-                
-                let res = await fetch('api.php?action=save_settings', { method: 'POST', body: fd }).then(r => r.json());
-                this.loading = false;
-                
-                if (res.success) {
-                    this.showMsg('Einstellungen erfolgreich gespeichert!', 'success');
-                    // Neu initialisieren, um Passwörter im Formular wieder zu maskieren
-                    this.initSettings();
-                } else {
-                    this.showMsg(res.error, 'error');
-                }
-            } catch (err) {
-                this.loading = false;
-                this.showMsg('Verbindungsfehler beim Speichern.', 'error');
-            }
-        },
-        showMsg(text, type) {
-            this.message = { text, type };
-            if (type === 'success') {
-                setTimeout(() => { this.message.text = ''; }, 4000);
-            }
-        }
-    }
-}
-</script>

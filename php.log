@@ -1,0 +1,1034 @@
+[29-May-2026 15:23:45 Europe/Berlin] === API aufgerufen am 2026-05-29 15:23:45 ===
+[29-May-2026 15:23:45 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:23:45 Europe/Berlin] imap.mail.me.com
+[29-May-2026 15:23:47 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6843 | Letzte UID in DB: 3943 | H√∂chste UID Server: 7316
+[29-May-2026 15:23:47 Europe/Berlin] Sync: Verarbeite 200 neue Mails.
+[29-May-2026 15:23:56 Europe/Berlin] andregeese@me.com : nameandregeese@me.com
+[29-May-2026 15:23:56 Europe/Berlin] 1
+[29-May-2026 15:24:06 Europe/Berlin] andregeese@me.com : nameAndre Geese
+[29-May-2026 15:24:06 Europe/Berlin] 1
+[29-May-2026 15:24:11 Europe/Berlin] === API aufgerufen am 2026-05-29 15:24:11 ===
+[29-May-2026 15:24:11 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] PHP Warning:  Undefined variable $dashboard in /var/www/html/age_web/classes/App/SettingProcessor.php on line 43
+[29-May-2026 15:24:11 Europe/Berlin] === API aufgerufen am 2026-05-29 15:24:11 ===
+[29-May-2026 15:24:11 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:24:11 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:24:19 Europe/Berlin] andregeese@me.com : nameAndre Geese
+[29-May-2026 15:24:19 Europe/Berlin] 1
+[29-May-2026 15:24:29 Europe/Berlin] Zentraler Datenbankfehler: SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'subject_hash' at row 1
+[29-May-2026 15:24:29 Europe/Berlin] üö® TRACE STACK:
+#0 /var/www/html/age_web/classes/App/Database.php(157): PDOStatement->execute()
+#1 /var/www/html/age_web/classes/App/MailProcessor.php(395): App\Database->queryIt('INSERT INTO mai...', Array, true, true)
+#2 /var/www/html/age_web/classes/App/Api/MailController.php(195): App\MailProcessor->syncWithICloud(true, 200, 'Sent Messages')
+#3 /var/www/html/age_web/api.php(182): App\Api\MailController->syncICloud()
+#4 {main}
+[29-May-2026 15:24:29 Europe/Berlin] INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
+                                    VALUES (4093, 'ê„Ê˙ôn~>ñ[£ê_p#∏%6ºä=ÎÙDÀWOK…', '<3F9E2C29-5288-4646-B3A0-8881FB99AA8B@me.com>', '39eIDZbNbFhr3jMtKgw1WGQGKk0JNqkCXanLgCVC7QOdtY6VvNimGLA+sShh7shELpUkZlb5fik0pMOaLLrnp5+T3PPzk5AVB4D6BSQxzEgX01+vfd4aAUk7tEZIzZNTFjqUSd9RyoZNMRpa5KbqoQ8GLz4q8SL6JeSuRluNgk6YmcSmCmdbEegixqhMzf6I8xYyiuPvgSj2Yz24G/dy6fg6ikOLUuNdUMwT4yD9UeGsPadVRdk1I17eaYrFF+aqzkkIvXaNekK9SLnViZYkakkUcVk+jUGjCOj3BSFwENmsiKZPi0wo2bI2m2aYbHlzq6LzS/zo4dqleI21uPvh18okdi/pTpYINthMX1zn4NdeKk2NH6qLkvdlhWNkp6j6Gwxoiw2KzD3BH9kPMDonNlojDBCc1h13oHSbmVFSJ/OqbjLiFe7ch9ewgiSE2bCq0xS7Wm1WJkrHhjyw13EGwPzmI0WpNrxoXJSEApeAwB/QGs5hsJHPY82gSAfe1LWQ/Z6K9L3tR2o9zTSG+jBOEbvoVllIZGF19Jyr/ZomyRzloJxoQQTvM1rldq7cb1E5VAqzbvg6SOxKK6s9IxSWabqm9GkEZvIvbHESE8pvWCpLMSwfyewuDOtEQitvDh5vzJYXpBjM69Re1hR4O0i5Yw==', 'andregeese@me.com', '2017-01-26 22:03:15', 'Sent Messages', 'active', 6)
+                                    ON DUPLICATE KEY UPDATE
+                                    date_received = VALUES(date_received),
+                                    sender = VALUES(sender),
+                                    imap_folder = VALUES(imap_folder),
+                                    status = 'active'
+[29-May-2026 15:24:29 Europe/Berlin] Kritischer Fehler im Sync: SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'subject_hash' at row 1
+[29-May-2026 15:24:55 Europe/Berlin] === API aufgerufen am 2026-05-29 15:24:55 ===
+[29-May-2026 15:24:55 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] PHP Warning:  Undefined variable $dashboard in /var/www/html/age_web/classes/App/SettingProcessor.php on line 43
+[29-May-2026 15:24:55 Europe/Berlin] === API aufgerufen am 2026-05-29 15:24:55 ===
+[29-May-2026 15:24:55 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:24:55 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] === API aufgerufen am 2026-05-29 15:25:29 ===
+[29-May-2026 15:25:29 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:25:29 Europe/Berlin] PHP Warning:  Undefined variable $dashboard in /var/www/html/age_web/classes/App/SettingProcessor.php on line 43
+[29-May-2026 15:25:29 Europe/Berlin] API-FEHLER: Call to undefined method App\SettingProcessor::getRequiredEnv()
+Stacktrace:
+#0 /var/www/html/age_web/classes/App/Api/SettingsController.php(42): App\SettingProcessor->saveTenantSettings(6, Array, NULL)
+#1 /var/www/html/age_web/api.php(182): App\Api\SettingsController->save()
+#2 {main}
+[29-May-2026 15:26:54 Europe/Berlin] === API aufgerufen am 2026-05-29 15:26:54 ===
+[29-May-2026 15:26:54 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:26:54 Europe/Berlin] Kritischer Fehler im Sync: Too few arguments to function App\SystemProcessor::__construct(), 0 passed in /var/www/html/age_web/classes/App/MailProcessor.php on line 330 and exactly 1 expected
+[29-May-2026 15:33:04 Europe/Berlin] === API aufgerufen am 2026-05-29 15:33:04 ===
+[29-May-2026 15:33:04 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:33:04 Europe/Berlin] PHP Warning:  Service systemProcess nicht gefunden in /var/www/html/age_web/classes/App/ServiceTrait.php on line 29
+[29-May-2026 15:33:04 Europe/Berlin] API-FEHLER: Call to a member function getRequiredEnv() on null
+Stacktrace:
+#0 /var/www/html/age_web/classes/App/Api/SettingsController.php(42): App\SettingProcessor->saveTenantSettings(6, Array, NULL)
+#1 /var/www/html/age_web/api.php(182): App\Api\SettingsController->save()
+#2 {main}
+[29-May-2026 15:36:03 Europe/Berlin] === API aufgerufen am 2026-05-29 15:36:03 ===
+[29-May-2026 15:36:03 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] === API aufgerufen am 2026-05-29 15:36:03 ===
+[29-May-2026 15:36:03 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:36:03 Europe/Berlin] PHP Warning:  Service tenantConfig nicht gefunden in /var/www/html/age_web/classes/App/ServiceTrait.php on line 29
+[29-May-2026 15:41:55 Europe/Berlin] === API aufgerufen am 2026-05-29 15:41:55 ===
+[29-May-2026 15:41:55 Europe/Berlin] PHP Warning:  include(/var/www/html/age_web/vendor/composer/../../classes/App/ServiceTrait.php): Failed to open stream: No such file or directory in /var/www/html/age_web/vendor/composer/ClassLoader.php on line 576
+[29-May-2026 15:41:55 Europe/Berlin] PHP Warning:  include(): Failed opening '/var/www/html/age_web/vendor/composer/../../classes/App/ServiceTrait.php' for inclusion (include_path='.:/usr/local/lib/php') in /var/www/html/age_web/vendor/composer/ClassLoader.php on line 576
+[29-May-2026 15:41:55 Europe/Berlin] PHP Fatal error:  Trait "App\ServiceTrait" not found in /var/www/html/age_web/classes/App/SystemProcessor.php on line 13
+[29-May-2026 15:41:56 Europe/Berlin] === API aufgerufen am 2026-05-29 15:41:56 ===
+[29-May-2026 15:41:56 Europe/Berlin] PHP Warning:  include(/var/www/html/age_web/vendor/composer/../../classes/App/ServiceTrait.php): Failed to open stream: No such file or directory in /var/www/html/age_web/vendor/composer/ClassLoader.php on line 576
+[29-May-2026 15:41:56 Europe/Berlin] PHP Warning:  include(): Failed opening '/var/www/html/age_web/vendor/composer/../../classes/App/ServiceTrait.php' for inclusion (include_path='.:/usr/local/lib/php') in /var/www/html/age_web/vendor/composer/ClassLoader.php on line 576
+[29-May-2026 15:41:56 Europe/Berlin] PHP Fatal error:  Trait "App\ServiceTrait" not found in /var/www/html/age_web/classes/App/SystemProcessor.php on line 13
+[29-May-2026 15:46:18 Europe/Berlin] === API aufgerufen am 2026-05-29 15:46:18 ===
+[29-May-2026 15:46:18 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:46:18 Europe/Berlin] Kritischer Fehler im Sync: Too few arguments to function App\SystemProcessor::__construct(), 0 passed in /var/www/html/age_web/classes/App/MailProcessor.php on line 330 and exactly 1 expected
+[29-May-2026 15:46:18 Europe/Berlin] API-FEHLER: Call to undefined method App\Api\MailController::cleanBuffer()
+Stacktrace:
+#0 /var/www/html/age_web/api.php(182): App\Api\MailController->syncICloud()
+#1 {main}
+[29-May-2026 15:46:19 Europe/Berlin] === API aufgerufen am 2026-05-29 15:46:19 ===
+[29-May-2026 15:46:19 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:46:19 Europe/Berlin] Kritischer Fehler im Sync: Too few arguments to function App\SystemProcessor::__construct(), 0 passed in /var/www/html/age_web/classes/App/MailProcessor.php on line 330 and exactly 1 expected
+[29-May-2026 15:46:19 Europe/Berlin] API-FEHLER: Call to undefined method App\Api\MailController::cleanBuffer()
+Stacktrace:
+#0 /var/www/html/age_web/api.php(182): App\Api\MailController->syncICloud()
+#1 {main}
+[29-May-2026 15:47:17 Europe/Berlin] === API aufgerufen am 2026-05-29 15:47:17 ===
+[29-May-2026 15:47:17 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:47:17 Europe/Berlin] Kritischer Fehler im Sync: Too few arguments to function App\SystemProcessor::__construct(), 0 passed in /var/www/html/age_web/classes/App/MailProcessor.php on line 330 and exactly 1 expected
+[29-May-2026 15:47:18 Europe/Berlin] === API aufgerufen am 2026-05-29 15:47:18 ===
+[29-May-2026 15:47:18 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:47:18 Europe/Berlin] Kritischer Fehler im Sync: Too few arguments to function App\SystemProcessor::__construct(), 0 passed in /var/www/html/age_web/classes/App/MailProcessor.php on line 330 and exactly 1 expected
+[29-May-2026 15:47:52 Europe/Berlin] === API aufgerufen am 2026-05-29 15:47:52 ===
+[29-May-2026 15:47:52 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Tenant construct f√ºr ID: 6
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_URL
+    [config_value] => http://192.168.0.72:8030
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_NAME
+    [config_value] => eyJjIjoiIiwiaSI6InlzdDRDamlQQUhlRkt6bmEiLCJ0IjoiWVFNQ1wvSjZ6RlBhVHl5UWUraDhjZkE9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => PAPERLESS_TOKEN
+    [config_value] => eyJjIjoiIiwiaSI6InZKbmFaRlVFSFRFNVY0M1kiLCJ0IjoidGt3M0lcLzkzRVAyVUVBRzdRMTlmanc9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_HOST
+    [config_value] => imap.mail.me.com
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PORT
+    [config_value] => 993
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_USER
+    [config_value] => eyJjIjoiNHprV3VGVjk0UWZlYStzd1F1SllWUkE9IiwiaSI6IkRiemFLMHZNOXVzYnhiVEsiLCJ0IjoidGhodmtLOUJLZ0N4T214Ujc5Y08zZz09In0=
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => IMAP_PASSWORD
+    [config_value] => eyJjIjoidDBidE5ZK0NPYUVTM0ZINU5VWkFVNjluY2c9PSIsImkiOiJ6SmdcL2ZCYW1ySHY1VlkzSSIsInQiOiI1TWUwVkN3T0lhTkdsNEtldVRvVDJ3PT0ifQ==
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_USER
+    [config_value] => eyJjIjoiK2N1ZTNKWjAzeEVxVVVpU25pZkdSRXc9IiwiaSI6InM0MWpWVHNwbHc2ZFg3cG8iLCJ0IjoiODEyb0tKNjdGdkhrVE9UcklHbng3QT09In0=
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] Array
+(
+    [config_key] => ICLOUD_PASSWORD
+    [config_value] => eyJjIjoiUlZCTWY4MUZINzAzbGI3OElIcFc5VHBrSEE9PSIsImkiOiJ1bG43K3FwcU01eDRvMHJXIiwidCI6IlE5cnhmbyswWVcraUNkbG55UEhmY3c9PSJ9
+)
+
+[29-May-2026 15:47:52 Europe/Berlin] imap.mail.me.com
+[29-May-2026 15:47:55 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner: 6843 | Letzte UID in DB: 3943 | H√∂chste UID Server: 7316
+[29-May-2026 15:47:55 Europe/Berlin] Sync: Verarbeite 200 neue Mails.
+[29-May-2026 15:48:09 Europe/Berlin] andregeese@me.com : nameandregeese@me.com
+[29-May-2026 15:48:09 Europe/Berlin] 1
+[29-May-2026 15:48:19 Europe/Berlin] andregeese@me.com : nameAndre Geese
+[29-May-2026 15:48:19 Europe/Berlin] 1
+[29-May-2026 15:48:29 Europe/Berlin] andregeese@me.com : nameAndre Geese
+[29-May-2026 15:48:29 Europe/Berlin] 1
+[29-May-2026 15:48:38 Europe/Berlin] Zentraler Datenbankfehler: SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'subject_hash' at row 1
+[29-May-2026 15:48:38 Europe/Berlin] üö® TRACE STACK:
+#0 /var/www/html/age_web/classes/App/Database.php(157): PDOStatement->execute()
+#1 /var/www/html/age_web/classes/App/MailProcessor.php(396): App\Database->queryIt('INSERT INTO mai...', Array, true, true)
+#2 /var/www/html/age_web/classes/App/Api/MailController.php(195): App\MailProcessor->syncWithICloud(true, 200, 'Sent Messages')
+#3 /var/www/html/age_web/api.php(182): App\Api\MailController->syncICloud()
+#4 {main}
+[29-May-2026 15:48:38 Europe/Berlin] INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
+                                    VALUES (4093, 'ê„Ê˙ôn~>ñ[£ê_p#∏%6ºä=ÎÙDÀWOK…', '<3F9E2C29-5288-4646-B3A0-8881FB99AA8B@me.com>', '39eIDZbNbFhr3jMtKgw1WGQGKk0JNqkCXanLgCVC7QOdtY6VvNimGLA+sShh7shELpUkZlb5fik0pMOaLLrnp5+T3PPzk5AVB4D6BSQxzEgX01+vfd4aAUk7tEZIzZNTFjqUSd9RyoZNMRpa5KbqoQ8GLz4q8SL6JeSuRluNgk6YmcSmCmdbEegixqhMzf6I8xYyiuPvgSj2Yz24G/dy6fg6ikOLUuNdUMwT4yD9UeGsPadVRdk1I17eaYrFF+aqzkkIvXaNekK9SLnViZYkakkUcVk+jUGjCOj3BSFwENmsiKZPi0wo2bI2m2aYbHlzq6LzS/zo4dqleI21uPvh18okdi/pTpYINthMX1zn4NdeKk2NH6qLkvdlhWNkp6j6Gwxoiw2KzD3BH9kPMDonNlojDBCc1h13oHSbmVFSJ/OqbjLiFe7ch9ewgiSE2bCq0xS7Wm1WJkrHhjyw13EGwPzmI0WpNrxoXJSEApeAwB/QGs5hsJHPY82gSAfe1LWQ/Z6K9L3tR2o9zTSG+jBOEbvoVllIZGF19Jyr/ZomyRzloJxoQQTvM1rldq7cb1E5VAqzbvg6SOxKK6s9IxSWabqm9GkEZvIvbHESE8pvWCpLMSwfyewuDOtEQitvDh5vzJYXpBjM69Re1hR4O0i5Yw==', 'andregeese@me.com', '2017-01-26 22:03:15', 'Sent Messages', 'active', 6)
+                                    ON DUPLICATE KEY UPDATE
+                                    date_received = VALUES(date_received),
+                                    sender = VALUES(sender),
+                                    imap_folder = VALUES(imap_folder),
+                                    status = 'active'
+[29-May-2026 15:48:38 Europe/Berlin] Kritischer Fehler im Sync: SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'subject_hash' at row 1

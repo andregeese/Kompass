@@ -297,7 +297,7 @@ const mailViewComponent = () => ({
         // Schleife 2: IMAP-Ordner-Sync (vom Mail-Refresh entkoppelt)
         const runFolderSyncLoop = async () => {
             if (this.$data.isOnline) {
-                const foldersToSync = ['INBOX', 'DMS', 'DMSDone'];
+                const foldersToSync = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
                 const LIMIT = 20; // Muss exakt mit deinem PHP $maxNewMailsLimit übereinstimmen
 
                 // Der Loop läuft entkoppelt im Hintergrund

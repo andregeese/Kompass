@@ -2,47 +2,35 @@
 namespace App\Api;
 
 abstract class BaseController {
-    protected $dashboard;
+    use \App\ServiceTrait; // Trait liefert jetzt alles via __get
 
-    // Registry für geladene Services
-    private $services = [];
+    protected $dashboard;
+    protected $tenantConfig;
 
     public function __construct($dashboard) {
         $this->dashboard = $dashboard;
-    }
-
-    /**
-     * Lazy-Loader für Services
-     */
-    // Proxy: Controller fragt das Dashboard
-    protected function getService($name, $className) {
-        return $this->dashboard->getService($name, $className);
-    }
-    
-    /**
-     * Proxy-Methode: So kann ich in Controllern einfach $this->xyz->... schreiben
-     * @property \App\MailProcessor $mailProcess
-     * @property \App\ContactProcessor $contactProcess
-     * @property \App\PaperlessProcessor $processorProcess
-     */
-    public function __get($name) {
-        $services = [
-            'mailProcess'    => \App\MailProcessor::class,
-            'contactProcess' => \App\ContactProcessor::class,
-            'paperlessProcess' => \App\PaperlessProcessor::class,
-            'systemProcess' => \App\SystemProcessor::class
-        ];
-
-        if (array_key_exists($name, $services)) {
-            return $this->getService($name, $services[$name]);
+        
+        // Tenant Logik hier nur, wenn unbedingt nötig
+        if ($tid = $_SESSION['tenant_id'] ?? null) {
+            $masterKey = $this->systemProcess->getRequiredEnv('APP_KEY');
+            $this->tenantConfig = new \App\Tenant($tid, $masterKey);
         }
     }
 
-    
-
+    /**
+     * Zentrales Bereinigen der Ausgabe
+     */
     protected function cleanBuffer() {
         if (ob_get_length()) {
             ob_clean();
         }
+    }
+
+    // Zentrale API-Hilfsmethoden
+    protected function jsonResponse($data) {
+        $this->cleanBuffer();
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
     }
 }

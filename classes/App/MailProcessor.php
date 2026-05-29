@@ -327,6 +327,12 @@ class MailProcessor extends Database
         $result = ['success' => false, 'added' => 0, 'error' => null];
 
         try {
+            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
+
+            $tenant = new Tenant($_SESSION['tenant_id'], $encryptionKey);
+            $imap_host = $tenant->get('IMAP_HOST');
+            error_log(print_r($imap_host, true));
+
             $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
             if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, MAIL_HOST . $folder)) {
                 throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
@@ -590,7 +596,7 @@ class MailProcessor extends Database
             return ['success' => false, 'error' => 'IMAP Verbindung fehlgeschlagen'];
         }
 
-        $targetFolders = ['INBOX', 'DMS', 'DMSDone']; 
+        $targetFolders = ['INBOX', 'DMS', 'DMSDone','Sent Messages']; 
         $baseConnString = preg_replace('/\}.*$/', '}', MAIL_HOST);
         $results = [];
 
@@ -599,12 +605,13 @@ class MailProcessor extends Database
             $msgId = $mail['message_id'];
             if (empty($msgId)) continue;
 
-            $currentFolder = 'DMSDone'; // Fallback, falls nirgends mehr auffindbar
+            $currentFolder = 'INBOX'; // Fallback, falls nirgends mehr auffindbar
             $currentUid = 0;
 
             foreach ($targetFolders as $folder) {
                 $fullFolderString = $baseConnString . $folder;
                 
+                error_log("IMAP Folder Sync: " . $fullFolderString);
                 if (@imap_reopen($this->imapStream, $fullFolderString)) {
                     $searchRes = imap_search($this->imapStream, 'HEADER Message-ID "' . $msgId . '"');
 
@@ -1189,7 +1196,7 @@ class MailProcessor extends Database
 
         // 4. Verknüpfen, falls wir eine ID haben
         if ($contactId) {
-            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE tenant_id=: tenant_id AND id = :mailId", [
+            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE tenant_id= :tenant_id AND id = :mailId", [
                 'contact_id' => (int)$contactId,
                 'mailId'    => $mailId
             ]);

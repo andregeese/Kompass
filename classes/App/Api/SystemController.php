@@ -5,7 +5,7 @@ use App\SystemProcessor;
 
 class SystemController extends BaseController
 {
-     public function __construct($dashboard) {
+    public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!
     }
 
@@ -17,6 +17,34 @@ class SystemController extends BaseController
             'success' => true,
             'details' => ['status' => $status]
         ];
+    }
+
+    /**
+     * Verbiindungsprüfung und FOLDER im IMAP
+     */
+    public function testImap()
+    {
+       try {
+            $host = $_POST['imap_host'] ?? '';
+            $port = $_POST['imap_port'] ?? '993';
+            $user = $_POST['imap_user'] ?? '';
+            $pass = $_POST['imap_password'] ?? '';
+
+            if (empty($host) || empty($user) || empty($pass)) {
+                throw new \Exception("Bitte alle Felder ausfüllen.");
+            }
+
+            // Aufruf des Prozessors
+            $folders = $this->systemProcess->testImap($host, $port, $user, $pass);
+
+            // Erfolgreiche Antwort
+            echo json_encode(['success' => true, 'folders' => $folders]);
+
+        } catch (\Exception $e) {
+            // Fehlerhafte Antwort
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 
     /**

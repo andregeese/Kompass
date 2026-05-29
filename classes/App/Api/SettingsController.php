@@ -2,17 +2,21 @@
 namespace App\Api;
 
 use Exception;
-use App\Setting; // 🚀 Das Modell aus setting.php importieren
+use App\Tenant;
+use App\SettingProcessor; // 🚀 Das Modell aus setting.php importieren
 
 class SettingsController extends BaseController {
     
-    public function get() {
+    public function __construct($dashboard) {
+        parent::__construct($dashboard); // Das ist entscheidend!
+    }
+
+    public function get() 
+    {
         $this->cleanBuffer();
         
-        // 🚀 Modell instanziieren, damit wir an die DB kommen
-        $settingModel = new Setting($this->dashboard);
-        $secretKey = $this->tenantConfig->secret_key ?? null;
-        $settings = $settingModel->getTenantSettings($this->tenantId, $secretKey);
+        $secretKey = $this->systemProcess->tenantConfig->secret_key ?? null;
+        $settings = $this->settingProcess->getTenantSettings($this->tenantId, $secretKey);
         
         return [
             'success' => true,
@@ -20,7 +24,8 @@ class SettingsController extends BaseController {
         ];
     }
 
-    public function save() {
+    public function save() 
+    {
         $this->cleanBuffer();
         
         // 🚀 Formulardaten (entweder $_POST oder JSON) entgegennehmen
@@ -31,11 +36,10 @@ class SettingsController extends BaseController {
             $formData = json_decode(file_get_contents('php://input'), true) ?? [];
         }
 
-        $settingModel = new Setting(($this->dashboard));
         
         $secretKey = $this->tenantConfig->secret_key ?? null;
 
-        $success = $settingModel->saveTenantSettings($this->tenantId, $formData, $secretKey);
+        $success = $this->settingProcess->saveTenantSettings($_SESSION['tenant_id'], $formData, $secretKey);
         
         if (!$success) {
             throw new \Exception("Fehler beim Aktualisieren der Einstellungen.");

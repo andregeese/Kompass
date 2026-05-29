@@ -13,6 +13,7 @@
             <button @click="switchFolder('INBOX')" :class="currentFolder === 'INBOX' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">📥 Posteingang</button>
             <button @click="switchFolder('DMS')" :class="currentFolder === 'DMS' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">📁 DMS Archiv</button>
             <button @click="switchFolder('DMSDone')" :class="currentFolder === 'DMSDone' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">✅ Erledigt</button>
+            <button @click="switchFolder('Sent Messages')" :class="currentFolder === 'Sent Messages' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors"> Gesendet</button>
         </div>
 
         <div class="flex justify-between items-center px-1 mt-1.5 text-[11px]" x-show="mailSearchQuery.trim().length >= 0" x-cloak>

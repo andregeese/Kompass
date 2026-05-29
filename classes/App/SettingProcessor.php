@@ -1,8 +1,21 @@
 <?php
 namespace App;
+
+use Override;
 use PDO;
 
-class Setting extends Database {
+/**
+ * @property \App\SettingProcessor $settingProcess
+ */
+class SettingProcessor extends Database 
+{
+    use ServiceTrait;
+
+    public function __construct($dashboard)
+    {
+        parent::__construct($dashboard);
+        $this->dashboard = $dashboard;
+    }
 
     public function getTenantSettings($tenantId, $encryptionKey=null): array
         {
@@ -10,7 +23,7 @@ class Setting extends Database {
             $rows = $this->queryIt($sql, ['tenant_id' => $tenantId]);
 
             if (!$encryptionKey) {
-                $encryptionKey = defined('APP_KEY') ? APP_KEY : 'dein_fallback_key_falls_konstante_fehlt';
+                $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
             }
 
 
@@ -32,14 +45,14 @@ class Setting extends Database {
     /**
      * Aktualisiert oder erstellt die Einstellungen eines Mandanten
      */
-    public function saveTenantSettings($tenantId, $data): bool
+    public function saveTenantSettings($tenantId, $data, $encryptionKey=null): bool
     {
         // Falls kein Key übergeben wurde, greifen wir auf die globale Konstante zurück
-        if (!$encryptionKey) {
-            $encryptionKey = defined('APP_KEY') ? APP_KEY : 'dein_fallback_key_falls_konstante_fehlt';
+        if (!$encryptionKey || $encryptionKey == null || trim($encryptionKey) =="") {
+            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
         }
 
-        $allowedKeys = ['imap_host', 'imap_port', 'imap_user', 'imap_password', 'paperless_url', 'paperless_name', 'paperless_token'];
+        $allowedKeys = ['IMAP_HOST', 'IMAP_PORT', 'IMAP_USER', 'IMAP_PASSWORD', 'PAPERLESS_URL', 'PAPERLESS_NAME', 'PAPERLESS_TOKEN'];
         
         $sql = "INSERT INTO tenant_config (tenant_id, config_key, config_value) 
                 VALUES (:tenant_id, :config_key, :config_value)

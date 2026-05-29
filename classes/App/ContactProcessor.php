@@ -160,6 +160,8 @@ class ContactProcessor extends Database
 
         foreach ($emails as $_email)
         {
+            error_log(__FILE__ . ": " . __LINE__ . " => " . print_r($_email, true));
+
             if (is_array($_email) && isset($_email['id'])) {
                 $contact_ids[] = $_email['id'];
             }

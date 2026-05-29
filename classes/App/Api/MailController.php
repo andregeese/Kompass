@@ -185,7 +185,7 @@ class MailController extends BaseController
         }
         
         $folder = isset($_GET['folder']) ? trim($_GET['folder']) : 'INBOX';
-        $allowedFolders = ['INBOX', 'DMS', 'DMSDone'];
+        $allowedFolders = ['INBOX', 'DMS', 'DMSDone','Sent Messages'];
         
         if (!in_array($folder, $allowedFolders)) {
             throw new \Exception("Ungültiger Ordner-Name übergeben.");

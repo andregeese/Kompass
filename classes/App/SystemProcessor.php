@@ -6,6 +6,10 @@ use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use PDO;
 
+
+/**
+ * @property \App\SystemProcessor $systemProcess
+ */
 class SystemProcessor extends Database
 {
     use ServiceTrait;
@@ -160,5 +164,71 @@ class SystemProcessor extends Database
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
+    }
+
+    /**
+     * Testet die Verbindung und gibt eine Liste der Ordner wieder
+     */
+    public function testImap($host, $port, $user, $pass)
+    {
+     
+        $connectionString = "{" . $host . ":" . $port . "/imap/ssl}";
+    
+        // Wir verbinden zum Root-Verzeichnis (ohne INBOX), um alle Ordner zu sehen
+        $mbox = @imap_open($connectionString, $user, $pass, OP_READONLY, 1);
+        
+        if (!$mbox) {
+            throw new \Exception("Konnte keine Verbindung aufbauen: " . imap_last_error());
+        }
+
+        $mailboxes = @imap_list($mbox, $connectionString, "*");
+        
+        if ($mailboxes === false) {
+            imap_close($mbox);
+            throw new \Exception("Konnte keine Ordner auflisten: " . imap_last_error());
+        }
+
+        $folders = [];
+        foreach ($mailboxes as $mailbox) {
+            // Pfad-Präfix entfernen, um nur den Namen zu behalten
+            $folders[] = str_replace($connectionString, "", $mailbox);
+        }
+        
+        imap_close($mbox);
+        return $folders; // Rückg
+    }
+
+    public function getRequiredEnv(string $key, ?int $tenantId = null):string
+    {
+        $key = strtoupper($key);
+
+        // 1. Priorität: .env Datei
+        $envPath = __DIR__ . '/../../.env';
+        if (file_exists($envPath)) {
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = explode('=', $line, 2);
+                    if (trim($name) === $key && trim($value) !== '') {
+                        return trim($value);
+                    }
+                }
+            }
+        }
+
+        // 2. Priorität: Datenbank (tenant_config)
+        if ($tenantId) {
+            $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tid LIMIT 1";
+            $row = $this->queryit($sql, ['key' => $key, 'tid' => $tenantId], true);
+            
+            if ($row && !empty($row['config_value'])) {
+                return $row['config_value'];
+            }
+        }
+
+        // 3. Wenn nirgendwo gefunden -> Exception
+        error_log("KRITISCHER FEHLER: Konfigurations-Key {$key} weder in .env noch in DB gefunden.");
+        throw new \Exception("System-Konfiguration unvollständig: {$key} konnte nicht geladen werden.");
     }
 }

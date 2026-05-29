@@ -14,29 +14,23 @@ $isDebugMode = isset($_GET['debug']) && $_GET['debug'] === 'true';
 
 $action = $_REQUEST['action'] ?? ''; 
 
-ini_set('display_errors', 0);         
-ini_set('display_startup_errors', 0); 
+ini_set('display_errors', 1);         
+ini_set('display_startup_errors', 1); 
 error_reporting(E_ALL);               
 
+$logFile= __DIR__."/php.log";
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/php_debug.log');
+ini_set('error_log', $logFile);
+
+// Sicherstellen, dass die Datei existiert und beschreibbar ist
+if (!file_exists($logFile)) {
+    touch($logFile);
+    chmod($logFile, 0666);
+}
 
 require_once __DIR__ . '/vendor/autoload.php'; 
 require_once __DIR__ . '/config.php'; 
 
-
-// --- Virtueller Log-Stream ---
-class DeinesystemsLogStream {
-    public function stream_open($path, $mode, $options, &$opened_path) { return true; }
-    public function stream_write($data) {
-        \App\ErrorLogs::logRawMessage($data);
-        return strlen($data);
-    }
-}
-if (!in_array("logdb", stream_get_wrappers())) {
-    stream_wrapper_register("logdb", "DeinesystemsLogStream");
-}
-//ini_set('error_log', 'logdb://output');
 
 set_error_handler([\App\ErrorLogs::class, 'handleNotification']);
 //set_exception_handler([\App\ErrorLogs::class, 'handleException']);
@@ -165,6 +159,7 @@ $routes = [
     'system_status'                 => [App\Api\SystemController::class, 'status'],
     'repair_contacts'               => [App\Api\SystemController::class, 'repairTenantContacts'],
     'imap_mails'                    => [App\Api\SystemController::class, 'syncFolder'],
+    'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
 
 ];
 
