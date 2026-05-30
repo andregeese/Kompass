@@ -1,0 +1,29 @@
+BEGIN:VCALENDAR
+CALSCALE:GREGORIAN
+PRODID:-//Apple Inc.//macOS 14.5//EN
+VERSION:2.0
+BEGIN:VEVENT
+DESCRIPTION:<h4><span style="color: #000000\;">Space to Breathe with Imogen North & Caro Gante</span></h4>\n<span style="color: #008080\;"><strong><a style="color: #008080\;" href="https://yogaspiritcircle.com/yoga-vinyasa-yin-retreat-italy-august-2024/" target="_blank" rel="noopener">Retreat description</a></strong></span>\nPrice includes\n○ 6 nights in a countryside house in Torri InSabina\n○ 9 yoga sessions\n○ embodied vinyasa yoga in the morning\n○ all classes are interwoven with meditations\, self-enquiry\, yin and goddess ritual\n○ yin and/or restorative practice in the afternoons\n○ 3 culinary workshops with Caro\n○ inspiring vegan food 3 times/day\n○ river experience afternoon trip\n○ aperitivo on last evening\n○ water\, tea & coffee\n○ practicing on the famous yoga deck\n<span style="color: #000000\;"><u>Not included\n</u>\n○ flight or train to Rome\n○ airport transfer to In Sabina\n○ ceramics workshop & massages\n○ dinner on friday at the local restaurant\n○ travel insurance (recommended)\n</span>\n<span style="color: #000000\;"><u>Payment</u></span>\n<span style="color: #000000\;">All prices and payments are in Euros. Payments can be made via bank transfer to</span>\n<span style="color: #000000\;">Yoga Spirit Circle <span class="s1"> |  DE90110101015791883035  | BIC SOBKDEB2XXX\n</span>Please transfer 30% of the price as deposit within the next 5 days after your booking. Balance payable 8 weeks prior to arrival.</span>\n<span style="color: #000000\;">Bookings made <b>less than 8 weeks prior to Retreat</b> must be paid in full.</span>\n<span style="color: #000000\;">During the booking process you can also choose credit card payment. This payment method only allows all at once payments.</span>\n<span style="color: #000000\;"><u>Airport/ Train station transfer</u></span>\n<span style="color: #000000\;">Read more about the transfer options in our<span style="color: #008080\;"><strong> <a style="color: #008080\;" href="https://yogaspiritcircle.com/faqs/" target="_blank" rel="noopener">faqs</a></strong></span>.</span>\n<span style="color: #000000\;">We will organise a group transfers on arrival day around 3pm and 7pm from Fiumicino airport.  Please book your flight accordingly or arrive a day early in order to take this transfer. Individual transfers can be booked for approx. 130€/direction. Check- in is from 4pm. If you arrive by yourself by car or cab\, latest check- in is 9pm.\n</span>\n<span style="color: #000000\;"><u>Cancellations / Refunds:</u></span>\n<span style="color: #000000\;">If you cancel your booking\, a cancellation fee of 30€ will apply. Read more about our cancellation policy in our <span style="color: #008080\;"><strong><a style="color: #008080\;" href="https://yogaspiritcircle.com/faqs/" target="_blank" rel="noopener">faqs.</a></strong></span></span>\n<span style="color: #000000\;"><u>Terms &amp\; conditions</u></span>\n<span style="color: #000000\;">Please find our full terms &amp\; conditions in the attached documents. This also includes our cancellation policy.</span>\n
+DTEND;VALUE=DATE:20240818
+DTSTAMP:20240812T060143Z
+DTSTART;VALUE=DATE:20240811
+LAST-MODIFIED:20240812T060142Z
+LOCATION:Yoga Retreat Center in Central Italy
+ORGANIZER;CN=Yoga Spirit Circle;EMAIL=reservations@yogaspiritcircle.com:mailto:reservations@yogaspiritcircle.com
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:ACL: In Sabina ☾ Imogen & Caro · All Level · English
+UID:xvmudnzwnsic-ev-shp6-20240811000000@bookwhen.com
+URL;VALUE=URI:https://bookwhen.com/de/yogaspiritcircle/e/ev-shp6-20240811000000
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACKNOWLEDGED:20240812T060142Z
+ACTION:DISPLAY
+DESCRIPTION:Erinnerung
+TRIGGER:-PT15H
+UID:78BE84FA-A6EE-43CA-91F0-099BA2474E79
+X-APPLE-DEFAULT-ALARM:TRUE
+X-WR-ALARMUID:78BE84FA-A6EE-43CA-91F0-099BA2474E79
+END:VALARM
+END:VEVENT
+END:VCALENDAR

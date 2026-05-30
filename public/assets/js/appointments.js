@@ -1,27 +1,56 @@
-const appointmentComponent = () => ({
+const appointmentViewComponent = () => ({
     loading: true,
-    appointments: [],
-    async fetchAppointments() {
-        try {
-            // Ersetze 'deine-api-route' durch deinen Endpunkt, der die ICloudConnector Methode aufruft
-            const response = await fetch('/api/appointments');
-            this.appointments = await response.json();
-        } catch (e) {
-            console.error("Fehler beim Laden:", e);
-        } finally {
-            this.loading = false;
-        }
+
+    async initCalendar() {
+        // Warte kurz, damit Alpine das DOM bereitstellt
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const calendarEl = document.getElementById('calendar');
+        if (!calendarEl) return;
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: 'today'
+            },
+            dayMaxEvents: 3, // Zeigt "+ X weitere" an, statt den Kalender zu sprengen
+            eventTimeFormat: { // Zeit im Stil "13:00" statt "13 Uhr"
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false
+            },
+            locale: 'de',
+            height: 'auto',
+            events: async (fetchInfo, successCallback, failureCallback) => {
+                try {
+                    const data = await safeFetch(`api.php?action=get_appointments`);
+                    console.log("APPOINTMENTS Data:", data);
+
+                    // Mapping: Überprüfe genau deine API-Struktur aus dem Screenshot
+                    const events = data.details.appointment.map(item => ({
+                        title: item.title,      // Achte hier auf die Namen aus der DB!
+                        start: item.start,
+                        id: item.id
+                    }));
+                    
+                    this.loading = false;
+                    successCallback(events);
+                } catch (e) {
+                    this.loading = false;
+                    failureCallback(e);
+                }
+            },
+            eventClick: (info) => {
+                alert('Termin: ' + info.event.title);
+            }
+        });
+        calendar.render();
     }
 });
 
-
-// Sicherheits-Registrierung am Ende von mail.js
-if (window.Alpine) {
-    // Falls Alpine bereits voll geladen ist
-    window.Alpine.data('contactsView', contactsViewComponent);
-} else {
-    // Falls Alpine noch auf den Start wartet
-    document.addEventListener('alpine:init', () => {
-        window.Alpine.data('mailViecontactsVieww', contactsViewComponent);
-    });
-}
+// Registrierung für Alpine
+document.addEventListener('alpine:init', () => {
+    Alpine.data('appointmentView', appointmentViewComponent);
+});

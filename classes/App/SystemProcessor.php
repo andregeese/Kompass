@@ -220,7 +220,7 @@ class SystemProcessor extends Database
                 }
             }
         }else{
-            throw new \Exception("### .env nicht gefunden!! ###");
+            //throw new \Exception("### .env nicht gefunden!! ###");
         }
 
         // 2. Priorität: Datenbank (tenant_config)

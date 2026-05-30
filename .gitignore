@@ -1,2 +1,5 @@
 php_debug.log
 php.log
+conifg.php
+.env
+caldav_debug.xml

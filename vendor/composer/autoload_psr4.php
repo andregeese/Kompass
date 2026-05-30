@@ -7,7 +7,14 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Svg\\' => array($vendorDir . '/dompdf/php-svg-lib/src/Svg'),
+    'Sabre\\Xml\\' => array($vendorDir . '/sabre/xml/lib'),
+    'Sabre\\VObject\\' => array($vendorDir . '/sabre/vobject/lib'),
+    'Sabre\\Uri\\' => array($vendorDir . '/sabre/uri/lib'),
+    'Sabre\\HTTP\\' => array($vendorDir . '/sabre/http/lib'),
+    'Sabre\\Event\\' => array($vendorDir . '/sabre/event/lib'),
+    'Sabre\\' => array($vendorDir . '/sabre/dav/lib'),
     'Sabberworm\\CSS\\' => array($vendorDir . '/sabberworm/php-css-parser/src'),
+    'Psr\\Log\\' => array($vendorDir . '/psr/log/src'),
     'Masterminds\\' => array($vendorDir . '/masterminds/html5/src'),
     'FontLib\\' => array($vendorDir . '/dompdf/php-font-lib/src/FontLib'),
     'Dompdf\\' => array($vendorDir . '/dompdf/dompdf/src'),

@@ -108,6 +108,22 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        #calendar-container {
+            display: flex;
+            flex-direction: column;
+            /* Verhindert, dass der Kalender den Container sprengt */
+            height: 700px; 
+        }
+
+        #calendar {
+            flex-grow: 1;
+            overflow: hidden; /* Verhindert doppelte Scrollbars */
+        }
+
+        /* Falls du doch innerhalb scrollen willst, falls der Inhalt zu lang ist */
+        .fc-scroller {
+            overflow-y: auto !important;
+        }
     </style>
     
     <script>
@@ -124,6 +140,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
 </head>
 <body x-data="crmEngine()" 

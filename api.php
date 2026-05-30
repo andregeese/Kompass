@@ -85,7 +85,7 @@ try {
     if ($isDebugMode) {
         // 🚀 HIER DIE RETTUNG: Schreibe es direkt in die Session!
         if (!isset($_SESSION['tenant_id'])) {
-            $_SESSION['tenant_id'] = '5';
+            $_SESSION['tenant_id'] = '6';
         }
         $tenantId = $_SESSION['tenant_id']; 
         error_log("=== API-DEBUG-MODE: Authentifizierung umgangen ===");
@@ -129,7 +129,10 @@ $routes = [
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
 
     //Appointment
-    'get_appointments'                   => [App\Api\AppointmentsController::class, 'getAppointments'],
+    'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
+    'get_events'                    => [App\Api\AppointmentsController::class, 'getEventsParsed'],
+    'full_sync'                     => [App\Api\AppointmentsController::class, 'fullSync'],
+    'get_parti'                     => [App\Api\AppointmentsController::class, 'getPartition'],
 
     //Sidebar
     

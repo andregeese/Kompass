@@ -337,8 +337,7 @@ class MailProcessor extends Database
      */
     public function syncWithICloud(bool $debug = true, int $maxNewMailsLimit = 200, string $folder = "INBOX"): array 
     {
-        //$processor = $this->getService('mail', \App\MailProcessor::class);
-
+        
         @set_time_limit(120);
         $added = 0;
         $result = ['success' => false, 'added' => 0, 'error' => null];
