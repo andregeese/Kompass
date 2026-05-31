@@ -42,7 +42,7 @@ if ($view === 'login' && isset($_GET['logout'])) {
 // 2. Authentifizierungs-Check
 $isLoggedIn = \App\Core\Auth::check();
 error_log("DEBUG: Is logged in: " . ($isLoggedIn ? 'JA' : 'NEIN'));
-error_log("DEBUG: Session: " . print_r($_SESSION, true));
+#error_log("DEBUG: Session: " . print_r($_SESSION, true));
 
 // Wenn nicht eingeloggt und nicht auf der Login-Seite -> Weiterleitung
 if (!$isLoggedIn && $view !== 'login') {

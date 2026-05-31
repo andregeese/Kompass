@@ -153,11 +153,11 @@ class ContactProcessor extends \App\Core\Database
         $contact_ids=[];
         $email_list = [];
         error_log("saveContactEmails");
-        error_log(print_r($emails, true));
+        #error_log(print_r($emails, true));
 
         foreach ($emails as $_email)
         {
-            error_log(__FILE__ . ": " . __LINE__ . " => " . print_r($_email, true));
+            #error_log(__FILE__ . ": " . __LINE__ . " => " . print_r($_email, true));
 
             if (is_array($_email) && isset($_email['id'])) {
                 $contact_ids[] = $_email['id'];
@@ -194,7 +194,7 @@ class ContactProcessor extends \App\Core\Database
         //3. contct aktualisieren
         $sqlC = "UPDATE contacts SET is_active =0 WHERE tenant_id=:tenant_id AND id IN ($ids_string);";
         $this->queryIt($sqlC, [],true, false);
-        error_log("idstring:" . print_r($ids_string, true));
+        #error_log("idstring:" . print_r($ids_string, true));
 
 
         $quoted_emails = array_map(function($email) {
@@ -260,8 +260,7 @@ class ContactProcessor extends \App\Core\Database
             FROM contacts AS c
             -- INNER JOIN mails AS m ON c.id = m.contact_id
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-            WHERE c.tenant_id =:tenant_id 
-            -- AND id_hash = UNHEX(:hash)
+            WHERE c.tenant_id =:tenant_id
             AND (ce.email LIKE :search OR c.display_name LIKE :search)
             GROUP BY c.id, ce.id, c.is_active, ce.email, c.display_name, c.paperless_id, c.type;";
 
@@ -427,7 +426,7 @@ class ContactProcessor extends \App\Core\Database
             $resAr['korrespondenten'] = [];
         }
 
-        error_log(print_r($resAr, true));
+        #error_log(print_r($resAr, true));
         // Wandle das Ergebnis-Array in ein flaches Array von IDs um
         return $resAr;
     }
