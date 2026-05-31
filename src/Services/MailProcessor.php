@@ -105,32 +105,26 @@ class MailProcessor extends \App\Core\Database
      */
     public function getMailByHash($hash) 
     {
-        try {
-            
-            $sql = "SELECT * FROM mails 
-                    WHERE 
-                      tenant_id=:tenant_id
-                      AND id_hash = UNHEX(:hash)
-                      AND (status NOT IN('deleted') OR status IS NULL) 
-                      LIMIT 1";
 
-            $rows = $this->queryIt($sql, 
-                ['hash' => $hash]
-            );
-            
-            if (empty($rows)) {
-                $this->dashboard->sendResponse(false, "", "E-Mail mit diesem Hash wurde nicht gefunden.");
-                return false;
-            }
+        $sql = "SELECT * FROM mails 
+                WHERE 
+                    tenant_id=:tenant_id
+                    AND id_hash = UNHEX(:hash)
+                    AND (status NOT IN('deleted') OR status IS NULL) 
+                    LIMIT 1";
 
-
-            return $rows[0];
-
-        }catch (Throwable $e) {      
-            $this->dashboard->sendResponse(false, "", "Fehler beim Laden des Mail-Bodys: " . print_r($rows, true) . $e->getMessage());
-            return false;      
-            //return "94: Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage();
+        $rows = $this->queryIt($sql, 
+            ['hash' => $hash]
+        );
+        
+        if (empty($rows)) {
+            $this->dashboard->sendResponse(false, "", "E-Mail mit diesem Hash wurde nicht gefunden.");
+            return false;
         }
+
+
+        return $rows[0];
+
     }
 
     /**
@@ -673,7 +667,6 @@ class MailProcessor extends \App\Core\Database
             AND m.tenant_id = :tenant_id;";
 
         $rows = $this->queryIt($sql, [
-            'salt' => defined('HASH_SALT') ? HASH_SALT : '',
             'hash' => $hash
         ]);
 
@@ -785,8 +778,8 @@ class MailProcessor extends \App\Core\Database
             // 1. SQL und Parameter dynamisch generieren lassen
             [$sql, $params] = $this->buildSearchSQLAndParams($folder, $search, $limit, $offset);
             
-            error_log("SQL: " . $sql);
-            error_log("getMailsPaginated PARAMS: " . print_r($params, true));
+            //error_log("SQL: " . $sql);
+            //error_log("getMailsPaginated PARAMS: " . print_r($params, true));
 
             // 2. Datenbank abfragen
             $mailsFromDb = $this->queryIt($sql, $params);

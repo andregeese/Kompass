@@ -233,6 +233,8 @@ class Database
             $pdo = $this->getConnection();
             $this->injectTenantId($query, $params);
 
+            
+
             // 1. LIMIT und OFFSET explizit im Array casten, BEVOR execute aufgerufen wird
             if (isset($params['limit']))  $params['limit']  = (int)$params['limit'];
             if (isset($params['offset'])) $params['offset'] = (int)$params['offset'];
@@ -241,6 +243,24 @@ class Database
 
             // 2. Prepare das Statement
             $stmt = $pdo->prepare($query);
+
+            // 1. Extrahiere alle Platzhalter aus dem SQL (z.B. :id, :tenant_id)
+            preg_match_all('/:([a-zA-Z0-9_]+)/', $query, $matches);
+            $requiredParams = array_unique($matches[1]);
+
+            // 2. Abgleich: Was fehlt?
+            $missing = [];
+            foreach ($requiredParams as $req) {
+                if (!array_key_exists($req, $params)) {
+                    $missing[] = $req;
+                }
+            }
+
+            if (!empty($missing)) {
+                $msg = "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query";
+                error_log($msg);
+                throw new \Exception($msg); // Abbruch, da Query sonst fehlschlägt
+            }
 
             // --- DER WICHTIGE TEIL: Manuelles Binden für ALLE Parameter ---
             foreach ($params as $key => $value) {
@@ -262,6 +282,8 @@ class Database
 
         } catch (\Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            
+            $this->getCallerInfo();
             error_log("DB FEHLER: " . $e->getMessage());
             throw new \Exception("Datenbankfehler: " . $e->getMessage());
         }

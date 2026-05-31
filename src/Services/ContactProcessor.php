@@ -130,7 +130,7 @@ class ContactProcessor extends \App\Core\Database
                 c.type,
                 GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails
             FROM contacts AS c
-            INNER JOIN mails AS m ON c.id = m.contact_id
+            INNER JOIN mails AS m ON c.id = m.sender_ceid
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
             WHERE id_hash = UNHEX(:hash)
             AND m.tenant_id = :tenant_id
@@ -379,11 +379,11 @@ class ContactProcessor extends \App\Core\Database
                     m.sender AS detail
                 FROM mails AS m
                 INNER JOIN (
-                    SELECT sender_ceid, recipient_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
-                ) AS ref ON m.sender_ceid = ref.sender_ceid ON m.recipient_ceid = ref.recipient_ceid
+                    SELECT sender_ceid, recipient_ceid, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
+                ) AS ref ON m.sender_ceid = ref.sender_ceid AND m.recipient_ceid = ref.recipient_ceid
                 WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
                 ORDER BY m.date_received DESC LIMIT 100;"; // Dein SQL von oben
-        $rawMails = $this->queryIt($sql, ["hash" => $hash, "salt" => $salt, "tenant_id" => $tenantId]);
+        $rawMails = $this->queryIt($sql, ["hash" => $hash, "tenant_id" => $tenantId]);
         //error_log(print_r($rawMails,true));
 
         $items = [];
@@ -413,7 +413,7 @@ class ContactProcessor extends \App\Core\Database
             -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
             WHERE m.id_hash = UNHEX(:hash) AND m.tenant_id=:tenant_id;";
 
-        $result = $this->queryIt($sql, ['hash' => $hash, 'salt' => $salt, 'tenant_id' => $tenantId]);
+        $result = $this->queryIt($sql, ['hash' => $hash, 'tenant_id' => $tenantId]);
         // 1. Prüfen, ob überhaupt ein Ergebnis da ist
         if (!empty($result) && is_array($result)) {
             // Da GROUP_CONCAT nur eine Zeile liefert, nehmen wir den ersten Index [0]
@@ -443,7 +443,7 @@ class ContactProcessor extends \App\Core\Database
                 GROUP_CONCAT(DISTINCT c.paperless_id SEPARATOR ', ') AS paperless_ids
             FROM contacts AS c
             /* 1. Schritt: Finde den Kontakt anhand des Mails-Hash */
-            INNER JOIN mails AS m ON c.id = m.contact_id
+            INNER JOIN mails AS m ON c.id = m.sender_ceid
             /* 2. Schritt: Verknüpfe alle E-Mails, die zu DIESEM Kontakt gehören */
             LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
             WHERE id_hash = UNHEX(:hash)
@@ -451,8 +451,7 @@ class ContactProcessor extends \App\Core\Database
             GROUP BY c.id, c.display_name, c.type;";
 
         $ret = $this->queryIt($sql,
-            ["hash" => $hash,
-            "salt" =>  $this->dashboard->getHashSalt()]
+            ["hash" => $hash]
         );
 
         if (is_array($ret) && count($ret)>0){

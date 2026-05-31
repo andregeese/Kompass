@@ -186,7 +186,7 @@ class PaperlessProcessor extends \App\Core\Database
     {
         //$sql = "SELECT sender FROM mails WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
         $sql = "SELECT sender FROM mails as m
-                LEFT JOIN contact_emails as ce ON ce.contact_id=m.contact_id
+                LEFT JOIN contact_emails as ce ON ce.contact_id=m.sender_ceid
                 WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
         
         $rows = $this->queryIt($sql, [
