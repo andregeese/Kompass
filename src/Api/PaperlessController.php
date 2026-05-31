@@ -1,10 +1,10 @@
 <?php
 namespace App\Api;
-use App\PaperlessProcessor; // Importiere den Prozessor
+use App\Services\PaperlessProcessor; // Importiere den Prozessor
 use Exception;
 
 
-class PaperlessController extends BaseController {
+class PaperlessController extends \App\Core\BaseController {
     
     public function sync() 
     {

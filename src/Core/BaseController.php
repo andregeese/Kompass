@@ -1,14 +1,17 @@
 <?php
-namespace App\Api;
+namespace App\Core;
 
 abstract class BaseController {
-    use \App\ServiceTrait; // Trait liefert jetzt alles via __get
+    use \App\Core\ServiceTrait; // Trait liefert jetzt alles via __get
 
     protected $dashboard;
 
     public function __construct($dashboard) {
         $this->dashboard = $dashboard;
-        
+
+        if (get_class($this) !== 'App\Api\AuthController') {
+            $this->authorize();
+        }
     }
 
     /**

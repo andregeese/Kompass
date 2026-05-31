@@ -1,5 +1,5 @@
 <?php
-namespace App;
+namespace App\Services;
 use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use DateTime;
@@ -8,9 +8,9 @@ use PDO;
 /**
  * @method void contactProcess() 
  */
-class ContactProcessor extends Database
+class ContactProcessor extends \App\Core\Database
 {
-    use ServiceTrait;
+    use \App\Core\ServiceTrait;
     protected $dashboard;
 
     public function __construct($dashboard) {
@@ -82,7 +82,7 @@ class ContactProcessor extends Database
             , true
         );
 
-        error_log("contact ID nach speichern 1:" . print_r($contactId, true));
+        //error_log("contact ID nach speichern 1:" . print_r($contactId, true));
         if (empty($contactId)) {
             $sqlGetId = "SELECT id FROM contacts WHERE display_name = :name AND tenant_id = :tenant_id LIMIT 1";
             $result = $this->queryIt($sqlGetId, ['name' => $name, 'tenant_id' => $tenantId]);
@@ -96,10 +96,7 @@ class ContactProcessor extends Database
             throw new Exception("Kontakt konnte weder angelegt noch gefunden werden.");
         }
 
-        error_log("contact ID nach speichern 2:" . print_r($contactId, true));
-        // Die ID des Kontakts (neu oder bestehend) direkt vom PDO-Objekt holen
-        // Hinweis: Deine queryIt müsste hierfür den PDO-Zugriff auf lastInsertId() erlauben
-        //$contactId = $this->getLastInsertId(); 
+        //error_log("SELECT ID nach speichern 2:" . print_r($contactId, true));
 
         // 2. E-Mail-Adresse speichern
         $emailHash = hash('sha256', $email . $salt);
@@ -382,10 +379,10 @@ class ContactProcessor extends Database
                     m.sender AS detail
                 FROM mails AS m
                 INNER JOIN (
-                    SELECT contact_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
-                ) AS ref ON m.contact_id = ref.contact_id
+                    SELECT sender_ceid, recipient_id, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
+                ) AS ref ON m.sender_ceid = ref.sender_ceid ON m.recipient_ceid = ref.recipient_ceid
                 WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
-                ORDER BY m.date_received DESC LIMIT 100"; // Dein SQL von oben
+                ORDER BY m.date_received DESC LIMIT 100;"; // Dein SQL von oben
         $rawMails = $this->queryIt($sql, ["hash" => $hash, "salt" => $salt, "tenant_id" => $tenantId]);
         //error_log(print_r($rawMails,true));
 
@@ -409,7 +406,7 @@ class ContactProcessor extends Database
                 -- END AS relation_type
             FROM mails AS m
             -- 1. Von Mail zu der E-Mail-Adresse, von der sie kam
-            INNER JOIN contact_emails ce ON m.contact_id = ce.id
+            INNER JOIN contact_emails ce ON m.sender_ceid = ce.id
             -- 2. Von der E-Mail-Adresse zum Kontakt
             INNER JOIN contacts c ON ce.contact_id = c.id
             -- 3. Vom Kontakt zu den Paperless-Mappings

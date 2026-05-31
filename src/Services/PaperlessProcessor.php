@@ -1,15 +1,15 @@
 <?php
-namespace App;
+namespace App\Services;
 
 use Exception;
 use Throwable;
 
 /**
- * @property \App\PaperlessProcessor $paperlessProcess
+ * @property \App\Services\PaperlessProcessor $paperlessProcess
  */
-class PaperlessProcessor extends Database
+class PaperlessProcessor extends \App\Core\Database
 {
-    use ServiceTrait;
+    use \App\Core\ServiceTrait;
     private string $apiUrl;
     private string $token;
     protected $dashboard;

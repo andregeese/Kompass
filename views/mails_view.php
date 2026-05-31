@@ -39,7 +39,7 @@
                         }">
                     
                     <!-- 1. UNGELESEN-INDIKATOR (Blauer Punkt ganz links) -->
-                    <div x-show="!mail.is_read" 
+                    <div x-show="mail.is_read===0" 
                         class="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-sm shadow-blue-500/50">
                     </div>
 
@@ -51,7 +51,7 @@
                             
                             <!-- Absender (Wird fett, wenn die Mail ungelesen ist) -->
                             <span class="text-blue-500 dark:text-blue-400 truncate" 
-                                :class="!mail.is_read ? 'font-black' : 'font-medium'" 
+                                :class="mail.is_read===0 ? 'font-black' : 'font-medium'" 
                                 x-text="mail.sender"></span>
                         </div>
                         
@@ -64,7 +64,7 @@
                     
                     <!-- Betreffzeile (Ebenfalls fetter bei ungelesenen Mails) -->
                     <h4 class="text-xs line-clamp-2 text-slate-800 dark:text-gray-200 mb-2" 
-                        :class="!mail.is_read ? 'font-bold' : 'font-normal text-slate-600 dark:text-gray-300'"
+                        :class="mail.is_read===0 ? 'font-bold' : 'font-normal text-slate-600 dark:text-gray-300'"
                         x-text="mail.subject"></h4>
 
                     <div class="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-gray-700/50 mt-2">

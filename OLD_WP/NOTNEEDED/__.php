@@ -1,37 +1,40 @@
 <?php
-namespace App\Api;
+namespace App;
 
 use Exception;
 
-class AuthController extends BaseController {
-    
-    public function login() {
-        $this->cleanBuffer();
-        $email    = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL);
-        $password = $_POST['password'] ?? '';
+class AuthController extends \App\Core\BaseController 
+{
 
-        if (!$email || empty($password)) {
-            return ['success' => false, 'error' => 'Ungültige Anmeldedaten.'];
+    public static function init() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start([
+                'cookie_httponly' => true,
+                'cookie_secure' => false, // Nur wenn HTTPS aktiv
+                'use_strict_mode' => true
+            ]);
         }
-
-        $userResult = $this->dashboard->loginUser($email, $password);
-        $user = !empty($userResult) ? $userResult[0] : null;
-
-        if ($user && password_verify($password, $user['password_hash'])) {
-            session_regenerate_id(true);
-            $_SESSION['user_id']   = $user['id'];
-            $_SESSION['tenant_id'] = $user['id'];
-
-            // 4. Fingerprint hinterlegen (Zusätzlicher Schutz gegen Session-Diebstahl)
-            $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
-            $_SESSION['login_ip']   = $_SERVER['REMOTE_ADDR']; // Optional (Achtung bei Mobilfunk-Wechseln)
-            return ['success' => true];
-        }
-
-        return ['success' => false, 'error' => 'E-Mail-Adresse oder Passwort falsch.'];
     }
 
-    public function register() {
+    public static function check(): bool {
+        return isset($_SESSION['user_id']) && 
+               isset($_SESSION['fingerprint']) && 
+               $_SESSION['fingerprint'] === self::getFingerprint();    }
+
+    public static function login($user) {
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['fingerprint'] = self::getFingerprint();
+    }
+
+    private static function getFingerprint(): string {
+        return hash('sha256', $_SERVER['HTTP_USER_AGENT'] . session_id());
+    }
+    
+    
+
+    public function register() 
+    {
         $this->cleanBuffer();
         $email     = filter_var(trim($_POST['email'] ?? ''), FILTER_VALIDATE_EMAIL);
         $password  = $_POST['password'] ?? '';

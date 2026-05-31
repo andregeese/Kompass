@@ -1,16 +1,16 @@
 <?php
 namespace App\Api;
-use App\ContactProcessor;
-use App\SystemProcessor;
+use App\Services\ContactProcessor;
+use App\Services\SystemProcessor;
 
-class SystemController extends BaseController
+class SystemController extends \App\Core\BaseController
 {
     public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!
     }
 
     public function status() {
-        $system = new \App\System();
+        $system = new \App\Services\SystemProcessor();
         $status = $system->isSystemReady();
 
         return [

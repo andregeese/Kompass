@@ -63,37 +63,52 @@ function showNotify(title, message, type = 'danger') {
 }
 
 // Hilfsfunktion für ausfallsichere API-Abfragen mit globalem API-Pfad und Session-Timeout Schutz
-async function safeFetch(url, options = {}) {
+async function safeFetch(url, customOptions = {}) 
+{
+    const defaultOptions = {
+        method: 'POST',
+        credentials: 'include',
+        // 'Content-Type' entfernen wir aus den Default-Headern
+        headers: {} 
+    };
+
+    const finalOptions = { ...defaultOptions, ...customOptions };
+
+    // Automatische Header-Logik:
+    // Wenn der Body KEIN FormData ist, setzen wir JSON als Standard
+    if (!(finalOptions.body instanceof FormData)) {
+        finalOptions.headers['Content-Type'] = 'application/json';
+        // Falls du JSON sendest, musst du es hier stringifyen
+        if (typeof finalOptions.body === 'object') {
+            finalOptions.body = JSON.stringify(finalOptions.body);
+        }
+    }
+
     try {
-        const response = await fetch(url, options);
-        
-        // Prüfen, ob wir überhaupt Text/JSON bekommen
-        const text = await response.text();
-        let data;
-        
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            showNotify("API Antwort (" + url + ") ist kein valides JSON:", text, "danger");
-            throw new Error("Server antwortete mit ungültigem Format.");
-        }
+        const response = await fetch(url, finalOptions);
 
-        // HTTP Status-Check
+        // 1. HTTP-Status prüfen (Gehört HIERHER, solange response noch lebt)
         if (!response.ok) {
-            showNotify("Server-Fehler: ", esponse.status, "danger");
-            throw new Error(data.error || `Server-Fehler: Status ${response.status}`);
+            throw new Error(`Server-Fehler: Status ${response.status}`);
         }
 
-        // 3. Backend Business-Logik prüfen
+        // 2. JSON lesen
+        const data = await response.json();
+
+        // 3. Business-Logik prüfen
         if (data && data.success === false) {
             showNotify('Fehler', data.error || 'Unbekannter Fehler', 'danger');
+            // Je nachdem, ob du das als Fehler werfen willst oder nur anzeigen:
+            return data; 
         }
 
         return data;
 
     } catch (error) {
-        console.error(`Fetch-Fehler bei ${url}:`, error);
-        return { success: false, error: error.message, details: [] };
+        console.error("Fehler beim Laden:", error);
+        showNotify('Fehler: ' + error.message, 'danger');
+        // Gib ein leeres Objekt oder null zurück, damit dein restlicher Code nicht abstürzt
+        return { success: false, error: error.message };
     }
 
 }

@@ -3,70 +3,67 @@
  * Enterprise CRM Hub - Core Controller
  * Lädt Composer-Autoloading und steuert die modulare View-Injektion.
  */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+define('ROOT_PATH', __DIR__);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// 2. Logout-Trigger prüfen (?view=login&logout=1)
-if (isset($_GET['view']) && $_GET['view'] === 'login' && isset($_GET['logout']) && $_GET['logout'] === '1') {
-    
-    // Alle Session-Variablen (inkl. tenant_id, user, etc.) löschen
-    $_SESSION = [];
+// 2. Wohin schreibt PHP interne Fehler?
+$logFile = __DIR__ . "/php.log";
+ini_set('log_errors', 1);
+ini_set('error_log', $logFile); // Hier muss 'error_log' stehen, nicht deine Klasse
 
-    // Session-Cookie im Browser zerstören
-    if (ini_get("session.use_cookies")) {
-        $params = session_get_cookie_params();
-        setcookie(
-            session_name(), 
-            '', 
-            time() - 42000,
-            $params["path"], 
-            $params["domain"],
-            $params["secure"], 
-            $params["httponly"]
-        );
-    }
-
-    // Die eigentliche Session auf dem Server vernichten
-    session_destroy();
-
-    // Sauberer Redirect auf die nackte Login-Seite (entfernt das &logout=1 aus der URL)
-    header("Location: ./index.php?view=login");
-    exit;
+// 3. Sicherstellen, dass die Datei beschreibbar ist
+if (!file_exists($logFile)) {
+    touch($logFile);
+    chmod($logFile, 0666);
 }
 
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
 
-$tenantId = $_SESSION['tenant_id'] ?? null;
+$db = new \App\Core\Database();
+\App\Core\ErrorLogs::setDatabase($db);
 
-if (preg_match('/\/$/', $_SERVER['REQUEST_URI'])) {
-    header('Location: ./index.php?view=' . ($tenantId ? 'mails' : 'login'));
+\App\Core\Auth::init();
+
+
+
+$view = $_GET['view'] ?? 'dashboard';
+
+// 1. Logout-Logik (wie von dir bereitgestellt)
+if ($view === 'login' && isset($_GET['logout'])) {
+    \App\Core\Auth::logout(); // Nutze die Methode aus deiner Auth.php
+    header("Location: ./index.php?view=login");
     exit;
 }
 
-// 1. Erlaubte Views definieren
-$allowedViews = ['login', 'mails', 'notes', 'paperless', 'appointments', 'detail','setting', 'contacts'];
-$currentView = $_GET['view'] ?? 'mails'; 
-$selectedHash = $_GET['hash'] ?? null;
+// 2. Authentifizierungs-Check
+$isLoggedIn = \App\Core\Auth::check();
+error_log("DEBUG: Is logged in: " . ($isLoggedIn ? 'JA' : 'NEIN'));
+error_log("DEBUG: Session: " . print_r($_SESSION, true));
 
+// Wenn nicht eingeloggt und nicht auf der Login-Seite -> Weiterleitung
+if (!$isLoggedIn && $view !== 'login') {
+    header("Location: ./index.php?view=login");
+    exit;
+}
 
-// 🔐 2. SCHUTZ-WALL OHNE RE-DIRECT-KASKADE
-if (!$tenantId) {
-    // Wenn nicht eingeloggt, erzwingen wir die Login-View OHNE HTTP-Header-Umleitung!
-    $currentView = 'login';
-} else {
-    // Wenn eingeloggt, darf er nicht auf die Login-Seite
-    if ($currentView === 'login') {
-        header('Location: ./index.php?view=mails');
+// 3. Optional: Tenant-Validierung (Zusätzliche Sicherheit)
+if ($isLoggedIn && isset($_SESSION['tenant_id'])) {
+    $dashboard = new \App\Dashboard($db);
+    $valid = $dashboard->isValidTenant((int)$_SESSION['tenant_id']);
+    error_log("DEBUG: Tenant valid: " . ($valid ? 'JA' : 'NEIN'));
+
+    if (!$dashboard->isValidTenant((int)$_SESSION['tenant_id'])) {
+        \App\Core\Auth::logout();
+        header("Location: ./index.php?view=login&error=invalid_tenant");
         exit;
     }
 }
 
-if (!in_array($currentView, $allowedViews)) {
-    $currentView = 'mails';
-}
+$currentView = $_GET['view'] ?? 'mails';
 
 // 📂 3. STATISCHES JS-MAPPING STATT TEUREM `file_exists()` FILING
 $viewJsMapping = [

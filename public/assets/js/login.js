@@ -24,12 +24,11 @@ const loginComponent = () => ({
 
             try {
                 // Nutzt den in index.php definierten globalen Endpunkt
-                const response = await fetch(`${window.CRM_API_URL}?action=${action}`, {
+                const data = await safeFetch(`${window.CRM_API_URL}?action=${action}`, {
                     method: 'POST',
                     body: fd
                 });
                 
-                const data = await response.json();
                 
                 if (data.success) {
                     // Erfolgreich! Wir leiten den User auf die Standard-Ansicht (Mails) um

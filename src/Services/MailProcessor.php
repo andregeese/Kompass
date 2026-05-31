@@ -1,8 +1,8 @@
 <?php
-namespace App;
+namespace App\Services;
 use Exception; // Falls du Exceptions nutzt
-use App\PaperlessProcessor;
-use App\ContactProcessor;
+use App\Services\PaperlessProcessor;
+use App\Services\ContactProcessor;
 use Throwable;
 use PDO;
 use HTMLPurifier;
@@ -10,12 +10,12 @@ use HTMLPurifier_Config;
 
 
 /**
- * @property \App\MailProcessor $mailProcess
+ * @property \App\Services\MailProcessor $mailProcess
  */
-class MailProcessor extends Database
+class MailProcessor extends \App\Core\Database
 {
 
-    use ServiceTrait;
+    use \App\Core\ServiceTrait;
     protected $dashboard;
     private $imapStream = null;
 
@@ -53,13 +53,12 @@ class MailProcessor extends Database
             return;
         }
 
-        error_log("Hole IMAP aus der DB / ENV");
         $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
         $port = $this->systemProcess->getRequiredEnv('IMAP_PORT');
         $user = $this->systemProcess->getRequiredEnv('IMAP_USER');
         $pw = $this->systemProcess->getRequiredEnv('IMAP_PASSWORD');
         
-        //error_log("Habe erhalten");
+        error_log("Habe erhalten: $host");
         $ssl = ($port == 993) ? '/imap/ssl' : '';
         $connectionString = "{" . $host . ":" . $port . $ssl . "}INBOX";
     
@@ -107,7 +106,6 @@ class MailProcessor extends Database
     public function getMailByHash($hash) 
     {
         try {
-            $salt = defined('HASH_SALT') ? HASH_SALT : '';
             
             $sql = "SELECT * FROM mails 
                     WHERE 
@@ -117,7 +115,7 @@ class MailProcessor extends Database
                       LIMIT 1";
 
             $rows = $this->queryIt($sql, 
-                ['salt' => $salt, 'hash' => $hash]
+                ['hash' => $hash]
             );
             
             if (empty($rows)) {
@@ -129,7 +127,7 @@ class MailProcessor extends Database
             return $rows[0];
 
         }catch (Throwable $e) {      
-            $this->dashboard->sendResponse(false, "", "Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage());
+            $this->dashboard->sendResponse(false, "", "Fehler beim Laden des Mail-Bodys: " . print_r($rows, true) . $e->getMessage());
             return false;      
             //return "94: Fehler beim Laden des Mail-Bodys: " . print_r($rows) . $e->getMessage();
         }
@@ -143,7 +141,7 @@ class MailProcessor extends Database
      */
     public function getHtmlBody($hash) 
     {
-        $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+        $this->connectIMAP();
         $mail = $this->getMailByHash($hash);
 
         if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
@@ -162,13 +160,13 @@ class MailProcessor extends Database
             
             // WICHTIG: Prüfe, ob deine connectIMAP den Host-String bereits mit geschweiften Klammern speichert!
             // Wir bauen ihn hier absolut sauber und standardkonform zusammen:
-            $fullFolderString = MAIL_HOST . $folder;
+            $fullFolderString = $this->systemProcess->getRequiredEnv('IMAP_HOST') . $folder;
 
             // Lautlos versuchen zu öffnen
             if (!imap_reopen($this->imapStream, $fullFolderString)) {
                 // Falls iCloud zickt (z.B. weil der Ordner auf dem Server "INBOX.DMSDone" statt "DMSDone" heißt):
                 // Probieren wir den iCloud-Standard-Präfix "INBOX." als Fallback
-                $fallbackFolderString =  MAIL_HOST . $folder;
+                $fallbackFolderString =  $this->systemProcess->getRequiredEnv('IMAP_HOST') . $folder;
                 
                 if (!imap_reopen($this->imapStream, $fallbackFolderString)) {
                     $this->dashboard->sendResponse(false, "Der IMAP-Ordner '$folder' konnte auf dem iCloud-Server nicht gefunden oder geöffnet werden.");
@@ -211,7 +209,7 @@ class MailProcessor extends Database
     public function getTxtBody($hash) 
     {
         try {
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+            $this->connectIMAP();
             $mail = $this->getMailByHash($hash);
             
             $msgNumber = imap_msgno($this->imapStream, $mail['uid']);
@@ -293,7 +291,7 @@ class MailProcessor extends Database
     {
         try {
             // Verbindung sicherstellen (nutzt die private connect Methode)
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+            $this->connectIMAP();
 
             $mail = $this->getMailByHash($hash);
 
@@ -338,23 +336,17 @@ class MailProcessor extends Database
     public function syncWithICloud(bool $debug = true, int $maxNewMailsLimit = 200, string $folder = "INBOX"): array 
     {
         
-        @set_time_limit(120);
+        //@set_time_limit(120);
         $added = 0;
         $result = ['success' => false, 'added' => 0, 'error' => null];
 
         try {
-            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
-
-            //$tenant = new Tenant($_SESSION['tenant_id'], $encryptionKey);
+            
+            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');            
             $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-            $port = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-            $user = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-            $pw = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-            
-            
             $this->connectIMAP();
 
-            if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, MAIL_HOST . $folder)) {
+            if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, $host . $folder)) {
                 throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
             }
 
@@ -390,10 +382,15 @@ class MailProcessor extends Database
                 if (empty($overview)) continue;
 
                 $ov = $overview[0];
-                
+
                 if (empty($ov->from)) {
                     $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
                     $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                }
+
+                if (empty($ov->to)) {
+                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
+                    $ov->to = $header->toaddress ?? 'unknown@unknown.local';
                 }
                 // E-Mail-Datum konvertieren
                 $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
@@ -405,27 +402,35 @@ class MailProcessor extends Database
                 $idHash = hash('sha256', $messageId . $salt, true);
 
                 // 1. Mail anlegen und ID zurückholen
-                $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, date_received, imap_folder, status, tenant_id) 
-                                    VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :date_received, :folder, 'active', :tenant_id)
-                                    ON DUPLICATE KEY UPDATE
-                                    date_received = VALUES(date_received),
-                                    sender = VALUES(sender),
-                                    imap_folder = VALUES(imap_folder),
-                                    status = 'active'";
+                $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered) 
+                            VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered)
+                            ON DUPLICATE KEY UPDATE
+                            date_received = VALUES(date_received),
+                            sender = VALUES(sender),
+                            imap_folder = VALUES(imap_folder),
+                            status = 'active',
+                            is_read = VALUES(is_read),
+                            is_flagged = VALUES(is_flagged),
+                            is_answered = VALUES(is_answered);";
 
-                $mailId = $this->queryIt($sqlInsert, [
-                    'id_hash'       => $idHash,
+                $params = [
                     'uid'           => $ov->uid,
+                    'id_hash'       => $idHash,
                     'message_id'    => $ov->message_id ?? '',
-                    'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)), // Falls du das so berechnest
+                    'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)),
                     'sender'        => $this->decodeMimeHeader($ov->from),
+                    'recipient'     => $this->decodeMimeHeader($ov->to),
                     'date_received' => $formattedDate,
-                    'folder'        => $folder // Stelle sicher, dass $folder hier verfügbar ist
-                ], true, true); 
+                    'folder'        => $folder,
+                    'is_read'       => (int)$ov->seen,
+                    'is_flagged'    => (int)$ov->flagged,
+                    'is_answered'   => (int)$ov->answered
+                ];
+                $mailId = $this->queryIt($sqlInsert, $params, true, true); 
 
                 // PROAKTIVE Kontaktverknüpfung / anlage:
                 if ($mailId) {
-                    $this->linkMailToContact((int)$mailId, $ov->from);
+                    $this->linkMailToContact((int)$mailId, $ov->from, $ov->to);
                 }
                 
                 $added++;
@@ -541,7 +546,7 @@ class MailProcessor extends Database
         $sql = "SELECT m.uid, m.id_hash as hash, m.subject_hash as sHash, m.sender, m.date_received, m.paperless_id, 
                         c.email as contact_name
                     FROM mails m
-                    LEFT JOIN contact_emails c ON m.contact_id = c.id
+                    LEFT JOIN contact_emails c ON m.sender_ceid = c.id
                     WHERE m.tenant_id = :tenant_id 
                     AND m.imap_folder = :folder
                     AND (
@@ -611,13 +616,13 @@ class MailProcessor extends Database
 
         // 2. IMAP-Verbindung aufbauen
         try {
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+            $this->connectIMAP();
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'IMAP Verbindung fehlgeschlagen'];
         }
 
         $targetFolders = ['INBOX', 'DMS', 'DMSDone','Sent Messages']; 
-        $baseConnString = preg_replace('/\}.*$/', '}', MAIL_HOST);
+        $baseConnString = preg_replace('/\}.*$/', '}', $this->systemProcess->getRequiredEnv('IMAP_HOST'));
         $results = [];
 
         // 3. Nur den aktuellen Live-Status ermitteln, OHNE in die DB zu schreiben
@@ -726,7 +731,7 @@ class MailProcessor extends Database
         //in TRASH schieben
         try {
             // Verbindung sicherstellen (nutzt die private connect Methode)
-            $this->connectIMAP(MAIL_HOST, MAIL_USER, MAIL_PASS);
+            $this->connectIMAP();
 
             $mail = $this->getMailByHash($hash);
 
@@ -779,9 +784,13 @@ class MailProcessor extends Database
 
             // 1. SQL und Parameter dynamisch generieren lassen
             [$sql, $params] = $this->buildSearchSQLAndParams($folder, $search, $limit, $offset);
-        
+            
+            error_log("SQL: " . $sql);
+            error_log("getMailsPaginated PARAMS: " . print_r($params, true));
+
             // 2. Datenbank abfragen
             $mailsFromDb = $this->queryIt($sql, $params);
+
             $returnMails = []; 
 
             // 3. Daten filtern und für das Frontend aufbereiten
@@ -815,16 +824,17 @@ class MailProcessor extends Database
         
         $params = [
             'folder' => $folder,
-            'limit'  => $limit,
-            'offset' => $offset
+            'limit'  => (int)$limit,
+            'offset' => (int)$offset,
+            'tenant_id' => 6
         ];
         
         $sql = "SELECT 
-                    m.id, uid, sender, subject_hash, m.paperless_id, imap_folder,
+                    m.id, uid, sender, recipient, subject_hash, m.paperless_id, imap_folder,
                     date_received as date, id_hash as hash,
                     is_read, is_flagged, is_answered, c.display_name as displayname, cm.email_hash as emailhash
                 FROM mails as m
-                LEFT JOIN contact_emails as cm ON cm.id = m.contact_id
+                LEFT JOIN contact_emails as cm ON cm.id = m.sender_ceid
                 LEFT JOIN contacts as c ON c.id = cm.contact_id
                 WHERE m.tenant_id = :tenant_id
                 AND imap_folder = :folder
@@ -876,6 +886,7 @@ class MailProcessor extends Database
             // UTF-8 Absicherung
             $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
             $cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+            $cleanRecipient    = mb_convert_encoding($row['recipient'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
 
             // Zusätzlicher PHP-Filter bei aktiver Suche
             if (!empty($search)) {
@@ -905,11 +916,12 @@ class MailProcessor extends Database
                 'uid'          => $row['uid'] ?? null, 
                 'subject'      => $cleanSubject,        
                 'sender'       => $cleanSender,         
+                'recipient'    => $cleanRecipient,
                 'date'         => date('d.m.Y H:i', strtotime($row['date'])),
                 'paperless_id' => $row['paperless_id'], 
-                'unread'       => $row['is_read'],
-                'flagged'      => $row['is_flagged'],
-                'answered'     => $row['is_answered'],
+                'is_read'       => $row['is_read'],
+                'is_flagged'      => $row['is_flagged'],
+                'is_answered'     => $row['is_answered'],
                 'displayname'  => $row['displayname'],
                 'emailhash'    => $row['emailhash']
             ];
@@ -960,7 +972,7 @@ class MailProcessor extends Database
                 ];
             }
 
-            $paperless = new \App\Paperless($this->dashboard);
+            $paperless = new \App\Services\PaperlessProcessor($this->dashboard);
 
             foreach ($result as $row) {
                 $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
@@ -1037,7 +1049,9 @@ class MailProcessor extends Database
         }
     }
 
-
+    /**
+     * @deprecated !!
+     */
     public function getSingleMail2Paperless(?string $hash = null, ?int $id = null): array 
     {
         try {
@@ -1177,50 +1191,86 @@ class MailProcessor extends Database
         
     }
 
-    public function linkMailToContact(int $mailId, string $senderRaw): void 
+    public function linkMailToContact(int $mailId, string $senderRaw, string $recipientRaw): void 
     {
-        // 1. Sender extrahieren (dein bestehender Regex-Block)
-        $email = $senderRaw;
-        $name = $senderRaw;
-        if (preg_match('/^([^<]*)\s*<([^>]+)>/', $senderRaw, $matches)) {
-            $name = trim($matches[1]);
-            $email = trim($matches[2]);
-        }
-        $email = strtolower(trim($email));
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return;
-        error_log($email . " : name". $name);
+        $parse = function($raw) {
+            if (preg_match('/^([^<]*)\s*<([^>]+)>/', $raw, $matches)) {
+                return ['name' => trim($matches[1]), 'email' => strtolower(trim($matches[2]))];
+            }
+            return ['name' => trim($raw), 'email' => strtolower(trim($raw))];
+        };
 
-        // 2. Kontakt suchen
-        $sqlFindContact = "SELECT ce.contact_id 
-                            FROM contact_emails ce
-                            INNER JOIN contacts c ON ce.contact_id = c.id
-                            WHERE c.tenant_id = :tenant_id
-                              AND ce.email = :email 
-                              AND c.tenant_id = :tenant_id;";
+        $sender = $parse($senderRaw);
+        $recipient = $parse($recipientRaw);
+        $processor = new ContactProcessor($this->dashboard);
+
+        // Hilfsfunktion: Kontakt finden oder anlegen (schluckt Fehler)
+        $getOrInsert = function($data) use ($processor) {
+            if (empty($data['email'])) return null;
+            try {
+                $id = $this->findContactId($data['email']);
+                if (!$id) {
+                    $id = $processor->insertContact($data['name'], $data['email'], 'person');
+                }
+                return (int)$id;
+            } catch (\Exception $e) {
+                error_log("Kontakt-Verarbeitung fehlgeschlagen: " . $e->getMessage());
+                return null;
+            }
+        };
+
+        $cid = $getOrInsert($sender);
+        $rid = $getOrInsert($recipient);
+
+        // Vor dem Update prüfen: Existieren die IDs wirklich in contact_emails?
+        // Damit umgehen wir den Foreign-Key-Fehler 1452 komplett.
+        $validCid = $this->checkIdExists($cid, 'contact_emails');
+        $validRid = $this->checkIdExists($rid, 'contact_emails');
+
+        $params = ['mid' => $mailId];
+        $updateFields = [];
+
+        if ($validCid) {
+            $updateFields[] = "sender_ceid = :cid";
+            $params['cid'] = $validCid;
+        }
+        if ($validRid) {
+            $updateFields[] = "recipient_ceid = :rid";
+            $params['rid'] = $validRid;
+        }
+
+        if (!empty($updateFields)) {
+            try {
+                $sql = "UPDATE mails SET " . implode(', ', $updateFields) . 
+                    " WHERE tenant_id = :tenant_id AND id = :mid";
+                $this->queryIt($sql, $params);
+            } catch (\Exception $e) {
+                error_log("Update der Mail-Verknüpfung fehlgeschlagen: " . $e->getMessage());
+                // Hier kein Abbruch -> continue
+            }
+        }
+    }
+
+    // Hilfsmethode zur Validierung
+    private function checkIdExists(?int $id, string $table): ?int {
+        if (!$id) return null;
+        $res = $this->queryIt("SELECT id FROM $table WHERE id = :id LIMIT 1", ['id' => $id]);
+        return !empty($res) ? $id : null;
+    }
+
+    /** 
+     * Gibt die ID von contact_emails wieder, wenn gefunden!
+     * @param $email string => E-Mail-Adresse
+     */
+    private function findContactId(string $email) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return null;
         
-        $contactResult = $this->queryIt($sqlFindContact, ['email' => $email]);
-        if (count($contactResult)>1)
-        {
-            error_log("mehr als eine E-Mail gefunden: " . $email);
-            exit;
-        }
+        $res = $this->queryIt("SELECT ce.contact_id FROM contact_emails ce 
+                            INNER JOIN contacts c ON ce.contact_id = c.id 
+                            WHERE c.tenant_id = :tid AND ce.email = :email", 
+                            ['tid' => $this->tenant_id, 'email' => $email]);
         
-        error_log(print_r($contactResult));
-        $contactId = !empty($contactResult) ? $contactResult[0]['contact_id'] : null;
-
-        // 3. Wenn nicht gefunden -> Neu anlegen
-        if (!$contactId) {
-            $contact = new ContactProcessor($this->dashboard);
-            $contactId = $contact->insertContact($name, $email, 'company');
-        }
-
-        // 4. Verknüpfen, falls wir eine ID haben
-        if ($contactId) {
-            $this->queryIt("UPDATE mails SET contact_id = :contact_id WHERE tenant_id= :tenant_id AND id = :mailId", [
-                'contact_id' => (int)$contactId,
-                'mailId'    => $mailId
-            ]);
-        }
+        return !empty($res) ? (int)$res[0]['contact_id'] : null;
     }
 
     private function calculateBodyHash(string $plainText): string 

@@ -1,15 +1,15 @@
 <?php
-namespace App;
+namespace App\Services;
 use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use Sabre\DAV\Client;
 use Sabre\VObject\Reader;
 /**
- * @property \App\AppointmentsProcessor $appointProcess
+ * @property \App\Services\AppointmentsProcessor $appointProcess
  */
-class AppointmentsProcessor extends Database
+class AppointmentsProcessor extends BaseProcessor
 {
-    use ServiceTrait;
+
     protected $dashboard;
 
     public function __construct($dashboard) {
@@ -18,11 +18,14 @@ class AppointmentsProcessor extends Database
     }
 
     // Zentrale Client-Fabrik
-    private function getClient($uri = 'https://p41-caldav.icloud.com/') {
+    private function getClient($uri = 'https://p41-caldav.icloud.com/') 
+    {
+        $systemService = $this->dashboard->getService('systemProcess', \App\Services\SystemProcessor::class);
+
         $settings = [
             'baseUri'  => $uri,
-            'userName' => $this->systemProcess->getRequiredEnv('IMAP_USER'),
-            'password' => $this->systemProcess->getRequiredEnv('IMAP_PASSWORD'),
+            'userName' => $systemService->getRequiredEnv('IMAP_USER'),
+            'password' => $systemService->getRequiredEnv('IMAP_PASSWORD'),
         ];
 
         $client = new Client($settings);

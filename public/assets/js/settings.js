@@ -11,7 +11,7 @@ const settingsComponent = () => ({
 
     async initSettings() {
         try {
-            let res = await fetch('api.php?action=get_settings').then(r => r.json());
+            let res = await safeFetch('api.php?action=get_settings');
             if (res.success) {
                 // Zusammenführen und existierende Daten behalten
                 this.form = { ...this.form, ...res.details.settings };
@@ -33,6 +33,8 @@ const settingsComponent = () => ({
                 this.showMsg(res.error, 'error');
             }
         } catch (err) {
+            console.error("Fehler beim Laden der Einstellungen");
+            console.error(err);
             this.showMsg('Fehler beim Laden der Einstellungen.', 'error');
         }
     },
@@ -53,10 +55,12 @@ const settingsComponent = () => ({
                 this.folders = res.folders; // Erwartet ['INBOX', 'Archiv', ...]
                 this.showMsg('Verbindung erfolgreich!', 'success');
             } else {
+                console.error('Verbindung fehlgeschlagen');
+                console.error(res.error);
                 this.showMsg('Verbindung fehlgeschlagen: ' + res.error, 'error');
             }
         } catch (err) {
-            this.showMsg('Verbindungsfehler.', 'error');
+            this.showMsg('Verbindungsfehler.' + err, 'error');
         } finally {
             this.loadingFolders = false;
         }
@@ -73,7 +77,7 @@ const settingsComponent = () => ({
                 fd.append(key, value);
             }
             
-            let res = await fetch('api.php', { method: 'POST', body: fd }).then(r => r.json());
+            let res = await safeFetch('api.php', { method: 'POST', body: fd });
             this.loading = false;
             
             if (res.success) {

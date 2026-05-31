@@ -289,7 +289,7 @@ const contactsViewComponent = () => ({
         if (!confirm(`Kontakt mit Dokument #${docId} verknüpfen?`)) return;
         
         const fd = new FormData();
-        fd.append('contact_id', contactId);
+        fd.append('sender_ceid', contactId);
         fd.append('item_id', docId);
         fd.append('item_type', 'paperless');
 
@@ -324,7 +324,7 @@ const contactsViewComponent = () => ({
     // Verknüpft einen Kontakt mit einer Mail
     async linkToMail(contactId, mailHash) {
         const fd = new FormData();
-        fd.append('contact_id', contactId);
+        fd.append('sender_ceid', contactId);
         fd.append('item_id', mailHash);
         fd.append('item_type', 'mail');
 
@@ -404,6 +404,6 @@ if (window.Alpine) {
 } else {
     // Falls Alpine noch auf den Start wartet
     document.addEventListener('alpine:init', () => {
-        window.Alpine.data('mailViecontactsVieww', contactsViewComponent);
+        window.Alpine.data('contactsView', contactsViewComponent);
     });
 }

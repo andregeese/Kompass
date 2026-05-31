@@ -1,15 +1,15 @@
 <?php
-namespace App;
+namespace App\Services;
 
 use Override;
 use PDO;
 
 /**
- * @property \App\SettingProcessor $settingProcess
+ * @property \App\Services\SettingProcessor $settingProcess
  */
-class SettingProcessor extends Database 
+class SettingProcessor extends \App\Core\Database 
 {
-    use ServiceTrait;
+    use \App\Core\ServiceTrait;
 
     public function __construct($dashboard)
     {
@@ -74,7 +74,7 @@ class SettingProcessor extends Database
 
             if (in_array($key, ['PAPERLESS_NAME', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
                 error_log($key . ": VOR DER VERSCHLÜSSELUNG");
-                $finalValue = \App\Crypto::encrypt($val, $encryptionKey);
+                $finalValue = \App\Core\Crypto::encrypt($val, $encryptionKey);
             } else {
                 error_log($key . ": IM KLARTEXT");
                 $finalValue = $val;

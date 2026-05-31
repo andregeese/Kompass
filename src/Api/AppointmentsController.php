@@ -4,7 +4,7 @@ use App\AppointmentsProcessor; // Importiere den Prozessor
 
 use Exception;
 
-class AppointmentsController extends BaseController 
+class AppointmentsController extends \App\Core\BaseController 
 {
     public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!

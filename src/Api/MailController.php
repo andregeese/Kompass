@@ -1,10 +1,10 @@
 <?php
 namespace App\Api;
-use App\MailProcessor; // Importiere den Prozessor
+use App\Services\MailProcessor; // Importiere den Prozessor
 
 use Exception;
 
-class MailController extends BaseController 
+class MailController extends \App\Core\BaseController 
 {
     public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!
@@ -109,7 +109,7 @@ class MailController extends BaseController
         return [
             'success' => true,
             'details' => [
-                'subject'      => $this->decrypt($mailDetails['subject_hash']),
+                'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
                 'date'         => $mailDetails['date_received'],
                 'sender'       => $mailDetails['sender'],
                 'paperless_id' => $mailDetails['paperless_id']

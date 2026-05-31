@@ -1,92 +1,53 @@
 <?php
-// classes/Database.php
-namespace App;
+namespace App\Core;
 
 use PDO;
-use PDOException;
+use App\Services\SystemProcessor;
 
 class Database 
 {
-    private static ?PDO $instance = null;
+    private ?PDO $pdo = null;
+    
 
-    private static ?PDO $pdo = null;
-    protected $dashboard;
-
-    public function __construct($dashboard) {
-        $this->dashboard = $dashboard;
-    }
-
-    public function prepareHash(string $hex): string {
-        return hex2bin($hex);
-    }
-
-    public function __destruct() {
-        self::closeConnection();
-    }
-
-    // In deiner DB-Klasse oder dem Datenbank-Wrapper
-    private function beginTransaction() {
-        $pdo = self::getConnection();
-        return $pdo->beginTransaction();
-    }
-
-    private function commit() {
-        $pdo = self::getConnection();
-        return $pdo->commit();
-    }
-
-    private function rollBack() {
-        $pdo = self::getConnection();
-        return $pdo->rollBack();
+    public function __construct() {
+        
     }
 
     /**
-     * Zentrale Verbindung zur Datenbank (Singleton-Pattern)
-     * Stellt sicher, dass immer nur eine Verbindung aufgebaut wird und schützt so vor "Too many connections"-Fehlern.
+     * Zentrale Verbindung: Nutzt Instanz-Variable statt statischer Property
      */
-    protected static function getConnection(): PDO {
-        if (self::$pdo === null) {
-            // Hier deine echten DB-Daten eintragen
-                $dsn = "mysql:host=" . \DB_HOST . ";dbname=" . \DB_NAME . ";charset=utf8mb4";            
-                self::$pdo = new PDO($dsn, \DB_USER, \DB_PASS, [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_PERSISTENT         => false // Schutz vor "Too many connections"
-            ]);
-            self::$pdo->exec("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+    public function getConnection(): PDO 
+    {
+        if ($this->pdo) return $this->pdo;
+        $systemService = new SystemProcessor(null);
+
+        $host = $systemService->getStaticEnv('DB_HOST');
+        $db   = $systemService->getStaticEnv('DB_NAME');
+        $user = $systemService->getStaticEnv('DB_USER');
+        $pass = $systemService->getStaticEnv('DB_PASS');
+
+        if (!$host || !$db) {
+            throw new \RuntimeException("Datenbank-Konfiguration unvollständig.");
         }
-        return self::$pdo;
-    }
 
-    public function getCallerInfo() {
-        // Hole den Backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $dsn = "mysql:host={$host};dbname={$db};charset=utf8mb4";
         
-        // Index 0: debug_backtrace() selbst
-        // Index 1: Die Funktion, die getCallerInfo() aufgerufen hat (dein Ziel)
-        // Index 2: Der Rufer, der Index 1 aufgerufen hat
-        $caller = $trace[2] ?? $trace[1]; 
-        
-        error_log(
-            print_r(
-                [
-                'file'     => $caller['file'] ?? 'unknown',
-                'line'     => $caller['line'] ?? 'unknown',
-                'function' => $caller['function'] ?? 'unknown',
-                'class'    => $caller['class'] ?? 'n/a'
-            ],true)
-        );
+        $this->pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_PERSISTENT         => false 
+        ]);
+
+        return $this->pdo;
     }
 
     /**
-     * Universelle Query-Methode - Sicher gegen SQL-Injections geschützt,
-     * liefert IMMER ein flaches fetchAll()-Array zurück.
-     * tenant_id wird hier mit reingeladen
-     * @param string $query Das SQL-Query mit benannten Platzhaltern (z.B. :id, :name)
-     * @param array $params Ein assoziatives Array mit den Werten für die Platzhalter (z.B. ['id' => 5, 'name' => 'Test'])  
-     * @return array|int of values or lastInsertId
+     * Database class for handling database connections and operations
+    * @deprecated Use queryIt() instead. This method is obsolete and replaced by queryIt().
+     * This class manages database connectivity, query execution, and data retrieval
+     * for the age_web application.
      */
-    public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
+    public function queryItOld(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
     {
         //$this->getCallerInfo();
         //error_log(__FUNCTION__ . ": " . $query);
@@ -238,42 +199,104 @@ class Database
         }
         return $sql;
     }
-    
 
-    
 
 
     /**
-     * Durchsucht die Kontakte/Absender anhand eines Suchbegriffs.
-     * @param string $query Der Suchbegriff (Name, E-Mail oder Firma)
-     * @return array Liste der gefundenen Kontakte
+     * Executes a database query with optional transaction support and parameter binding.
+     *
+     * @param string $query The SQL query to execute. Can include placeholders for prepared statements.
+     * @param array $params Optional. Array of parameters to bind to the query. Default is empty array.
+     * @param bool $isTransactional Optional. If true, wraps the query in a transaction. Default is false.
+     * @param bool $returnInsertID Optional. If true, returns the last inserted ID instead of fetched results. Default is false.
+     *
+     * @return mixed Returns the last inserted ID (int) if $returnInsertID is true, otherwise returns an array of fetched rows.
+     *
+     * @throws \Exception When a database error occurs. The exception message contains the original PDO error message.
+     *
+     * @note This method automatically injects the tenant ID into queries for multi-tenant support.
+     * @note Transactions are automatically rolled back on errors.
+     * @note Error logging avoids writing to the database to prevent cascading failures.
+     * @note Caller information is logged for debugging purposes.
      */
-    public function searchContacts(string $query): array {
-        $search = trim($query);
-        if (strlen($search) < 2) {
-            return [];
-        }
-        $searchTerm = "%" . $query . "%";
+    public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
+    {
+        // Debugging vorher
+        #$this->getCallerInfo();
+        #error_log("DB Query $query");
+        #$a = $this->getDebugSql($query, $params);
+        #error_log("### DEBUG SQL ###");
+        #error_log(print_r($a, true));
+        #error_log("### EOF: DEBUG SQL ###");
 
-        // Wir suchen in Name, E-Mail und Firma nach dem Begriff
-        $sql = "SELECT MIN(id) as id, sender as name, sender as email, '' as company FROM mails WHERE sender like :sender GROUP BY sender LIMIT 50";
-        
-        $ret = $this->queryIt($sql, [
-            'salt' => defined('HASH_SALT') ? HASH_SALT : '',
-            'hash' => $hash,
-            'sender' => $searchTerm
-        ]);
-                
-        return $ret;
+        try {
+            $pdo = $this->getConnection();
+            $this->injectTenantId($query, $params);
+
+            // 1. LIMIT und OFFSET explizit im Array casten, BEVOR execute aufgerufen wird
+            if (isset($params['limit']))  $params['limit']  = (int)$params['limit'];
+            if (isset($params['offset'])) $params['offset'] = (int)$params['offset'];
+
+            if ($isTransactional) $pdo->beginTransaction();
+
+            // 2. Prepare das Statement
+            $stmt = $pdo->prepare($query);
+
+            // --- DER WICHTIGE TEIL: Manuelles Binden für ALLE Parameter ---
+            foreach ($params as $key => $value) {
+                $placeholder = ':' . $key;
+                // Wenn es limit oder offset ist, MUSS es als Integer gebunden werden
+                if ($key === 'limit' || $key === 'offset') {
+                    $stmt->bindValue($placeholder, (int)$value, \PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($placeholder, $value);
+                }
+            }
+
+            $stmt->execute();
+
+            $result = $returnInsertID ? $pdo->lastInsertId() : $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            if ($isTransactional) $pdo->commit();
+            return $result;
+
+        } catch (\Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            error_log("DB FEHLER: " . $e->getMessage());
+            throw new \Exception("Datenbankfehler: " . $e->getMessage());
+        }
     }
 
+    private function injectTenantId(string &$sql, array &$params): void 
+    {
+        // 1. Prüfen, ob der Platzhalter überhaupt im SQL-String existiert
+        if (!str_contains($sql, ':tenant_id')) {
+            return; // Nichts zu tun, sofort beenden
+        }
+        
+        // Multi-Tenancy Logik
+        $isGlobalTable = preg_match('/\b(users|tenants|global_config)\b/i', $sql);
+        if (!$isGlobalTable) {
+            $tenantId = $_SESSION['tenant_id'] ?? null;
+            if (!$tenantId) error_log(__FUNCTION__ . ": ### Sicherheitsblockade: Keine tenant_id. ###");
+            
+            
+            // Automatischer Append nur, wenn :tenant_id im SQL steht
+            if (str_contains($sql, ':tenant_id')) {
+                $params['tenant_id'] = (int)$tenantId;
+            }
+        }
+    }
 
-    
+    public function getCallerInfo() {
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = $trace[2] ?? $trace[1]; 
+        
+        // Nutze hier den Standard error_log, um DB-Logger-Rekursion zu vermeiden
+        error_log("DB Query von: " . ($caller['class'] ?? '') . "->" . ($caller['function'] ?? ''));
+    }
 
-    /**
-     * Schließt die Verbindung aktiv (Schutz vor "Too many connections")
-     */
-    public static function closeConnection() {
-        self::$pdo = null;
+    public function __destruct() {
+        $this->pdo = null;
     }
 }

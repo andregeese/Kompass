@@ -1,22 +1,21 @@
 <?php
 
-namespace App;
-use App\ContactProcessor;
+namespace App\Services;
+use App\Services\ContactProcessor;
 use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use PDO;
 
 
 /**
- * @property \App\SystemProcessor $systemProcess
+ * @property \App\Services\SystemProcessor $systemProcess
  */
-class SystemProcessor extends Database
+class SystemProcessor extends \App\Core\Database
 {
-    use ServiceTrait;
+    use \App\Core\ServiceTrait;
     protected $dashboard;
 
-    public function __construct($dashboard) {
-        parent::__construct($dashboard);
+    public function __construct($dashboard =null) {
         $this->dashboard = $dashboard;
     }
 
@@ -198,15 +197,11 @@ class SystemProcessor extends Database
         return $folders; // Rückg
     }
 
-
-    /**
-     * tbd: $tenant_id = null
-     */
-    public function getRequiredEnv(string $key, ?int $tenantId = 6):string
-    {
-        $key = strtoupper($key);
+    // NEU: Eine statische Brücke
+    public static function getStaticEnv(string $key) {
+        // Hier greifen wir direkt auf die Umgebung zu, 
+        // ohne ein Dashboard-Objekt zu benötigen
         
-        // 1. Priorität: .env Datei
         $envPath = __DIR__ . '/../../.env';
         if (file_exists($envPath)) {
             $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -220,14 +215,54 @@ class SystemProcessor extends Database
                 }
             }
         }else{
-            //throw new \Exception("### .env nicht gefunden!! ###");
+            throw new \RuntimeException("Umgebungsvariable '$key' fehlt.");
+        }
+        return $value;
+    }
+
+    /**
+     * tbd: $tenant_id = null
+     */
+    public function getRequiredEnv(string $key, ?int $tenantId = null):string
+    {
+        if (!$tenantId)
+        {
+            #error_log("tenant_id ist leer");
+            $tenantId = $_SESSION['tenant_id'];    
+        }
+        #error_log("getRequiredEnv");
+        #error_log("getRequiredEnv $key - $tenantId");
+        $key = strtoupper($key);
+        
+        // 1. Priorität: .env Datei
+        $envPath = ROOT_PATH .'/.env';
+
+        if (file_exists($envPath)) {
+            #error_log("Suche in .env $key");
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = explode('=', $line, 2);
+                    if (trim($name) === $key && trim($value) !== '') {
+                        return trim($value);
+                    }
+                }
+            }
+        }else{
+            throw new \Exception("### .env ($envPath) nicht gefunden!! ###");
         }
 
         // 2. Priorität: Datenbank (tenant_config)
         if ($tenantId) {
             error_log("search Key In DB: " . $key);
+            #error_log("Suche in .env $key");
+
             $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tid LIMIT 1";
-            $row = $this->queryit($sql, ['key' => $key, 'tid' => $tenantId], true);
+            $params=[
+                'key' => $key, 'tid' => $tenantId
+            ];
+            $row = $this->queryit($sql, $params, true);
             
             if (!empty($row)) {                
                 $value = isset($row[0]['config_value']) ? $row[0]['config_value'] : null;
@@ -237,13 +272,14 @@ class SystemProcessor extends Database
                 
                 if (in_array($key, $encryptedKeys)) {
                     $masterKey = trim($this->getMasterKeyFromEnv()); 
-                    $decrypted = \App\Crypto::decrypt($value, $masterKey);
+                    $decrypted = \App\Core\Crypto::decrypt($value, $masterKey);
+                    //error_log("decrypted: " . $decrypted);
                     
                     // DEBUG: WICHTIG!
                     if ($decrypted === false) {
-                        error_log("FEHLER: Entschlüsselung von {$key} hat FALSE zurückgegeben!");
-                        error_log("Value aus DB: " . $value);
-                        error_log("Master-Key Hash: " . bin2hex(hash('sha256', $masterKey, true)));
+                        #error_log("FEHLER: Entschlüsselung von {$key} hat FALSE zurückgegeben!");
+                        #error_log("Value aus DB: " . $value);
+                        #error_log("Master-Key Hash: " . bin2hex(hash('sha256', $masterKey, true)));
                         throw new \Exception("Entschlüsselungs-Fehler für Key: " . $key);
                     }
                     

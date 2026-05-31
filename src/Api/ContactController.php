@@ -1,9 +1,9 @@
 <?php
 namespace App\Api;
-use App\ContactProcessor; // Importiere den Prozessor
-use App\PaperlessProcessor;
+use App\Services\ContactProcessor; // Importiere den Prozessor
+use App\Services\PaperlessProcessor;
 
-class ContactController extends BaseController {
+class ContactController extends \App\Core\BaseController {
 
     public function __construct($dashboard) {
         // Übergibt das Dashboard an den BaseController, 

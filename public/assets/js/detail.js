@@ -48,7 +48,7 @@ const detailViewComponent = () => ({
         this.dmsLoading = true;
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
-            const res = await fetch(`api.php?action=search_contact&hash=${hash}`);
+            const res = await safeFetch(`api.php?action=search_contact&hash=${hash}`);
             const json = await res.json();
             
             if (json.success) {
@@ -82,7 +82,7 @@ const detailViewComponent = () => ({
     async fetchDMSCorrespondents(hash, queryTerm) {
         try {
             // Wir encoden den QueryTerm, falls der User Leerzeichen oder Sonderzeichen eingibt
-            const response = await fetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
+            const response = await safeFetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
             const data = await response.json();
             
             // HIER DIE NEUE PRÜFUNG: Auf "status === 'success'" checken!
@@ -120,7 +120,7 @@ const detailViewComponent = () => ({
         bodyData.append('type', this.formData.type);
 
         try {
-            const res = await fetch('api.php?action=insert_contact', { method: 'POST', body: bodyData });
+            const res = await safeFetch('api.php?action=insert_contact', { method: 'POST', body: bodyData });
             const json = await res.json();
             if (json.success) {
                 const urlParams = new URLSearchParams(window.location.search);

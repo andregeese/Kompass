@@ -1,5 +1,5 @@
 <?php
-namespace App;
+namespace App\Core;
 
 class Crypto {
     private static $cipher = 'aes-256-gcm';
