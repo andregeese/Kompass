@@ -45,10 +45,36 @@ class ContactController extends \App\Core\BaseController {
         }
     }
 
+
+    public function getContactByEmailHash()
+    {
+         try{
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+            $hash = $data['hash'];
+
+            if (empty($hash)) {
+                return ['success' => false, 'error' => 'Kein Hash übergeben.'];
+            }
+            
+            $contacts = $this->contactProcess->getContactByEmailHash($hash);
+            
+            $this->dashboard->sendResponse(true, ['contact_emails' => $contacts], "", 'success');
+        }catch(\Throwable $e){
+            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        }
+    }
+
+    /**
+     * Suche anhand eines Strings
+     */
     public function getEmailsBySearch()
     {
          try{
-            $query = trim($_REQUEST['query'] ?? '');
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+            error_log(__FUNCTION__ . ": ". print_r($data, true));
+            $query = $data['query'];
 
             if (empty($query)) {
                 return ['success' => false, 'error' => 'Keine Query übergeben.'];

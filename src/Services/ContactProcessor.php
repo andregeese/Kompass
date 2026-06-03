@@ -256,9 +256,16 @@ class ContactProcessor extends \App\Core\Database
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
                             
-        $ret = $this->queryIt($sql,
+        $dbRequest = $this->queryIt($sql,
             ["contact_id" => $contact_id], false, false, false
         );
+        
+        if (!$dbRequest->success)
+        {
+            return [];
+        }
+
+        $ret = $dbRequest->data->fetched;
 
         $contacts=[];
         foreach ($ret as $row) {
@@ -336,6 +343,40 @@ class ContactProcessor extends \App\Core\Database
         $finalContacts = array_values($contacts);
         return $finalContacts;
 
+    }
+
+    /**
+     * HASH von der Mail?
+     */
+    public function getContactByEmailHash($hash)
+    {
+        $sql = "SELECT 
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name as displayname,
+                    c.type,
+                    ce.id AS ceid,
+                    ce.email
+                FROM contact_emails ce
+                LEFT JOIN contacts as c ON c.id=ce.contact_id
+                
+                WHERE c.tenant_id = :tenant_id
+                  AND ce.email_hash=:hash
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY c.display_name, ce.email";
+
+        $dbResult = $this->queryIt($sql,
+            ["hash" => $hash ], false, false, true
+        );
+        
+        if (!$dbResult->success)
+        {
+            $this->dashboard->sendResponse(false,null, print_r($dbResult->error, true),'error');
+        }
+
+        $finalContacts = $dbResult->data->fetched;
+        $this->dashboard->sendResponse(true, ["contacts" => $finalContacts], false, 'success');
+        
     }
 
     public function getEmailsBySearch($query)

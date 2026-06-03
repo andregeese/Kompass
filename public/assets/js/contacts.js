@@ -14,12 +14,15 @@ const contactsViewComponent = () => ({
     async initContacts() {
 
         const urlParams = new URLSearchParams(window.location.search);
-        const hashValue = urlParams.get('id');
+        const hashValue = urlParams.get('hash'); //mail_hash
+        
 
         if (hashValue) {
-            const res = await safeFetch('api.php?action=get_emails_by_contact', {
+            console.log(hashValue);
+
+            const res = await safeFetch('api.php?action=get_emails_by_hash', {
                 method: 'POST',
-                body: JSON.stringify({query: hashValue})
+                body: JSON.stringify({hash: hashValue})
             });
 
             // 1. Wert setzen
@@ -197,9 +200,14 @@ const contactsViewComponent = () => ({
 
             this.loadingMatch = true;
         
-            const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_search&query=${encodeURIComponent(this.matchSearchQuery)}`);
             
-            const rawResults = data.details?.contact_emails || [];
+            const res = await safeFetch('api.php?action=get_emails_by_search', {
+                method: 'POST',
+                body: JSON.stringify({query: encodeURIComponent(this.matchSearchQuery)})
+            });
+            //const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_search&query=${encodeURIComponent(this.matchSearchQuery)}`);
+            
+            const rawResults = res.details?.contact_emails || [];
             const normalizedResults = rawResults.map(item => ({
                 ceid: item.ceid,
                 email: item.email
