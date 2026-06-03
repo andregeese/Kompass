@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hub-v2.45'; 
+const CACHE_NAME = 'hub-v2.49'; 
 
 const ASSETS = [
     './index.php',

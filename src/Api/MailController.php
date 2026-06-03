@@ -81,7 +81,7 @@ class MailController extends \App\Core\BaseController
             //return ['success' => false, 'message' => "Keine Mails gefunden."];
         }
 
-        $this->dashboard->sendResponse(true, $mailDetails, null,'success');
+        $this->dashboard->sendResponse(true, ["mails" => $mailDetails], null,'success');
 
         // ACHTUNG: Hier hast du einen Design-Fehler im Controller:
         // Dein MailProcessor gibt jetzt eine LISTE (Array von Mails) zurück, 
@@ -196,7 +196,7 @@ class MailController extends \App\Core\BaseController
         ob_start();
         try{
 
-            $syncResult = $this->mailProcess->syncWithICloud(5, $folder);
+            $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
             
             ob_end_clean();
             return $syncResult; // Gibt das komplette Sync-Array direkt zurück

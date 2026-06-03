@@ -354,11 +354,16 @@ class ContactProcessor extends \App\Core\Database
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
 
-        $ret = $this->queryIt($sql,
+        $dbResult = $this->queryIt($sql,
             ["search" =>"%" . $query . "%"], false, false, false
         );
         
-        $finalContacts = array_values($ret);
+        if (!$dbResult->success)
+        {
+            $this->dashboard->sendResponse(false,null, print_r($dbResult->error, true),'error');
+        }
+
+        $finalContacts = $dbResult->data->fetched;
         return $finalContacts;
     }
 
@@ -380,6 +385,7 @@ class ContactProcessor extends \App\Core\Database
         $items = [];
         //Holt alle Mails
         $mails = $this->getMailItems($hash, $salt, $tenantId);
+
         $mailItems = array_merge($items, $mails);
         
         $timeline = [];
@@ -470,45 +476,40 @@ class ContactProcessor extends \App\Core\Database
     private function getMailItems($hash, $salt, $tenantId)
     {
         error_log(__FUNCTION__);
-        $sql = "SELECT 
-                    'mail' AS type,
+        $sql = "SELECT 'mail' AS type,
                     m.id AS item_id,
                     m.paperless_id AS paperlessdocument,
                     m.date_received AS event_date,
                     m.subject_hash AS title,
                     m.sender AS detail
-                FROM mails AS m
-                INNER JOIN (
-                    SELECT sender_ceid, recipient_ceid 
-                    FROM mails 
-                    WHERE id_hash = UNHEX(:hash) 
-                    LIMIT 1
-                ) AS ref ON (
-                    -- LOGIK 1: Dialog (Paar-Match)
-                    ((m.sender_ceid = ref.sender_ceid AND m.recipient_ceid = ref.recipient_ceid) OR
-                    (m.sender_ceid = ref.recipient_ceid AND m.recipient_ceid = ref.sender_ceid))
-                    OR
-                    -- LOGIK 2: Einbahnstraße (Newsletter/System)
-                    -- Wenn der Sender gleich ist und wir den Empfänger ignorieren dürfen
-                    (m.sender_ceid = ref.sender_ceid AND ref.sender_ceid != 0)
-                )
-                WHERE m.tenant_id = :tenant_id 
-                AND m.status != 'deleted'
-                GROUP BY m.id
-                ORDER BY m.date_received DESC
-                LIMIT 100;"; // Dein SQL von oben
+                    FROM mails m
+                    -- Join, um alle ceids zu finden, die zum Kontakt der Ausgangs-Mail gehören
+                    JOIN contact_emails ce ON (m.sender_ceid = ce.id OR m.recipient_ceid = ce.id)
+                    WHERE ce.contact_id IN (
+                        -- Subquery: Finde den Kontakt, der zur Ausgangs-Mail gehört
+                        SELECT contact_id 
+                        FROM contact_emails 
+                        WHERE id IN (
+                            SELECT sender_ceid 
+                            FROM mails 
+                            WHERE id_hash = UNHEX(:hash)
+                        )
+                    )
+                    AND m.tenant_id = :tenant_id 
+                    AND m.status != 'deleted'
+                    ORDER BY m.date_received DESC
+                    LIMIT 1000;"; // Dein SQL von oben
 
         $dbResult = $this->queryIt(
             $sql, 
             [
-                "hash" => $hash, 
-                "tenant_id" => $tenantId
+                "hash" => $hash
             ],
             false,
             false,
             false
         );
-        //error_log(print_r($rawMails,true));
+
         if ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
         {
             $rawMails = $dbResult->data->fetched;
@@ -593,7 +594,7 @@ class ContactProcessor extends \App\Core\Database
             ["hash" => $hash],
             false,
             false,
-            true
+            false
         );
 
         

@@ -149,7 +149,7 @@ const contactsViewComponent = () => ({
             });
 
             if (response.success) {
-                console.log('Kontakt gespeichert:', resuresponset.message);
+                console.log('Kontakt gespeichert:', response.message);
                 // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
             } else {
                 alert('Fehler: ' + (response.error || 'Unbekannt'));

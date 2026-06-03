@@ -60,6 +60,7 @@ const mailViewComponent = () => ({
 
         // Aktiviere visuellen Klick-Zustand in der Navigation (Optional)
         document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+
         const activeEl = document.getElementById(`folder-${this.currentFolder}`);
         if (activeEl) activeEl.classList.add('active');
         
@@ -87,7 +88,7 @@ const mailViewComponent = () => ({
 
         try {
             const isSearch = this.mailSearchQuery && this.mailSearchQuery.trim() !== '';
-            const folder = this.currentFolder || 'INBOX';
+            const folder = this.currentFolder;
             
             // Aufbau der URL
             let url = `${this.$data.apiUrl}?action=${isSearch ? 'search_mail' : 'list_mails'}&folder=${folder}`;
@@ -99,8 +100,9 @@ const mailViewComponent = () => ({
             }
 
             const data = await safeFetch(url);
-
+            //HACK
             const fetchedMails = data.details.mails; // Array(50)
+
             const receivedCount = fetchedMails.length;
 
             if (data?.success && data.details?.mails) {
@@ -361,8 +363,12 @@ const mailViewComponent = () => ({
         }
 
         try {
-            // 🚀 FIX: Backticks genutzt
-            const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&limit=50`);
+            if (this.currentFolder!=='')
+            {
+                const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&folder=${this.currentFolder}&limit=50`);
+            }else{
+                const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&limit=50`);
+            }
             
             if (data && data.success && data.details?.mails) {
                 // 🚀 FIX: Einheitlich $data.mails prüfen und setzen

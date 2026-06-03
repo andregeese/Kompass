@@ -497,7 +497,7 @@ class MailProcessor extends \App\Core\Database
                                 true, 
                                 false
                             );
-                            error_log(" übegebene Parameter: " . print_r($paramsLog, true));
+                            # error_log(" übegebene Parameter: " . print_r($paramsLog, true));
                             
                         }else{
                             error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
@@ -750,7 +750,8 @@ class MailProcessor extends \App\Core\Database
                     c.email LIKE :search 
                     OR c.email LIKE :search 
                     OR m.sender LIKE :search
-                );";
+                )
+                ORDER BY m.date_received DESC;";
         
         try {
             // 3. Ausführung über deine native queryIt-Methode
@@ -769,9 +770,6 @@ class MailProcessor extends \App\Core\Database
             // 2. Filter-Logik in PHP
             $filtered = [];
             $search = strtolower($search);
-
-            error_log("Gefundene Mails vor Filterung: " . count($results));
-            error_log(print_r($results, true));
 
             foreach ($results as $row) 
             {

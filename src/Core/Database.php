@@ -111,10 +111,10 @@ class Database
 
         // Debugging vorher
         //if ($debug=true) {
-            $result->debug = [
-                "caller" => $this->getCallerInfo(),
-                "sql"    => $this->getDebugSql($query, $params)
-            ];
+        $result->debug = [
+            "caller" => $this->getCallerInfo(),
+            "sql"    => $this->getDebugSql($query, $params)
+        ];
         //}
         
         try {
