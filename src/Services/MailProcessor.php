@@ -24,7 +24,7 @@ class MailProcessor extends \App\Core\Database
 
     use \App\Core\ServiceTrait;
     protected $dashboard;
-    private $imapStream = null;
+    //private $imapStream = null;
 
     public function __construct($dashboard) {
         parent::__construct($dashboard);
@@ -37,9 +37,9 @@ class MailProcessor extends \App\Core\Database
      */
     public function __destruct() {
         // 🚀 Nur schließen, wenn es eine valide, offene Ressource/Verbindung ist!
-        if (isset($this->imapStream) && $this->imapStream instanceof \IMAP\Connection) {
+        if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
             try {
-                @imap_close($this->imapStream);
+                //@imap_close($imapStream);
             } catch (\Throwable $e) {
                 // Falls sie intern schon zu war: Lautlos ignorieren
             }
@@ -52,37 +52,35 @@ class MailProcessor extends \App\Core\Database
      * @param string $user Benutzername
      * @param string $password Passwort
      */
-    private function connectIMAP() 
+    private function connectIMAP($folderPath = null) 
     {
         error_log(__FILE__ . ": " . __FUNCTION__);
-        // Falls der Stream schon existiert und noch antwortet, nichts tun
-        if ($this->imapStream && @imap_ping($this->imapStream)) {
-            return;
-        }
-
+        
         $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
         $port = $this->systemProcess->getRequiredEnv('IMAP_PORT');
         $user = $this->systemProcess->getRequiredEnv('IMAP_USER');
         $pw = $this->systemProcess->getRequiredEnv('IMAP_PASSWORD');
         
-        error_log("Habe erhalten: $host");
         $ssl = ($port == 993) ? '/imap/ssl' : '';
-        $connectionString = "{" . $host . ":" . $port . $ssl . "}INBOX";
-    
-        //error_log("connectionstring: ". $connectionString);
         
-        //error_log("IMAP-DEBUG: User: " . $user);
-        //error_log("IMAP-DEBUG: Password length: " . strlen($pw));
+    
 
-        if (strlen($pw) > 100) {
-            error_log("ACHTUNG: Passwort scheint noch verschlüsselt zu sein!");
+        if($folderPath!==null)
+        {
+            $connectionString = "{" . $host . ":" . $port . $ssl . "}" . $folderPath;
+        }else{
+            $connectionString = "{" . $host . ":" . $port . $ssl . "}";
         }
+        
+        error_log("connectionstring: ". $connectionString);
+        
+        $stream = @imap_open($connectionString, $user, $pw, OP_SILENT, 1);
 
-        $this->imapStream = @imap_open($connectionString, $user, $pw, OP_SILENT, 1);
-
-        if (!$this->imapStream) {
+        if (!$stream) {
             throw new \Exception("IMAP-Verbindung fehlgeschlagen: " . imap_last_error());
         }
+        
+        return $stream;
     }
 
     /**
@@ -112,7 +110,7 @@ class MailProcessor extends \App\Core\Database
      */
     public function getMailByHash($hash) 
     {
-
+        error_log("## " . __FUNCTION__ . " ##");
         $sql = "SELECT * FROM mails 
                 WHERE 
                     tenant_id=:tenant_id
@@ -120,8 +118,12 @@ class MailProcessor extends \App\Core\Database
                     AND (status NOT IN('deleted') OR status IS NULL) 
                     LIMIT 1";
 
-        $dbResult = $this->queryIt($sql, 
-            ['hash' => $hash]
+        $dbResult = $this->queryIt(
+            $sql, 
+            ['hash' => $hash],
+            false,
+            false,
+            false
         );
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) 
@@ -137,68 +139,50 @@ class MailProcessor extends \App\Core\Database
      * @param int $msgNumber Die Nummer der Mail im Postfach
      * @return string HTML-Inhalt oder leerer String
      */
-    public function getHtmlBody($hash) 
+    public function getHtmlBody($hash, $folder) 
     {
-        $this->connectIMAP();
+        error_log("## " . __FUNCTION__ . " mit $hash aufgerufen ##");
         $mail = $this->getMailByHash($hash);
 
-        //print_r($mail);
 
         if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
+            error_log("NO MAIL OR UID");
             $this->dashboard->sendResponse(false, "", "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
             return false;
         }
         
+        
         $uid = (int)$mail['uid'];
-        
-        // Welcher Ordner gehört zur Mail?
-        $folder = !empty($mail['imap_folder']) ? $mail['imap_folder'] : 'INBOX';
+        $imapStream = $this->connectIMAP($folder);
 
-        // 🚀 SICHERHEITSMASSNAHME: Nur reopen aufrufen, wenn wir NICHT in der INBOX sind!
-        // Da connectIMAP standardmäßig in der INBOX landet, sparen wir uns den fehleranfälligen Schritt.
-        if (strtoupper($folder) !== 'INBOX') {
-            
-            // WICHTIG: Prüfe, ob deine connectIMAP den Host-String bereits mit geschweiften Klammern speichert!
-            // Wir bauen ihn hier absolut sauber und standardkonform zusammen:
-            $fullFolderString = $this->getFullFolderPath($folder);
-            
-            // Lautlos versuchen zu öffnen
-            if (!imap_reopen($this->imapStream, $fullFolderString)) {
-                // Falls iCloud zickt (z.B. weil der Ordner auf dem Server "INBOX.DMSDone" statt "DMSDone" heißt):
-                // Probieren wir den iCloud-Standard-Präfix "INBOX." als Fallback
-                $fallbackFolderString =  $this->systemProcess->getRequiredEnv('IMAP_HOST') . $folder;
-                
-                if (!imap_reopen($this->imapStream, $fallbackFolderString)) {
-                    $this->dashboard->sendResponse(false, "Der IMAP-Ordner '$folder' konnte auf dem iCloud-Server nicht gefunden oder geöffnet werden.");
-                    return false;
-                }
+        try {
+            $structure = imap_fetchstructure($imapStream, $uid, FT_UID);
+            if ($structure === false) {
+                $imapError = imap_last_error();
+                throw new \Exception("IMAP Fehler: " . ($imapError ?: "Unbekannter Fehler beim Abrufen der Struktur"));
             }
-        }
-        
-        // Jetzt wandeln wir die UID in die fortlaufende msgNo um
-        $msgNumber = imap_msgno($this->imapStream, $uid);
+            
+            // 1. Inhalt holen
+            $htmlContent = $this->findPart($uid, $structure, 'TEXT/HTML', $imapStream);
+            
+            if (!$htmlContent) return null;
 
-        if (!$msgNumber || $msgNumber <= 0) {
-            $this->dashboard->sendResponse(false, null, "Mail ($uid) existiert nicht mehr im Ordner '$folder' auf dem Server.", 'error');
-            return false;
-        }
-
-        $structure = imap_fetchstructure($this->imapStream, $msgNumber);
-        if (!$structure) {
-            $this->dashboard->sendResponse(false, null, "Mail-Struktur konnte nicht gelesen werden.", 'error');
-            return false;
-        }
-
-        
-        // 1. Gezielte Suche nach HTML
-        $htmlPart = $this->findPart($msgNumber, $structure, 'TEXT/HTML');
-        if ($htmlPart) {
-            return mb_convert_encoding($htmlPart, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+            // 2. Security: HTML Purifier zum Säubern
+            $config = \HTMLPurifier_Config::createDefault();
+            $purifier = new \HTMLPurifier($config);
+            
+            return $purifier->purify($htmlContent);
+        } catch (\Throwable $e) {
+            // Logge den Fehler für deine Analyse
+            error_log("IMAP-Struktur Fehler bei UID $uid: " . $e->getMessage());
+            
+            error_log(__FUNCTION__ . ": ERROR: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+            
+            // Je nach Wunsch: Wirf eine eigene Exception oder gib null/einen Fehlertext zurück
+            throw new \Exception("Fehler beim Analysieren der E-Mail: " . $e->getMessage());
         }
         
         
-        // 2. Fallback auf Plaintext
-        return $this->getTxtBody($hash);
 
     }
 
@@ -209,29 +193,37 @@ class MailProcessor extends \App\Core\Database
     {
         $imapPath = "{" . $this->systemProcess->getRequiredEnv('IMAP_HOST') . ":" . $this->systemProcess->getRequiredEnv('IMAP_PORT'). "/imap/ssl}";
 
+        error_log($imapPath . " FOLDER: $folder");
         if ($folder !== "INBOX")
         {
-            $imapPath .= $folder;
+            $finalPath = $imapPath .= $folder;
+            error_log($finalPath);
+            return $finalPath;
         }
+
+        error_log($imapPath);
 
         return $imapPath;
     }
+
+
     /**
      * Holt den reinen Text-Inhalt einer E-Mail (Fallback)
      */
-    public function getTxtBody($hash) 
+    public function getTxtBody($hash, &$folder) 
     {
+        error_log("## " . __FUNCTION__ . " ##");
         try {
-            $this->connectIMAP();
+            $imapStream = $this->connectIMAP($folder);
             $mail = $this->getMailByHash($hash);
             
-            $msgNumber = imap_msgno($this->imapStream, $mail['uid']);
+            $msgNumber = imap_msgno($imapStream, $mail['uid']);
             if (!$msgNumber) {
                 return "Mail existiert nicht mehr auf dem Server.";
             }
 
-            $structure = imap_fetchstructure($this->imapStream, $msgNumber);
-            $plainText = $this->findPart($msgNumber, $structure, 'TEXT/PLAIN');
+            $structure = imap_fetchstructure($imapStream, $msgNumber);
+            $plainText = $this->findPart($msgNumber, $structure, 'TEXT/PLAIN', $imapStream);
             
             if (!$plainText) {
                 return "<i>(Kein lesbarer Textinhalt gefunden)</i>";
@@ -249,50 +241,39 @@ class MailProcessor extends \App\Core\Database
     /**
      * Interne Hilfsfunktion: Durchsucht die Mail-Struktur rekursiv nach dem gewünschten MIME-Type
      */
-    private function findPart($msgNumber, $structure, $mimeType, $partNumber = "") 
+    private function findPart($uid, $structure, $mimeType, &$imapStream, $partNumber = null) 
     {
         try{
-            $primaryTypes = ["TEXT", "MULTIPART", "MESSAGE", "APPLICATION", "AUDIO", "IMAGE", "VIDEO", "OTHER"];
+            error_log("## " . __FUNCTION__ . " aufgerufen mit UID: $uid, Typ: " . ($structure->type ?? 'n/a') . ", MIME: $mimeType ##");            // Basis-MIME-Typ bestimmen
+            // 1. Sicherer Zugriff auf den Typ
+            $type = isset($structure->type) ? $structure->type : 0;
             
-            if (!$structure) return null;
-
-            // MIME-Type des aktuellen Teils zusammensetzen
-            $primary = $primaryTypes[$structure->type] ?? "TEXT";
-            $subtype = !empty($structure->subtype) ? strtoupper($structure->subtype) : "PLAIN";
+            // 2. MIME-Typ Logik (kein Array-Zugriff auf $structure!)
+            $primaryTypes = ["TEXT", "MULTIPART", "MESSAGE", "APPLICATION", "AUDIO", "IMAGE", "VIDEO", "OTHER"];
+            $primary = $primaryTypes[$type] ?? "TEXT";
+            $subtype = isset($structure->subtype) ? strtoupper($structure->subtype) : "PLAIN";
             $currentMimeType = $primary . '/' . $subtype;
 
-            // Match gefunden!
             if ($currentMimeType === $mimeType) {
-                $targetPart = ($partNumber === "") ? "1" : $partNumber;
-                $text = imap_fetchbody($this->imapStream, $msgNumber, $targetPart);
+                $part = $partNumber ?: "1";
+                $data = imap_fetchbody($imapStream, $uid, $part, FT_UID);
                 
-                // Dekodierung
-                if ($structure->encoding == 3) {
-                    return base64_decode($text);
-                } elseif ($structure->encoding == 4) {
-                    return quoted_printable_decode($text);
-                }
-                return $text;
+                $encoding = isset($structure->encoding) ? $structure->encoding : 0;
+                return ($encoding == 3) ? base64_decode($data) : quoted_printable_decode($data);
             }
 
-            // Wenn es ein Multipart-Typ ist, rekursiv die Unterteile durchsuchen
-            if ($structure->type == 1 && !empty($structure->parts)) {
-                foreach ($structure->parts as $index => $subStructure) {
-                    // IMAP Part-Nummerierung aufbauen (z.B. "1.1", "1.2")
-                    $newPartNumber = ($partNumber === "") ? ($index + 1) : $partNumber . '.' . ($index + 1);
-                    
-                    $result = $this->findPart($msgNumber, $subStructure, $mimeType, $newPartNumber);
-                    if ($result !== null && $result !== "") {
-                        return $result;
-                    }
+            // 3. WICHTIG: Hier liegt oft der Fehler!
+            // Wir prüfen, ob $structure->parts ein Array ist, bevor wir es in eine Schleife schicken.
+            if ($type == 1 && isset($structure->parts) && is_array($structure->parts)) {
+                foreach ($structure->parts as $index => $sub) {
+                    $newPart = $partNumber ? $partNumber . '.' . ($index + 1) : (string)($index + 1);
+                    $found = $this->findPart($uid, $sub, $mimeType, $imapStream, $newPart);
+                    if ($found) return $found;
                 }
             }
-
-        }catch (Throwable $e) {
-            throw new \Exception("Fehler in findPart: " . $e->getMessage());
-        }
-
-        return null;
+            return null;
+        }catch(\Throwable $e) {
+            error_log(__FUNCTION__ . ": ERROR: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());        }
     }
 
     /**
@@ -310,17 +291,16 @@ class MailProcessor extends \App\Core\Database
 
             
             $msgUid = $mail['uid']; 
-            $destFolder = "DMS"; // Oder dynamisch basierend auf $targetFolder
 
             // Verschieben via UID
-            $moveSuccess = imap_mail_move($this->imapStream, $msgUid, $destFolder, CP_UID);
+            $moveSuccess = imap_mail_move($imapStream, $msgUid, $targetFolder, CP_UID);
 
             if (!$moveSuccess) {
-                throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
+                throw new \Exception("IMAP-Move nach $targetFolder fehlgeschlagen: " . imap_last_error());
             }
             
             // Wichtig, um die Mail aus der INBOX zu löschen
-            imap_expunge($this->imapStream);
+            imap_expunge($imapStream);
 
             // Lokalen DB Status aktualisieren
             
@@ -367,25 +347,23 @@ class MailProcessor extends \App\Core\Database
         return $cache;
     }
 
-    public function syncWithICloud(bool $debug = true, int $maxNewMailsLimit = 200, string $folder = "INBOX"): array 
+    public function syncWithICloud(int $maxNewMailsLimit, string $folder): array 
     {
         
         //@set_time_limit(120);
+        $pid = getmypid();
+        error_log("[$pid] Starte Sync für Ordner: $folder");
+
         $added = 0;
         $result = ['success' => false, 'added' => 0, 'error' => null];
 
         try {
             
-            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');            
-            $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-            $this->connectIMAP();
-
-            if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, $host . $folder)) {
-                throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
-            }
+            $imapFolder = $this->getFullFolderPath($folder);
+            $imapStream = $this->connectIMAP($folder);
 
             // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
-            $allUids = imap_sort($this->imapStream, SORTARRIVAL, 0, SE_UID);
+            $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
             $lastUid = $this->getSyncCheckpoint($folder);
 
             // DEBUG-BLOCK (Jetzt mit Werten)
@@ -412,227 +390,139 @@ class MailProcessor extends \App\Core\Database
 
             foreach ($uidsToProcess as $uid) 
             {
-                $overview = imap_fetch_overview($this->imapStream, (string)$uid, FT_UID);
-                if (empty($overview)) continue;
-
-                $ov = $overview[0];
-
-                if (empty($ov->from)) {
-                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
-                    $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
-                }
-
-                if (empty($ov->to)) {
-                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
-                    $ov->to = $header->toaddress ?? 'unknown@unknown.local';
-                }
-
-                // E-Mail-Datum konvertieren
-                $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
-
-                $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
-                $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
-
-                // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
-                $idHash = hash('sha256', $messageId . $salt, true);
-
-                $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
                 
-                // Anwendung in deinem Loop
-                $fromData = $this->parseAndDecodeAddress($ov->from ? : '');
-                $toData   = $this->parseAndDecodeAddress($ov->to ? : '');
+                try{
+                    //starte Transaktion
+                    $this->transaction(function() use ($uid, $folder, $imapFolder, &$imapStream, $pid) 
+                    {
+                        $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
+                        $ov = $overview[0];
+                        
+                        if (!empty($overview)) ;
 
-                $fromName  = $fromData['name'];
-                $fromEmail = $fromData['email'];
-                $toName    = $toData['name'];
-                $toEmail   = $toData['email'];
+                        
 
-                // Für die DB-Felder:
-                $senderString    = "$fromName <$fromEmail>";
-                $recipientString = "$toName <$toEmail>";
-                $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
-                $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
+                        if (empty($ov->from)) {
+                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                            $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                        }
 
-                $sceid = ($senderId > 0) ? (int)$senderId : null;
-                $rceid = ($reciepId > 0) ? (int)$reciepId : null;
+                        if (empty($ov->to)) {
+                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                            $ov->to = $header->toaddress ?? 'unknown@unknown.local';
+                        }
 
-                // 1. Mail anlegen und ID zurückholen
-                $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                            VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
-                            ON DUPLICATE KEY UPDATE
-                            date_received = VALUES(date_received),
-                            sender = VALUES(sender),
-                            imap_folder = VALUES(imap_folder),
-                            status = 'active',
-                            is_read = VALUES(is_read),
-                            is_flagged = VALUES(is_flagged),
-                            is_answered = VALUES(is_answered);";
+                        // E-Mail-Datum konvertieren
+                        $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
 
-                $params = [
-                    'uid'           => $ov->uid,
-                    'id_hash'       => $idHash,
-                    'message_id'    => $ov->message_id ?? '',
-                    'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)),
-                    'sender'        => $senderString,
-                    'recipient'     => $recipientString,
-                    'date_received' => $formattedDate,
-                    'folder'        => $folder,
-                    'is_read'       => (int)$ov->seen,
-                    'is_flagged'    => (int)$ov->flagged,
-                    'is_answered'   => (int)$ov->answered,
-                    'sceid'         => (int)$sceid,
-                    'rceid'         => (int)$rceid,
+                        $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
+                        $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
 
-                ];
-                $mailId = $this->queryIt($sqlInsert, $params, true, true); 
+                        // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
+                        $idHash = hash('sha256', $messageId . $salt, true);
+
+                        $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
+                        
+                        // Anwendung in deinem Loop
+                        $fromData = $this->parseAndDecodeAddress($ov->from ? : '');
+                        $toData   = $this->parseAndDecodeAddress($ov->to ? : '');
+
+                        $fromName  = $fromData['name'];
+                        $fromEmail = $fromData['email'];
+                        $toName    = $toData['name'];
+                        $toEmail   = $toData['email'];
+                        // Für die DB-Felder:
+                        $senderString    = "$fromName <$fromEmail>";
+                        $recipientString = "$toName <$toEmail>";
+                        $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
+                        $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
+
+                        $sceid = ($senderId > 0) ? (int)$senderId : null;
+                        $rceid = ($reciepId > 0) ? (int)$reciepId : null;
+
+                        error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
+                        $sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
+                        $this->queryIt(
+                            $sqlMaillog,
+                            [
+                                "uid"           => $uid,
+                                "folder"        => $folder,
+                                "imapFolder"    => $imapFolder
+                            ]
+                        );
+
+
+                        $exists = $this->mail_exists(bin2Hex($idHash), $uid, $folder);
+                        if (!$exists)
+                        {
+                            // 1. Mail anlegen und ID zurückholen
+                            $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
+                                        VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
+                                        ;";
+                            /*ON DUPLICATE KEY UPDATE
+                                        date_received = VALUES(date_received),
+                                        sender = VALUES(sender),
+                                        status = 'active',
+                                        is_read = VALUES(is_read),
+                                        is_flagged = VALUES(is_flagged),
+                                        is_answered = VALUES(is_answered)*/
+
+                            $params = [
+                                'uid'           => $ov->uid,
+                                'id_hash'       => $idHash,
+                                'message_id'    => $ov->message_id ?? '',
+                                'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)),
+                                'sender'        => $senderString,
+                                'recipient'     => $recipientString,
+                                'date_received' => $formattedDate,
+                                'folder'        => $folder,
+                                'is_read'       => (int)$ov->seen,
+                                'is_flagged'    => (int)$ov->flagged,
+                                'is_answered'   => (int)$ov->answered,
+                                'sceid'         => (int)$sceid,
+                                'rceid'         => (int)$rceid,
+
+                            ];
+                            $paramsLog = $params;
+                            $paramsLog['subject_hash']="HASH";
+                            $paramsLog['recipient']="NIX FÜR KI";
+                            $paramsLog['sender']="NIX FÜR KI";
+                            $paramsLog['id_hash']="NIX FÜR KI";
+                            $paramsLog['message_id']="NIX FÜR KI";
+
+                            $dbResult = $this->queryIt(
+                                $sqlInsert, 
+                                $params, 
+                                true, 
+                                true, 
+                                false
+                            );
+                            error_log(" übegebene Parameter: " . print_r($paramsLog, true));
+                            
+                        }else{
+                            error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
+                        }
+                    });
+                    
+                    
+                    
+                }catch(\Throwable $e)
+                {
+                    //imap_close($imapStream);
+                    error_log("Fehler bei Mail: " . $e->getMessage());
+                }
 
                 
                 $added++;
                 $highestUid = max($highestUid, (int)$uid);
             }
 
+
+            imap_close($imapStream);
+
             if ($added > 0) {
                 $this->saveSyncCheckpoint($folder, $highestUid);
             }
-            
-            $result['success'] = true;
-            $result['added']   = $added;
-
-        } catch (Throwable $e) {
-            error_log("Kritischer Fehler im Sync: " . $e->getMessage());
-            $result['error'] = $e->getMessage();
-        }
-
-        return $result;
-    }
-
-    /**
-     * 
-     * Synchronisiert im Hintergrund alle Mails in inbox /dms /dmsdone
-     * @param boolean debug Debugging
-     * @param int $maxNewMailsLimt (default 20)
-     * @param string $folder (default Inbox)
-     */
-    public function syncWithICloudOLD(bool $debug = true, int $maxNewMailsLimit = 200, string $folder = "INBOX"): array 
-    {
-        
-        //@set_time_limit(120);
-        $added = 0;
-        $result = ['success' => false, 'added' => 0, 'error' => null];
-            
-        $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');            
-        $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
-        $this->connectIMAP();
-
-        if (strtoupper($folder) !== 'INBOX' && !@imap_reopen($this->imapStream, $host . $folder)) {
-            throw new \Exception("Konnte Ordner '$folder' nicht öffnen.");
-        }
-
-       // 2. Status abrufen (effizienter als imap_sort)
-        $status = imap_status($this->imapStream, $folder, SA_UIDNEXT);
-        $highestServerUid = ($status->uidnext) - 1;
-        // 3. Letzten Checkpoint für DIESEN Ordner laden
-        $lastUid = $this->getSyncCheckpoint($folder);
-
-        // Wenn keine neuen Mails da sind, direkt abbrechen
-        if ($highestServerUid <= $lastUid) {
-            error_log("KEINE NEUEN MAILS");
-            return ['success' => true, 'added' => 0];
-        }
-
-        $uidsToProcess = range($lastUid + 1, $highestServerUid);
-
-        $uidsToProcess = array_slice($uidsToProcess, 0, $maxNewMailsLimit);
-        
-        $currentHighestUid = $lastUid;
-        try{
-            //$client = $this->getFrameworkClient(); 
-            //$folderIMAP = $client->getFolder($folder);
-            $salt = $this->dashboard->getHashSalt();
-
-            foreach ($uidsToProcess as $uid) 
-                {
-                    $overview = imap_fetch_overview($this->imapStream, (string)$uid, FT_UID);
-                    if (empty($overview)) continue;
-
-                    $ov = $overview[0];
-
-                if (empty($ov->from)) {
-                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
-                    $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
-                }
-
-                if (empty($ov->to)) {
-                    $header = imap_headerinfo($this->imapStream, imap_msgno($this->imapStream, $uid));
-                    $ov->to = $header->toaddress ?? 'unknown@unknown.local';
-                }
-                // E-Mail-Datum konvertieren
-                $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
-
-                $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
-                $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
-
-                // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
-                $idHash = hash('sha256', $messageId . $salt, true);
-
-                $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
-                
-
-                // Anwendung in deinem Loop
-                $fromData = $this->parseAndDecodeAddress($ov->from ? : '');
-                $toData   = $this->parseAndDecodeAddress($ov->to ? : '');
-
-                $fromName  = $fromData['name'];
-                $fromEmail = $fromData['email'];
-                $toName    = $toData['name'];
-                $toEmail   = $toData['email'];
-
-                // Für die DB-Felder:
-                $senderString    = "$fromName <$fromEmail>";
-                $recipientString = "$toName <$toEmail>";
-                $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
-                $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
-
-                $sceid = ($senderId > 0) ? (int)$senderId : null;
-                $rceid = ($reciepId > 0) ? (int)$reciepId : null;
-
-                // 1. Mail anlegen und ID zurückholen
-                $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                            VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
-                            ON DUPLICATE KEY UPDATE
-                            date_received = VALUES(date_received),
-                            sender = VALUES(sender),
-                            imap_folder = VALUES(imap_folder),
-                            status = 'active',
-                            is_read = VALUES(is_read),
-                            is_flagged = VALUES(is_flagged),
-                            is_answered = VALUES(is_answered);";
-
-                $params = [
-                    'uid'           => $ov->uid,
-                    'id_hash'       => $idHash,
-                    'message_id'    => $ov->message_id ?? '',
-                    'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)),
-                    'sender'        => $senderString,
-                    'recipient'     => $recipientString,
-                    'date_received' => $formattedDate,
-                    'folder'        => $folder,
-                    'is_read'       => (int)$ov->seen,
-                    'is_flagged'    => (int)$ov->flagged,
-                    'is_answered'   => (int)$ov->answered,
-                    'sceid'         => (int)$sceid,
-                    'rceid'         => (int)$rceid,
-
-                ];
-                $mailId = $this->queryIt($sqlInsert, $params, true, false, false); 
-
-                
-                $added++;
-                $currentHighestUid = (int)$uid;
-            }
-
-            
-            $this->saveSyncCheckpoint($folder, $currentHighestUid);
             
             $result['success'] = true;
             $result['added']   = $added;
@@ -711,18 +601,32 @@ class MailProcessor extends \App\Core\Database
         return $client;
     }
 
-    private function mail_exists($id_hash, $folder)
+    private function mail_exists($id_hash, $uid, $folder)
     {
-        $debugSQL = "SELECT Count(0) as Anzahl from mails WHERE id_hash = :id_hash AND imap_folder = :folder AND tenant_id = :tenant_id";
+        $debugSQL = "SELECT Count(0) as Anzahl from mails 
+                      WHERE tenant_id=:tenant_id 
+                        AND (
+                             (id_hash = UNHEX(:id_hash) AND imap_folder=:folder)
+                         OR (uid=:uid AND imap_folder=:folder)
+                        );";
+        $params = [
+            'id_hash' => $id_hash, 
+            'folder'  => $folder,
+            'uid'     => $uid
+        ];
+        /*$debugSQL = "SELECT Count(0) as Anzahl from mails WHERE tenant_id=:tenant_id AND uid=:uid;";
+        $params = [
+            'uid'     => $uid
+        ];*/
         $dbResult = $this->queryIt(
             $debugSQL,
-            ['id_hash' => $id_hash, 'folder' => $folder],
+            $params,
             false,
             false, 
             false
         );
 
-        # error_log(print_r($dbResult->data->fetched, true) . ": " . $dbResult->data->fetched[0]['Anzahl']);
+        //error_log(print_r($dbResult, true));
 
         $exists = ($dbResult->success && 
                  !empty($dbResult->data->fetched) && 
@@ -770,7 +674,7 @@ class MailProcessor extends \App\Core\Database
             ['folder' => $folder],
             false,
             false,
-            false
+            true
         );
 
         if ($dbResult->success) {
@@ -838,22 +742,28 @@ class MailProcessor extends \App\Core\Database
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
         $sql = "SELECT m.uid, m.id_hash as hash, m.subject_hash as sHash, m.sender, m.date_received, m.paperless_id, 
                         c.email as contact_name
-                    FROM mails m
-                    LEFT JOIN contact_emails c ON m.sender_ceid = c.id
-                    WHERE m.tenant_id = :tenant_id 
-                    AND m.imap_folder = :folder
-                    AND (
-                        c.email LIKE :search 
-                        OR c.email LIKE :search 
-                        OR m.sender LIKE :search
-                    );";
+                FROM mails m
+                LEFT JOIN contact_emails c ON m.sender_ceid = c.id
+                WHERE m.tenant_id = :tenant_id 
+                AND m.imap_folder = :folder
+                AND (
+                    c.email LIKE :search 
+                    OR c.email LIKE :search 
+                    OR m.sender LIKE :search
+                );";
         
         try {
             // 3. Ausführung über deine native queryIt-Methode
-            $results = $this->queryIt($sql, [
+            $dbResult = $this->queryIt($sql, [
                 'folder' => $folder,
                 'search' => '%' . $search . '%',
             ]);
+
+            if(!$dbResult->success){
+                return [];
+            }
+
+            $results = $dbResult->data->fetched;
 
             // Sicherstellen, dass immer ein Array zurückgegeben wird (falls queryIt im Leerzustand false/null liefert)
             // 2. Filter-Logik in PHP
@@ -923,19 +833,19 @@ class MailProcessor extends \App\Core\Database
             $msgId = $mail['message_id'];
             if (empty($msgId)) continue;
 
-            $currentFolder = 'INBOX'; // Fallback, falls nirgends mehr auffindbar
+            //$currentFolder = 'INBOX'; // Fallback, falls nirgends mehr auffindbar
             $currentUid = 0;
 
             foreach ($targetFolders as $folder) {
                 $fullFolderString = $baseConnString . $folder;
                 
                 error_log("IMAP Folder Sync: " . $fullFolderString);
-                if (@imap_reopen($this->imapStream, $fullFolderString)) {
-                    $searchRes = imap_search($this->imapStream, 'HEADER Message-ID "' . $msgId . '"');
+                if (@imap_reopen($imapStream, $fullFolderString)) {
+                    $searchRes = imap_search($imapStream, 'HEADER Message-ID "' . $msgId . '"');
 
                     if (!empty($searchRes)) {
                         $currentFolder = $folder;
-                        $currentUid = imap_uid($this->imapStream, $searchRes[0]);
+                        $currentUid = imap_uid($imapStream, $searchRes[0]);
                         break; 
                     }
                 }
@@ -959,6 +869,8 @@ class MailProcessor extends \App\Core\Database
      */
     public function getDecryptedMailBody(string $hash): ?string 
     {
+        error_log(__FUNCTION__);
+
         $sql = "SELECT mb.body_encrypted 
             FROM mail_bodies AS mb 
             INNER JOIN mails AS m ON m.id = mb.mail_id 
@@ -969,10 +881,12 @@ class MailProcessor extends \App\Core\Database
             'hash' => $hash
         ]);
 
-        if($dbResult->sucess && !empty($dbResult->data)){
-            $rows = $dbResult->data->fetched;
+        if (!$dbResult->success && !empty($dbResult->data->fetched)){
+            return "Mail Body leer";
         }
 
+        $rows = $dbResult->data->fetched;
+        
         if (empty($rows) || empty($rows[0]['body_encrypted'])) return null;
 
         // 1. Daten dekodieren
@@ -1002,19 +916,73 @@ class MailProcessor extends \App\Core\Database
      */
     public function getMailBody($hash): string
     {
-        $mail = $this->getMailByHash($hash);
+       $mail = $this->getMailByHash($hash);
         if (!$mail) return 'Inhalt nicht gefunden.';
-        
-        // 1. Den verschlüsselten Müll in den rohen Mail-Body umwandeln
-        $decryptedBody = $this->dashboard->decrypt($mail['body_hash']); 
-        
-        // 2. Den Mail-Body von MIME-Kodierungen (wie =C3=A4) befreien
-        $decodedBody = quoted_printable_decode($decryptedBody);
-        
-        // 3. Den nun dekodierten Text auf UTF-8 bügeln
-        $cleanBody = mb_convert_encoding($decodedBody, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
 
-        return $cleanBody;
+        // 1. Erst versuchen, aus der DB zu laden (entschlüsselt)
+        $htmlContent = $this->getDecryptedMailBody($hash);
+
+        // 2. Wenn DB leer, IMAP anzapfen
+        if (empty($htmlContent)) {
+            $htmlContent = $this->getHtmlBody($hash, $mail['folder']);
+            
+            if (empty($htmlContent)) {
+                // Fallback: Wenn kein HTML, versuche PlainText
+                $htmlContent = $this->getTxtBody($hash, $mail['folder']);
+            }
+            
+            if (empty($htmlContent)) {
+                throw new \Exception("Kein Inhalt auf IMAP gefunden.");
+            }
+            
+            // Jetzt in die DB schreiben (Sicherheit vor Speichern!)
+            $this->saveMailWithContent($hash, $htmlContent, strip_tags($htmlContent));
+        }
+
+        // 3. Hier kommt die finale Bereinigung (HTML Purifier!)
+        // Sicherheit: Erst hier wird das HTML für die Anzeige/Ausgabe "geputzt"
+        return $this->purifyHtml($htmlContent);        
+    }
+
+    private function purifyHtml(string $html): string
+    {
+        // Caching-Ordner für Performance (sehr wichtig bei vielen Mails!)
+        $cacheDir = '/var/www/html/age_web/storage/purifier_cache';
+        
+        // Konfiguration erstellen
+        $config = \HTMLPurifier_Config::createDefault();
+        
+        // Setze Cache-Verzeichnis (muss für den Webserver beschreibbar sein)
+        if (is_writable(dirname($cacheDir))) {
+            $config->set('Cache.SerializerPath', $cacheDir);
+        }
+        
+        // Erlaube grundlegende Formatierung
+        $config->set('HTML.Allowed', 'p,br,b,strong,i,em,u,a[href|title],ul,ol,li,blockquote,pre,code,h1,h2,h3,h4,img[src|alt|title|width|height]');
+        
+        // Sicherheit: Verhindere, dass Links in neuen Fenstern ohne Noopener öffnen
+        $config->set('Attr.AllowedFrameTargets', []);
+        
+        $purifier = new \HTMLPurifier($config);
+        
+        return $purifier->purify($html);
+    }
+
+    private function getIMAPFolderByHash(&$hash)
+    {
+        $sql = "SELECT imap_folder FROM mails WHERE tenant_id=:tenant_id AND id_hash=UNHEX(:hash);";
+        $dbResult = $this->queryIt(
+            $sql,
+            ["hash" => $hash]
+        );
+
+        if (!$dbResult->success)
+        {
+            return "";
+        }else{
+            error_log(print_r($dbResult, true));
+            return $dbResult->data->fetched[0]['imap_folder'];
+        }
     }
 
     /**
@@ -1037,14 +1005,14 @@ class MailProcessor extends \App\Core\Database
             $destFolder = "Deleted Messages"; // Oder dynamisch basierend auf $targetFolder
 
             // Verschieben via UID
-            $moveSuccess = imap_mail_move($this->imapStream, $msgUid, $destFolder, CP_UID);
+            $moveSuccess = imap_mail_move($imapStream, $msgUid, $destFolder, CP_UID);
 
             if (!$moveSuccess) {
                 throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
             }
             
             // Wichtig, um die Mail aus der INBOX zu löschen
-            imap_expunge($this->imapStream);
+            imap_expunge($imapStream);
 
             // Lokalen DB Status aktualisieren
             
@@ -1462,13 +1430,22 @@ class MailProcessor extends \App\Core\Database
     {
         // 1. Erst die ID zur Hash-Referenz finden
         $sql = "SELECT id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1";
-        $result = $this->queryIt($sql, ['hash' => $hash]);
+        //$result = $this->queryIt($sql, ['hash' => $hash]);
         
-        if (empty($result)) {
+        $dbResult = $this->queryIt(
+            $sql,
+            ['hash' => $hash],
+            false,
+            false,
+            false
+        );
+
+        if (!$dbResult->success) {
             $this->dashboard->sendResponse(false, "", "Keine Mail gefunden für diesen Hash, kann body nicht speichern.");
             throw new \Exception("Keine Mail gefunden für diesen Hash, kann body nicht speichern. $hash");
         }
-        $mailId = $result[0]['id'];
+
+        $mailId = $dbResult->data->fetched[0]['id'];
 
         // 1. HTML Sanitization (Sicherheits-Layer)
         $cleanHTML = $this->sanitizeEmailBody($htmlBody);

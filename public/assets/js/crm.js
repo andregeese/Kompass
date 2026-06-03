@@ -299,11 +299,11 @@ window.crmEngine = function() {
         // =========================================================================
         async loadAppointmentsBackend() {
             if (!this.isOnline) return;
-            const data = await safeFetch(`${apiUrl}?action=get_appointments`);
+            /*const data = await safeFetch(`${apiUrl}?action=get_appointments`);
             if (data?.success) {
                 this.appointments = data.details.appointments || [];
                 localStorage.setItem('cached_appointments', JSON.stringify(this.appointments));
-            }
+            }*/
         },
 
         async findMatchSuggestions(searchQuery) {

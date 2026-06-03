@@ -1,30 +1,48 @@
 const contactsViewComponent = () => ({
+    // State
     contacts: [],
-    paperlessContacts: [],
     searchQueryContacts: '',
-    loading: false,
-    hasMore: true,
-    page: 1,
-    limit: 20,
-    activeContact: null,
-    isMatchPanelOpen: false,
     matchSearchQuery: '',
     matchResults: [],
+    loading: false,
     loadingMatch: false,
-    matchResults: [],
+    isMatchPanelOpen: false,
+    isEditing: false,
+    activeContact: { displayname: '', type: 'person', emails: [] },
+    simulation: null,
 
     async initContacts() {
-        // Such-Watcher für Live-Suche
-        this.$watch('searchQueryContacts', (val) => {
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashValue = urlParams.get('id');
+
+        if (hashValue) {
+            const res = await safeFetch('api.php?action=get_emails_by_contact', {
+                method: 'POST',
+                body: JSON.stringify({query: hashValue})
+            });
+
+            // 1. Wert setzen
+            this.searchQueryContacts = res?.details?.contacts?.[0]?.displayname || '';
+            
+            // 2. WICHTIG: Die Suche sofort explizit triggern!
+            // Da du ein Debounce (setTimeout) im Watcher hast, 
+            // rufst du hier am besten direkt die Ladefunktion auf.
+            this.loadContacts(); 
+            
+            // Optional: Falls performMatchSearch auch automatisch laufen soll
+            this.$nextTick(() => {
+                this.performMatchSearch();
+            });
+        }
+        
+        // Bestehender Watcher bleibt wie er ist
+        this.$watch('searchQueryContacts', () => {
             clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.page = 1;
-                this.loadContacts(false);
-            }, 300);
+            this.searchTimeout = setTimeout(() => this.loadContacts(), 300);
         });
     },
-
-    // FEHLENDER GETTER: Alpine braucht diesen, um das x-for im Template zu füllen
+     // FEHLENDER GETTER: Alpine braucht diesen, um das x-for im Template zu füllen
     get filteredContacts() {
         return this.contacts; 
     },
@@ -46,7 +64,7 @@ const contactsViewComponent = () => ({
         });
     },
 
-    toggleEmail(contact) {
+     toggleEmail(contact) {
         if (!this.activeContact.emails) this.activeContact.emails = [];
         
         const contactId = Number(contact.ceid);
@@ -58,15 +76,47 @@ const contactsViewComponent = () => ({
             this.activeContact.emails.splice(existingIndex, 1);
         }
     },
-    
-    openMatchModal(contact) {
-        this.activeContact = contact;
-        this.isMatchPanelOpen = true;
 
+    // --- Kontakt-Logik ---
+    async loadContacts() {
+        this.loading = true;
+        try {
+            const data = await safeFetch(`api.php?action=list_contacts&query=${encodeURIComponent(this.searchQueryContacts)}`);
+            this.contacts = data.details?.contacts || [];
+            this.drawNetwork(this.contacts);
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    async saveContact(contact = this.activeContact) {
+        try {
+            const res = await safeFetch('api.php?action=save_contact', {
+                method: 'POST',
+                body: JSON.stringify(contact)
+            });
+            if (res.success) {
+                Object.assign(contact, res.data || contact);
+                this.closeMatchModal();
+            }
+        } catch (e) {
+            console.error("Speichern fehlgeschlagen", e);
+        }
+    },
+
+    // --- Modal & Verknüpfungs-Logik ---
+    openMatchModal(contact) {
+        const targetContact = contact;
+
+        this.activeContact = targetContact;
+        this.isMatchPanelOpen = true;
         // Zuerst die Mails vom Server laden
-        this.fetchEmailsForContact(contact.id).then(() => {
+        this.fetchEmailsForContact(targetContact.id).then(() => {
+            console.log(this.activeContact.emails);
             // Erst wenn geladen, matchResults mit den aktiven befüllen
-            this.matchResults = [...this.activeContact.emails];
+            if (this.activeContact && this.activeContact.id === targetContact.id) {
+                this.matchResults = [...(this.activeContact.emails ?? [])];
+            }
         });
     },
 
@@ -75,23 +125,16 @@ const contactsViewComponent = () => ({
         this.activeContact = null;
     },
 
-    async fetchEmailsForContact(contactId) {
+    async fetchEmailsForContact(id) {
         this.loadingMatch = true;
-        try {
-            const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_contact&query=${contactId}`);
-            if (data?.success) {
-                // Erst die bestehenden Mails für den Kontakt setzen
-                this.activeContact.emails = data.details.contacts || [];
-                // Dann die Suchergebnisse befüllen
-                this.matchResults = data.details.contacts || []; 
-            }
-        } catch (e) {
-            console.error("Fehler beim Laden:", e);
-        } finally {
-            this.loadingMatch = false;
+        const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_contact&query=${id}`);
+        if (data?.success) {
+            this.activeContact.emails = data.details.contacts || [];
+            this.matchResults = [...this.activeContact.emails];
         }
+        this.loadingMatch = false;
     },
-    
+
     async saveContact() 
     {
        try {
@@ -105,19 +148,18 @@ const contactsViewComponent = () => ({
                 body: JSON.stringify(this.activeContact)
             });
 
-            const result = await response.json();
-
-            if (result.success) {
-                console.log('Kontakt gespeichert:', result.message);
+            if (response.success) {
+                console.log('Kontakt gespeichert:', resuresponset.message);
                 // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
             } else {
-                alert('Fehler: ' + (result.error || 'Unbekannt'));
+                alert('Fehler: ' + (response.error || 'Unbekannt'));
             }
         } catch (err) {
             console.error('Speicherfehler:', err);
         }
 
     },
+
     async linkToMatch(contactId, itemId) {
         // Finde das ausgewählte Ergebnis, um den Typ zu bestimmen
         const result = this.matchResults.find(r => r.id === itemId);
@@ -145,255 +187,128 @@ const contactsViewComponent = () => ({
         }
         this.loadingMatch = true;
         try {
-            const data = await safeFetch(`${this.apiUrl}?action=list_contacts&query=${this.matchSearchQuery}`);
-            
-            // Suche ausführen und die bereits ausgewählten beibehalten
-            // Wir mischen die Suchergebnisse mit den bereits gewählten
-            const searchResults = data.details?.contacts || [];
+            // 1. ABSICHERUNG: Wenn kein Kontakt offen ist, darf nichts passieren!
+            if (!this.activeContact) return;
 
-            //this.drawNetwork(searchResults);
-            
-            // Mergen: Bestehende + Neue, dabei Duplikate vermeiden
-            const combined = [...this.activeContact.emails, ...searchResults];
-            this.matchResults = Array.from(new Map(combined.map(item => [item.ceid, item])).values());
-            
-        } catch (err) {
-            console.error("Suche fehlgeschlagen:", err);
-        } finally {
-            this.loadingMatch = false;
-        }
-    },
-
-    async drawNetwork(searchResults) {
-        //const query = encodeURIComponent(this.searchQueryContacts);
-        try{
-            console.log("Daten empfangen:", searchResults)
-            const contacts = searchResults;
-            d3.select("#network").selectAll("*").remove();
-
-            if (!Array.isArray(contacts)) {
-                console.error("Kein Array übergeben", contacts);
+            if (this.matchSearchQuery.length < 2) {
+                this.matchResults = [...(this.activeContact.emails ?? [])];
                 return;
             }
-            // 1. Daten laden (deine Liste aus dem Backend)
-            
-            
-            // 2. Daten für D3 transformieren
-            const nodes = [];
-            const links = [];
 
-            contacts.forEach(c => {
-                console.log(c);
-                // Kontakt als Node
-                nodes.push({ id: 'c' + c.id, label: c.displayname, type: 'contact' });
-                
-                // E-Mail als Node
-                nodes.push({ id: 'e' + c.ceid, label: c.email, type: 'email' });
-                
-                // Link zwischen Kontakt und E-Mail
-                links.push({ source: 'c' + c.id, target: 'e' + c.ceid });
-            });
-
-            // 3. Simulation einrichten
-            const width = 600, height = 400;
-            const svg = d3.select("#network")
-                .attr("width", width)
-                .attr("height", height);
-            
-            
-            const simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d => d.id).distance(80))
-                .force("charge", d3.forceManyBody().strength(-100))
-                .force("center", d3.forceCenter(width / 2, height / 2));
-
-            // 4. Linien zeichnen
-            const link = svg.selectAll("line")
-                .data(links).enter().append("line")
-                .attr("stroke", "#999");
-
-            // 5. Kreise zeichnen
-            const node = svg.selectAll("circle")
-                .data(nodes).enter().append("circle")
-                .attr("r", 8)
-                .style("fill", d => d.type === 'contact' ? '#2563eb' : '#10b981')
-                .style("cursor", "pointer") // Zeigt an, dass es klickbar ist
-                
-                // --- HIER DIE KLICK-LOGIK ---
-                .on("click", (event, d) => {
-                    // 'd' enthält deine Knoten-Daten. 
-                    // Da du dich in der drawNetwork-Methode innerhalb der Alpine-Komponente befindest:
-                    const alpineComponent = this; 
-                    
-                    // Da deine Nodes 'id's haben wie 'c14', müssen wir die ID extrahieren
-                    const rawId = d.id.replace('c', '').replace('e', '');
-                    
-                    // Hier rufst du deine Alpine-Methode auf
-                    // Wir suchen das passende Kontakt-Objekt aus deinen Daten
-                    const contact = this.contacts.find(c => String(c.id) === String(rawId));
-                    
-                    if (contact) {
-                        alpineComponent.openMatchModal(contact);
-                    } else {
-                        console.warn("Kontakt nicht gefunden für ID:", rawId);
-                    }
-                });
-            
-            // NEU: Zeichne Text-Labels
-            const label = svg.selectAll("text")
-                .data(nodes).enter().append("text")
-                .text(d => d.label)
-                .attr("font-size", "10px")
-                .attr("dx", 12) // Abstand zum Kreis nach rechts
-                .attr("dy", 4);  // Vertikale Ausrichtung mittig zum Kreis
-
-            // 6. Animation der Positionen
-            simulation.on("tick", () => {
-                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-                node.attr("cx", d => d.x).attr("cy", d => d.y);
-                label.attr("x", d => d.x).attr("y", d => d.y);
-            });
-         } catch (err) {
-            console.error("Suche fehlgeschlagen:", err);
-        } finally {
-            this.loadingMatch = false;
-        }
-    },
-
-    // Lädt die Kontaktliste (mit optionalem Suchbegriff)
-    async loadContacts(append = false) {
-        if (this.loading) return;
-        this.loading = true;
-
-        try {
-            const query = encodeURIComponent(this.searchQueryContacts);
-            const data = await safeFetch(`api.php?action=list_contacts&page=${this.page}&limit=${this.limit}&query=${query}`);
-
-            if (data?.success && data.details?.contacts) {
-                const newContacts = data.details.contacts;
-                this.drawNetwork(data.details.contacts);
-                this.contacts = append ? [...this.contacts, ...newContacts] : newContacts;
-                
-                this.hasMore = newContacts.length === this.limit;
-                if (this.hasMore) this.page++;
-            }
-        } catch (err) {
-            console.error("Fehler beim Laden der Kontakte:", err);
-        } finally {
-            this.loading = false;
-        }
-    },
-
-    // Verknüpft einen Kontakt mit einem Dokument (aus Paperless)
-    async linkToPaperless(contactId, docId) {
-        if (!confirm(`Kontakt mit Dokument #${docId} verknüpfen?`)) return;
+            this.loadingMatch = true;
         
-        const fd = new FormData();
-        fd.append('sender_ceid', contactId);
-        fd.append('item_id', docId);
-        fd.append('item_type', 'paperless');
-
-        try {
-            const data = await safeFetch('api.php?action=link_contact_item', { method: 'POST', body: fd });
-            if (data?.success) {
-                const contact = this.contacts.findIndex(c => c.id == contactId);
-                if (contact) {
-                    // SICHERHEITS-CHECK: Existiert linked_items schon?
-                    if (!contact.linked_items) {
-                        contact.linked_items = [];
-                    }
-                    
-                    // Jetzt ist es garantiert ein Array und .push() funktioniert
-                    contact.linked_items.push({ 
-                        id: docId, 
-                        type: 'paperless', 
-                        title: 'Neues Dokument' 
-                    });
-                    
-                    // Falls du auch die ID setzen willst:
-                    contact.paperless_id = docId;
-                    
-                    showNotify("Erfolgreich verknüpft!", "Daten aktualisiern", "success");
-                }
-            }
-        } catch (err) {
-            console.error("Link-Fehler:", err);
-        }
-    },
-
-    // Verknüpft einen Kontakt mit einer Mail
-    async linkToMail(contactId, mailHash) {
-        const fd = new FormData();
-        fd.append('sender_ceid', contactId);
-        fd.append('item_id', mailHash);
-        fd.append('item_type', 'mail');
-
-        await safeFetch('api.php?action=link_contact_item', { method: 'POST', body: fd });
-        // Hier könnte man analog das UI aktualisieren
-    },
-
-    async saveInlineContact(contact) 
-    {
-        try {
-            // Optionale Validierung vor dem Absenden
-            if (!contact.displayname || contact.displayname.trim() === '') {
-                alert('Bitte einen Namen angeben.');
-                return;
-            }
-
-            // POST-Request an deine api.php mit dem Query-Parameter
-            const response = await safeFetch('api.php?action=save_contact_manual', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Falls du CSRF-Token oder andere Sicherheits-Header nutzt, hier einfügen:
-                    // 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    id: contact.id,
-                    displayname: contact.displayname,
-                    email: contact.email,
-                    street: contact.street,
-                    zip: contact.zip,
-                    city: contact.city
-                })
-            });
-
-            // Falls der Server mit einem Fehler-Statuscode (z.B. 400 oder 500) antwortet
-            if (!response.ok) {
-                throw new Error(`Server-Fehler: ${response.status} ${response.statusText}`);
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Optional: Eine kleine Erfolgsmeldung in der Konsole oder Toast-Nachricht
-                console.log('Kontakt erfolgreich aktualisiert:', result.message);
-                
-                // Falls deine API die bereinigten/neuen Daten zurückgibt, 
-                // kannst du sie hier direkt wieder in das Objekt schreiben:
-                if (result.data) {
-                    Object.assign(contact, result.data);
-                }
-            } else {
-                // Falls die API 'success: false' liefert (z.B. Validierungsfehler in PHP)
-                alert(`Fehler beim Speichern: ${result.error || 'Unbekannter Fehler'}`);
-                
-                // Rollback: Holt die alten Daten vom Server zurück, um das UI zu bereinigen
-                if (typeof this.initContacts === 'function') {
-                    this.initContacts();
-                }
-            }
-
-        } catch (error) {
-            console.error('Netzwerk- oder Verarbeitungsfehler:', error);
-            alert('Verbindung zur API fehlgeschlagen. Die Änderungen konnten nicht gespeichert werden.');
+            const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_search&query=${encodeURIComponent(this.matchSearchQuery)}`);
             
-            // Im Fehlerfall ebenfalls die Daten zurücksetzen
-            if (typeof this.this.initContacts === 'function') {
-                this.initContacts();
-            }
+            const rawResults = data.details?.contact_emails || [];
+            const normalizedResults = rawResults.map(item => ({
+                ceid: item.ceid,
+                email: item.email
+            }));
+
+            // 2. Hier nutzen wir die sichere Abfrage, die du schon in Zeile 173 hattest
+            const existingEmails = Array.isArray(this.activeContact.emails) ? this.activeContact.emails : [];
+            const combined = [...existingEmails, ...normalizedResults];
+            
+            this.matchResults = Array.from(new Map(combined.map(item => [item.ceid, item])).values());
+        } catch (err) {
+            console.error("Suche fehlgeschlagen:", err);
+        } finally {
+            this.loadingMatch = false;
         }
+    },
+
+    // --- E-Mail UI Logik ---
+    isEmailLinked(ceid) {
+        return this.activeContact.emails.some(e => Number(e.ceid) === Number(ceid));
+    },
+
+    toggleEmail(emailObj) {
+        if (this.isEmailLinked(emailObj.ceid)) {
+            this.activeContact.emails = this.activeContact.emails.filter(e => Number(e.ceid) !== Number(emailObj.ceid));
+        } else {
+            this.activeContact.emails.push(emailObj);
+        }
+    },
+
+    // --- D3 Netzwerk-Logik ---
+    drawNetwork(contacts) {
+        if (this.simulation) this.simulation.stop();
+        const svg = d3.select("#network");
+        svg.selectAll("*").remove();
+
+        // Transformation
+        const nodes = [], links = [];
+        contacts.forEach(c => {
+            nodes.push({ 
+                id: 'c' + c.id, 
+                label: c.displayname, 
+                type: 'contact',
+                is_active: c.is_active
+            });
+            c.emails?.forEach(e => {
+                nodes.push({ 
+                    id: 'e' + e.ceid, 
+                    label: c.id + ": " + e.email, 
+                    type: 'email',
+                    is_active: c.is_active
+                });
+                links.push({ 
+                    source: 'c' + c.id, target: 'e' + e.ceid 
+                });
+            });
+        });
+
+        // Simulation
+        const width = svg.node().parentElement.clientWidth;
+        this.simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+            .force("charge", d3.forceManyBody().strength(-250))
+            .force("center", d3.forceCenter(width / 2, 200));
+
+        // Zeichnen (G-Container)
+        const g = svg.append("g");
+        svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+
+        const link = g.selectAll("line").data(links).enter().append("line").attr("stroke", "#999");
+        const node = g.selectAll("circle").data(nodes).enter().append("circle").attr("r", 8)
+            .style("fill", d => d.is_active == 0 ? '#ef4444' : (d.type === 'contact' ? '#2563eb' : '#10b981'))
+            .on("click", (event, d) => {
+                let foundContact = null;
+
+                if (d.type === 'contact') {
+                    // Fall 1: Du hast auf den blauen Kontakt-Kreis geklickt
+                    foundContact = contacts.find(c => ('c' + c.id) === d.id);
+                } else if (d.type === 'email') {
+                    // Fall 2: Du hast auf eine E-Mail geklickt
+                    // Wir müssen den Kontakt finden, zu dem diese E-Mail gehört
+                    foundContact = contacts.find(c => c.emails?.some(e => ('e' + e.ceid) === d.id));
+                }
+
+                if (foundContact) {
+                    this.openMatchModal(foundContact);
+                } else {
+                    console.warn("Kein Kontakt zu diesem Knoten gefunden:", d.id);
+                }
+            });
+        
+        // HIER DIE LABELS:
+        const label = g.selectAll("text").data(nodes).enter().append("text")
+            .text(d => d.label)
+            .attr("font-size", "10px")
+            .attr("dx", 12)
+            .attr("dy", 4)
+            .attr("fill", "#334155");
+
+        // 4. Tick-Update mit Labels
+        this.simulation.on("tick", () => {
+            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            
+            node.attr("cx", d => d.x).attr("cy", d => d.y);
+            
+            // Labels an die Position der Knoten binden
+            label.attr("x", d => d.x).attr("y", d => d.y);
+        });
     }
 });
 

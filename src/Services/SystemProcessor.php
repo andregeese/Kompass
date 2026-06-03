@@ -262,28 +262,32 @@ class SystemProcessor extends \App\Core\Database
             $params=[
                 'key' => $key, 'tid' => $tenantId
             ];
-            $row = $this->queryit($sql, $params, true);
+            $dbResult = $this->queryit($sql, $params, false, false, false);
+
+            if ($dbResult->success && !empty($dbResult->data->fetched)) {
+                $row = $dbResult->data->fetched;
             
-            if (!empty($row)) {                
-                $value = isset($row[0]['config_value']) ? $row[0]['config_value'] : null;
-                // AUTOMATISCHE ENTSCHLÜSSELUNG
-                // Prüfe, ob dieser Schlüssel zu denen gehört, die wir verschlüsselt haben
-                $encryptedKeys = ['IMAP_PASSWORD', 'PAPERLESS_TOKEN', 'IMAP_USER', 'PAPERLESS_NAME'];
-                
-                if (in_array($key, $encryptedKeys)) {
-                    $masterKey = trim($this->getMasterKeyFromEnv()); 
-                    $decrypted = \App\Core\Crypto::decrypt($value, $masterKey);
-                    //error_log("decrypted: " . $decrypted);
+                if (!empty($row)) {                
+                    $value = isset($row[0]['config_value']) ? $row[0]['config_value'] : null;
+                    // AUTOMATISCHE ENTSCHLÜSSELUNG
+                    // Prüfe, ob dieser Schlüssel zu denen gehört, die wir verschlüsselt haben
+                    $encryptedKeys = ['IMAP_PASSWORD', 'PAPERLESS_TOKEN', 'IMAP_USER', 'PAPERLESS_NAME'];
                     
-                    // DEBUG: WICHTIG!
-                    if ($decrypted === false) {
-                        #error_log("FEHLER: Entschlüsselung von {$key} hat FALSE zurückgegeben!");
-                        #error_log("Value aus DB: " . $value);
-                        #error_log("Master-Key Hash: " . bin2hex(hash('sha256', $masterKey, true)));
-                        throw new \Exception("Entschlüsselungs-Fehler für Key: " . $key);
+                    if (in_array($key, $encryptedKeys)) {
+                        $masterKey = trim($this->getMasterKeyFromEnv()); 
+                        $decrypted = \App\Core\Crypto::decrypt($value, $masterKey);
+                        //error_log("decrypted: " . $decrypted);
+                        
+                        // DEBUG: WICHTIG!
+                        if ($decrypted === false) {
+                            #error_log("FEHLER: Entschlüsselung von {$key} hat FALSE zurückgegeben!");
+                            #error_log("Value aus DB: " . $value);
+                            #error_log("Master-Key Hash: " . bin2hex(hash('sha256', $masterKey, true)));
+                            throw new \Exception("Entschlüsselungs-Fehler für Key: " . $key);
+                        }
+                        
+                        return $decrypted;
                     }
-                    
-                    return $decrypted;
                 }
 
                 return $value;

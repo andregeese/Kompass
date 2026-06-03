@@ -37,36 +37,17 @@ class AppointmentsProcessor extends BaseProcessor
 
     public function getAppointmentsFromDB()
     {
-        $res = $this->queryIt(
+        $dbResult = $this->queryIt(
             "SELECT summary as title, start_time as start, end_time as end FROM appointments WHERE tenant_id=:tenant_id",
-            []
+            [],
+            false,
+            false,
+            true
         );
 
-        return $res;
-    }
-
-    /**
-     * OBSOLET
-     */
-    public function getAppointments()
-    {
-        try {
-            $principalPath = $this->getPrincipalPath();
-            $client = $this->getClient(); // Client auf p41 Basis
-
-            $response = $client->propFind($principalPath, [
-                '{urn:ietf:params:xml:ns:caldav}calendar-home-set'
-            ], 0);
-
-            $key = '{urn:ietf:params:xml:ns:caldav}calendar-home-set';
-            if (isset($response[$key]) && is_array($response[$key]) && isset($response[$key][0]['value'])) {
-                $calendarHomeSet = $response[$key][0]['value'];
-                error_log("KALENDER-HOME-URL: " . $calendarHomeSet);
-                return $this->getCalendars($calendarHomeSet);
-            }
-            throw new Exception("calendar-home-set nicht im Response gefunden.");
-        } catch (Exception $e) {
-            error_log("Fehler in getAppointments: " . $e->getMessage());
+        if ($dbResult->sucess)
+        {
+            return $dbResult->data->fetched;
         }
     }
 
@@ -215,10 +196,10 @@ class AppointmentsProcessor extends BaseProcessor
         foreach ($icsData as $_event) {
             //error_log(print_r($_event, true));
 
-        // 3. Datenbank-Update vorbereiten
-            $res = $this->queryit("
-                    INSERT INTO $tableName (uid, summary, start_time, end_time, location, ical_data, updated_at)
-                    VALUES (:uid, :summary, :start, :end, :loc, :data, NOW())
+            // 3. Datenbank-Update vorbereiten
+            $dbResult = $this->queryit("
+                    INSERT INTO $tableName (uid, summary, start_time, end_time, location, ical_data, updated_at, tenant_id)
+                    VALUES (:uid, :summary, :start, :end, :loc, :data, NOW(), :tenant_id)
                     ON DUPLICATE KEY UPDATE 
                         summary = VALUES(summary), 
                         start_time = VALUES(start_time), 
@@ -234,9 +215,16 @@ class AppointmentsProcessor extends BaseProcessor
                         'end'     => $_event['end'],
                         'loc'     => $_event['loc'],
                         'data'    => $_event['data'], // Speichert den Teil-ICS-String
-                    ]
+                    ],
+                    true,
+                    false,
+                    false
                     );
 
+            }
+            if (!$dbResult->sucess)
+            {
+                return $dbResult->error;
             }
     }
 

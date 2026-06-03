@@ -17,22 +17,6 @@
                 <input type="password" x-model="formData.password" required class="mt-2 block w-full rounded-xl border-0 py-2.5 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 bg-transparent dark:text-white focus:ring-2 focus:ring-blue-600 sm:text-sm">
             </div>
 
-            <!-- Registrierungs-Zusatzfelder -->
-            <div x-show="isRegister" x-transition x-cloak class="space-y-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <div>
-                    <label class="block text-sm font-medium leading-6">Paperless Server URL</label>
-                    <input type="url" x-model="formData.paperless_url" :required="isRegister" placeholder="https://..." class="mt-2 block w-full rounded-xl border-0 py-2.5 px-3 text-slate-900 ring-1 ring-gray-300 dark:ring-gray-700 bg-transparent dark:text-white focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium leading-6">Paperless Name</label>
-                    <input type="text" x-model="formData.paperless_name" :required="isRegister" class="mt-2 block w-full rounded-xl border-0 py-2.5 px-3 text-slate-900 ring-1 ring-gray-300 dark:ring-gray-700 bg-transparent dark:text-white focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium leading-6">Paperless API Token</label>
-                    <input type="password" x-model="formData.paperless_token" :required="isRegister" class="mt-2 block w-full rounded-xl border-0 py-2.5 px-3 text-slate-900 ring-1 ring-gray-300 dark:ring-gray-700 bg-transparent dark:text-white focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                </div>
-            </div>
-
             <button type="submit" :disabled="loading" class="flex w-full justify-center rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 transition-all">
                 <span x-text="loading ? 'Bitte warten...' : (isRegister ? 'Registrieren' : 'Anmelden')"></span>
             </button>

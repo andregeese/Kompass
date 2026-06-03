@@ -89,9 +89,14 @@ class PaperlessController extends \App\Core\BaseController {
         
     }
 
+    /**
+     * Verbindet Kontakt mit PaperlessKorrespondent
+     */
     public function linkContact()
     {
-        $contactid        = trim($_POST['contact_id'] ?? '');
+        error_log(print_r($_POST, true));
+
+        $contactid        = trim($_POST['sender_ceid'] ?? '');
         $docId            = trim($_POST['item_id'] ?? '');
         $ret = $this->paperlessProcess->linkContact($contactid, $docId);
 

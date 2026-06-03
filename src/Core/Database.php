@@ -35,134 +35,14 @@ class Database
         $this->pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_PERSISTENT         => false 
+            PDO::ATTR_PERSISTENT         => false,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
         ]);
 
         return $this->pdo;
     }
 
-    /**
-     * Database class for handling database connections and operations
-    * @deprecated Use queryIt() instead. This method is obsolete and replaced by queryIt().
-     * This class manages database connectivity, query execution, and data retrieval
-     * for the age_web application.
-     */
-    public function queryItOld(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
-    {
-        //$this->getCallerInfo();
-        //error_log(__FUNCTION__ . ": " . $query);
-        //error_log(print_r($params, true));
-
-        try {
-            $pdo = self::getConnection();
-
-            // Transaktion starten, falls angefordert
-            if ($isTransactional) {
-                $pdo->beginTransaction();
-            }
-
-            if (!$pdo) {
-                throw new \Exception("Datenbankverbindung konnte nicht hergestellt werden.");
-            }
-
-            // 🚀 ERZWINGE EXCEPTIONS: Falls in getConnection vergessen, hier absichern!
-            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-
-            if (str_contains($query, ':tenant_id')) {
-                $isGlobalTable = preg_match('/\b(users|tenants|global_config)\b/i', $query);
-
-                if (!$isGlobalTable) {
-                    // Hier greift jetzt deine numerische ID aus der Session (z.B. 1)
-                    $currentTenantId = $_SESSION['tenant_id'] ?? ($_GET['debug'] === 'true' ? 1 : null);
-                    
-                    if (!$currentTenantId) {
-                        throw new \Exception("Sicherheitsblockade: Keine aktive tenant_id für dieses Query gefunden.");
-                    }
-
-                    $params['tenant_id'] = $currentTenantId;
-                }
-            }
-
-            // Wenn keine Parameter da sind, direkt abfeuern
-            if (empty($params)) {
-                $stmt = $pdo->query($query);
-                return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            }
-
-            $stmt = $pdo->prepare($query);
-            if (!$stmt) {
-                throw new \Exception("Fehler beim Vorbereiten des SQL-Statements.");
-            }
-
-            // Parameter sauber binden
-            foreach ($params as $key => $value) {
-                if (!str_contains($query, ':' . $key)) {
-                    continue; 
-                }
-                
-                if ($key === 'limit' || $key === 'offset') {
-                    $stmt->bindValue(':' . $key, intval($value), \PDO::PARAM_INT);
-                } else {
-                    // Wenn der Key tenant_id ist, erzwinge Integer, falls es eine Zahl ist
-                    if ($key === 'tenant_id' && is_numeric($value)) {
-                        $stmt->bindValue(':' . $key, intval($value), \PDO::PARAM_INT);
-                    } else {
-                        $stmt->bindValue(':' . $key, $value, \PDO::PARAM_STR);
-                    }
-                }
-            }
-
-            //error_log($this->getDebugSql($query, $params));
-            
-            // 🚀 Ausführen - Wenn hier ein Fehler auftritt, MUSS PDO jetzt eine Exception werfen!
-            $stmt->execute(); 
-
-            // Erst HIER entscheiden, was zurückgegeben wird
-            if ($returnInsertID) {
-                $result = $pdo->lastInsertId();
-            } else {
-                $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            }
-            
-            $stmt->closeCursor(); // Erst nach dem Fetch schließen
-
-            //error_log($this->getDebugSql($query, $params));
-            if ($isTransactional) $pdo->commit();
-            return $result;
-
-
-            
-        } catch (\PDOException $e) {
-            error_log("Zentraler Datenbankfehler: " . $e->getMessage());
-            error_log("🚨 TRACE STACK:\n" . $e->getTraceAsString());
-            
-            error_log($this->getDebugSql($query, $params));
-
-            $showQuery = (isset($_GET['debug']) && $_GET['debug'] === 'true');
-
-            //error_log("Zentraler Datenbankfehler in queryIt: " . $e->getMessage());
-            // Wir werfen eine stinknormale Exception weiter, statt exit aufzurufen!
-            throw new \Exception($e->getMessage(), (int)$e->getCode());
-            
-        } catch (\Throwable $e) {
-            
-            if ($isTransactional && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-
-            error_log("Zentraler Allgemeiner Fehler: " . $e->getMessage());
-            error_log($this->getDebugSql($query, $params));
-
-            if (ob_get_length()) ob_clean();
-            header('Content-Type: application/json', true, 500);
-            echo json_encode([
-                'success' => false,
-                'error'   => "Allgemeiner Systemfehler: " . $e->getMessage()
-            ]);
-            //exit;
-        }
-    }
-
+    
 
     private function getDebugSql(string $sql, array $params): string 
     {
@@ -219,27 +99,31 @@ class Database
      * @note Error logging avoids writing to the database to prevent cascading failures.
      * @note Caller information is logged for debugging purposes.
      */
-    public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false)
+    public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false, bool $debug=false)
     {
-        // Debugging vorher
-        #$this->getCallerInfo();
-        #error_log("DB Query $query");
-        #$a = $this->getDebugSql($query, $params);
-        #error_log("### DEBUG SQL ###");
-        #error_log(print_r($a, true));
-        #error_log("### EOF: DEBUG SQL ###");
+        $result = new \stdClass();
+        $result->success = false; // Standard: Fehler
+        $result->data = new \stdClass;     
+        $result->data->lastId = null;
+        $result->data->fetched = null;     
+        $result->error = null;
+        $result->debug = null;
 
+        // Debugging vorher
+        //if ($debug=true) {
+            $result->debug = [
+                "caller" => $this->getCallerInfo(),
+                "sql"    => $this->getDebugSql($query, $params)
+            ];
+        //}
+        
         try {
             $pdo = $this->getConnection();
             $this->injectTenantId($query, $params);
 
-            
-
             // 1. LIMIT und OFFSET explizit im Array casten, BEVOR execute aufgerufen wird
             if (isset($params['limit']))  $params['limit']  = (int)$params['limit'];
             if (isset($params['offset'])) $params['offset'] = (int)$params['offset'];
-
-            if ($isTransactional) $pdo->beginTransaction();
 
             // 2. Prepare das Statement
             $stmt = $pdo->prepare($query);
@@ -257,9 +141,10 @@ class Database
             }
 
             if (!empty($missing)) {
-                $msg = "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query";
-                error_log($msg);
-                throw new \Exception($msg); // Abbruch, da Query sonst fehlschlägt
+                $result->success = false;
+                $result->error = "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query";
+                
+                throw new \Exception("QUERY ABGEBROCHEN"); // Abbruch, da Query sonst fehlschlägt
             }
 
             // --- DER WICHTIGE TEIL: Manuelles Binden für ALLE Parameter ---
@@ -275,19 +160,88 @@ class Database
 
             $stmt->execute();
 
-            $result = $returnInsertID ? $pdo->lastInsertId() : $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $result->error = null;
+            $result->data->lastId = $returnInsertID ? $pdo->lastInsertId() : null;
+            $result->data->fetched = !$returnInsertID ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : null;
+            $result->success = true;
+            //error_log($result->debug['caller'] . " - SQL: " . $result->debug['sql']);
+           
+
             
-            if ($isTransactional) $pdo->commit();
-            return $result;
+        } catch (\PDOException $e) {
+            error_log("SQL FEHLER [" . $e->getCode() . "]: " . $e->getMessage() . " | Query: " . $query);
+            $result->error = $e->getMessage();
+            $result->success = false;
+
+            if ($e->getCode() == '23000') {
+                $result->error = "Eintrag vorhanden";
+                $result->debug = [
+                    "caller" => $this->getCallerInfo(),
+                    "sql"    => $this->getDebugSql($query, $params)
+                ];
+                error_log($result->debug['caller'] . " - SQL: " . $result->debug['sql']);
+
+            } else {
+                $result->error = "PDO Fehler: ". $e->getMessage();
+                $result->debug = [
+                    "caller" => $this->getCallerInfo(),
+                    "sql"    => $this->getDebugSql($query, $params)
+                ];
+                error_log($result->debug['caller'] . " - SQL: " . $result->debug['sql']);
+            }
+            
+
 
         } catch (\Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
-            
             $this->getCallerInfo();
-            error_log("DB FEHLER: " . $e->getMessage());
-            throw new \Exception("Datenbankfehler: " . $e->getMessage());
+            $result->error = "Fehler in " .__FUNCTION__ .": " . $e->getMessage();
+
+        }
+
+        if ($debug){
+            error_log("DB DEBUG: " . print_r($result->debug, true));
+        }
+        //tbd: ich möchte immer auf $result->success || $result->error im Frontend reagieren
+        return (object)$result;
+
+    }
+
+    public function beginTransaction() {
+        try {
+            $conn = $this->getConnection();
+            if (!$conn->inTransaction()) {
+                $conn->beginTransaction();
+            }
+        } catch (\PDOException $e) {
+            error_log("Transaction Start Fehler: " . $e->getMessage());
+            throw $e; // Den Fehler nach oben durchreichen
         }
     }
+
+    public function commit() {
+        $this->getConnection()->commit();
+    }
+
+    public function rollBack() {
+        $this->getConnection()->rollBack();
+    }
+
+    public function transaction(callable $callback) 
+    {
+        $pdo = $this->getConnection();
+        $pdo->beginTransaction();
+
+        try {
+            $result = $callback(); // Führt deinen Business-Code aus
+            $pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            error_log("Transaktion fehlgeschlagen: " . $e->getMessage());
+            throw $e; // Fehler weiterreichen, damit du weißt, dass was passiert ist
+        }
+    }
+
 
     private function injectTenantId(string &$sql, array &$params): void 
     {
@@ -315,7 +269,7 @@ class Database
         $caller = $trace[2] ?? $trace[1]; 
         
         // Nutze hier den Standard error_log, um DB-Logger-Rekursion zu vermeiden
-        error_log("DB Query von: " . ($caller['class'] ?? '') . "->" . ($caller['function'] ?? ''));
+        return ("DB Query von: " . ($caller['class'] ?? '') . "->" . ($caller['function'] ?? ''));
     }
 
     public function __destruct() {

@@ -1,19 +1,25 @@
-<div x-data="contactsView" x-init="initContacts()" class="flex-1 overflow-y-auto p-4 md:p-6 max-w-4xl mx-auto w-full space-y-6">
+<div x-data="contactsView" x-init="initContacts()" class="flex-1 overflow-y-auto p-4 md:p-6 mx-auto w-full space-y-6">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-slate-800 dark:text-white flex items-center space-x-2">
             <span>👥</span> <span>Kontakte & Partner-Archiv</span>
         </h2>
+        <button @click="openNewContactModal()" 
+            class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all text-sm font-medium whitespace-nowrap">
+        <span>+</span> <span>Neuer Kontakt</span>
+    </button>
     </div>
 
     <input type="text" x-model="searchQueryContacts" placeholder="Kontakte suchen..." 
            class="w-full p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+    </input>
+   
 
     <div class="space-y-4">
-        <svg id="network" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" style="width: 100%; border:1px solid #ccc;"></svg>    
+        <svg id="network" style="width: 100%; height: 500px; border:1px solid #ccc;"></svg>    
     </div>
 
     <div class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!--<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <template x-for="contact in filteredContacts" :key="contact.ceid || 'temp-' + contact.id">
                 <div x-data="{ isEditing: false }" 
                     class="bg-white p-5 rounded-2xl border transition-all duration-300 relative shadow-sm hover:shadow-md"
@@ -71,11 +77,11 @@
                                 <div class="relative">
                                     <input type="checkbox" 
                                         :checked="contact.type === 'company'" 
-                                        @change="contact.type = $event.target.checked ? 'company' : 'private'"
+                                        @change="contact.type = $event.target.checked ? 'company' : 'person'"
                                         class="sr-only peer">
                                     <div class="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
                                 </div>
-                                <span class="text-[10px] font-bold text-slate-600 uppercase" x-text="contact.type === 'company' ? 'Firma' : 'Privat'"></span>
+                                <span class="text-[10px] font-bold text-slate-600 uppercase" x-text="contact.type === 'company' ? 'Firma' : 'Person'"></span>
                             </label>
                         </div>
                     </div>
@@ -94,7 +100,7 @@
                     </div>
                 </div>
             </template>
-        </div>
+        </div>-->
 
        
 
@@ -121,59 +127,77 @@
             x-transition:leave-end="translate-x-full">
             
             <div class="p-4 flex-1 overflow-y-auto" x-data="{ openSection: 'match' }">
-    
-                <div class="mb-4">
-                    <button @click="openSection = (openSection === 'match' ? null : 'match')" 
-                            class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                        <span>🔗 Korrespondenten verknüpfen</span>
-                        <span x-text="openSection === 'match' ? '−' : '+'"></span>
-                    </button>
+                <div class="mb-6 pb-6 border-b border-slate-200 dark:border-gray-700">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase mb-3">Aktive Bearbeitung</p>
                     
-                    <div x-show="openSection === 'match'" x-collapse class="mt-2 space-y-2">
-                        <input type="text" x-model="matchSearchQuery" @input.debounce="performMatchSearch()"
-                            placeholder="Suche Korrespondent...." 
-                            class="w-full p-2 border border-slate-200 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                                <span x-text="activeContact.displayname.charAt(0)"></span>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm truncate" x-text="activeContact.displayname"></h3>
+                                <p class="text-[11px] text-slate-500 font-mono truncate" x-text="activeContact.emails[0]?.email || 'Keine E-Mail'"></p>
+                            </div>
+                        </div>
                         
-                        <template x-for="result in matchResults" :key="result.id">
-                            <div class="p-3 bg-slate-50 dark:bg-gray-750 rounded-lg flex justify-between items-center text-xs">
-                                <span x-text="result.displayname"></span>
-                                <button @click="linkToMatch(activeContact.id, result.id)" class="text-emerald-600 font-bold">🔗 Link</button>
+                        <template x-if="activeContact.is_connected">
+                            <div class="mt-3 pt-2 border-t border-slate-100 dark:border-gray-700">
+                                <p class="text-[9px] font-bold text-emerald-600 uppercase">Verknüpft</p>
                             </div>
                         </template>
                     </div>
                 </div>
 
-                <div>
-                    <button @click="openSection = (openSection === 'emails' ? null : 'emails')" 
-                            class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                        <span>✉️ E-Mail Adressen</span>
-                        <span x-text="openSection === 'emails' ? '−' : '+'"></span>
-                    </button>
-                    
-                    <div x-show="openSection === 'emails'" x-collapse class="mt-2 space-y-3">
-                        <input type="email" 
-                                    x-model="matchSearchQuery" @input.debounce.500ms="performMatchSearch()"
-                                    placeholder="Neue E-Mail..."
-                                    @keydown.enter.prevent="if($el.value) { activeContact.emails.push($el.value); $el.value = ''; }"
-                                    class="w-full text-sm p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-blue-500 outline-none">
-                        <div x-show="loadingMatch" class="text-xs text-blue-500 italic p-2">Suche läuft...</div>
-                        <div class="flex flex-wrap gap-2">
-                            <template x-for="contact in sortedMatchResults" :key="contact.ceid">
-                                <button type="button" 
-                                        x-show="contact.email"
-                                        @click="toggleEmail(contact)"
-                                        :class="activeContact?.emails?.some(e => Number(e.ceid) === Number(contact.ceid)) 
-                                            ? 'bg-emerald-100 border-emerald-300 text-emerald-800' 
-                                            : 'bg-slate-100 border-slate-200 text-slate-700'"
-                                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-all hover:bg-emerald-50">
-                                    
-                                    <span x-text="contact.email"></span>
-                                    
-                                    <span class="ml-2 font-bold" 
-                                        x-text="activeContact?.emails?.some(e => Number(e.ceid) === Number(contact.ceid)) ? '✕' : '+'">
-                                    </span>
-                                </button>
+                <div class="space-y-4">
+                    <div class="mb-4">
+                        <button @click="openSection = (openSection === 'match' ? null : 'match')" 
+                                class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
+                            <span>🔗 Korrespondenten verknüpfen</span>
+                            <span x-text="openSection === 'match' ? '−' : '+'"></span>
+                        </button>
+                        
+                        <div x-show="openSection === 'match'" x-collapse class="mt-2 space-y-2">
+                            <input type="text" x-model="matchSearchQuery" @input.debounce="performMatchSearch()"
+                                placeholder="Suche Korrespondent...." 
+                                class="w-full p-2 border border-slate-200 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800">
+                            
+                            <template x-for="result in matchResults" :key="result.id">
+                                <div class="p-3 bg-slate-50 dark:bg-gray-750 rounded-lg flex justify-between items-center text-xs">
+                                    <span x-text="result.displayname"></span>
+                                    <button @click="linkToMatch(activeContact.id, result.id)" class="text-emerald-600 font-bold">🔗 Link</button>
+                                </div>
                             </template>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button @click="openSection = (openSection === 'emails' ? null : 'emails')" 
+                                class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
+                            <span>✉️ E-Mail Adressen</span>
+                            <span x-text="openSection === 'emails' ? '−' : '+'"></span>
+                        </button>
+                        
+                        <div x-show="openSection === 'emails'" x-collapse class="mt-2 space-y-3">
+                            <input type="email" 
+                                x-model="matchSearchQuery" 
+                                @input.debounce.500ms="performMatchSearch()"
+                                placeholder="E-Mails suchen..."
+                                class="w-full text-sm p-3 rounded-xl border border-slate-200 bg-white focus:border-blue-500 outline-none">
+
+                            <div x-show="loadingMatch" class="text-xs text-blue-500 italic p-2">Suche läuft...</div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="contact in sortedMatchResults" :key="contact.ceid">
+                                    <button type="button" 
+                                            @click="toggleEmail(contact)"
+                                            :class="isEmailLinked(contact.ceid) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-700'"
+                                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80">
+                                        <span x-text="contact.email"></span>
+                                        <span class="ml-2 font-bold" x-text="isEmailLinked(contact.ceid) ? '✕' : '+'"></span>
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>

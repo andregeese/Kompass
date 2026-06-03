@@ -77,18 +77,21 @@ class MailController extends \App\Core\BaseController
         $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit); 
         
         if (!$mailDetails) {
-            return ['success' => false, 'message' => "Keine Mails gefunden."];
+            $this->dashboard->sendResponse(false, null, "keine Mails gefunden",'success');
+            //return ['success' => false, 'message' => "Keine Mails gefunden."];
         }
+
+        $this->dashboard->sendResponse(true, $mailDetails, null,'success');
 
         // ACHTUNG: Hier hast du einen Design-Fehler im Controller:
         // Dein MailProcessor gibt jetzt eine LISTE (Array von Mails) zurück, 
         // aber dein Code unten geht von EINEM Objekt aus.
-        return [
+        /*return [
             'success' => true,
             'details' => [
                 'mails' => $mailDetails // Gib einfach das Array der gefundenen Mails zurück
             ]
-        ];
+        ];*/
     }
 
     /**
@@ -130,7 +133,7 @@ class MailController extends \App\Core\BaseController
             return $this->mailProcess->deleteMailByHash($hash);
 
         } catch (Exception $e) {
-            error_log("Fehler bei moveToDms: " . $e->getMessage());
+            error_log("Fehler bei deleteMail: " . $e->getMessage());
             header('HTTP/1.1 500 Internal Server Error');
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -190,13 +193,16 @@ class MailController extends \App\Core\BaseController
         if (!in_array($folder, $allowedFolders)) {
             throw new \Exception("Ungültiger Ordner-Name übergeben.");
         }
+        ob_start();
         try{
 
-            $syncResult = $this->mailProcess->syncWithICloud(true, 200, $folder);
-            $this->cleanBuffer(); 
+            $syncResult = $this->mailProcess->syncWithICloud(5, $folder);
+            
+            ob_end_clean();
             return $syncResult; // Gibt das komplette Sync-Array direkt zurück
         } catch (Exception $e) {
-            error_log("Fehler bei moveToDms: " . $e->getMessage());
+            ob_end_clean();
+            error_log("Fehler bei syncCloud: " . $e->getMessage());
             header('HTTP/1.1 500 Internal Server Error');
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -207,7 +213,7 @@ class MailController extends \App\Core\BaseController
      */
     public function trackFolders() {
         ignore_user_abort(false);
-        $syncResult = $this->mailProcess->trackAndSyncFolderStatus();
+        //$syncResult = $this->mailProcess->trackAndSyncFolderStatus();
         return [
             'success' => true,
             'details' => [
@@ -223,28 +229,22 @@ class MailController extends \App\Core\BaseController
     public function streamHtml() 
     {
         $hash = $_GET['hash'] ?? '';
+
         if (empty($hash)) {
             throw new \Exception("Fehler: Kein gültiger Mail-Hash übergeben.");
         }
 
-        $htmlContent = $this->mailProcess->getDecryptedMailBody($hash);
-
-        if (empty($htmlContent)) {
-            $mailDetails = $this->mailProcess->getMailByHash($hash); 
-            $htmlContent = $this->mailProcess->getHtmlBody($hash); 
-
-            if (empty($htmlContent)) {
-                throw new \Exception("Der IMAP-Server hat keinen Inhalt für diese E-Mail zurückgegeben.");
-            }
-
-            $plainText = $this->mailProcess->getTxtBody($hash) ?? strip_tags($htmlContent);
-            $this->mailProcess->saveMailWithContent($hash, $htmlContent, $plainText);
+        try{
+            $BODY = $this->mailProcess->getMailBody($hash);
+            // Sonderfall: Direkter HTML-Stream an den Browser unterbricht JSON-Rückgabe
+            header('Content-Type: text/html; charset=utf-8');
+            header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
+            echo $BODY;
+            exit;
+        }catch(\Throwable $e)
+        {
+            error_log(__FUNCTION__. ": ". $e->getMessage() . ", Trace: ". $e->getTraceAsString());
         }
         
-        // Sonderfall: Direkter HTML-Stream an den Browser unterbricht JSON-Rückgabe
-        header('Content-Type: text/html; charset=utf-8');
-        header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
-        echo $htmlContent;
-        exit;
     }
 }

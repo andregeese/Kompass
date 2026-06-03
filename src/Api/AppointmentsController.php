@@ -15,6 +15,8 @@ class AppointmentsController extends \App\Core\BaseController
         try{
 
             $appointments = $this->appointProcess->getAppointmentsFromDB();
+            error_log(print_r($appointments, true));
+            
             return [
                 'success' => true,
                 'details' => [

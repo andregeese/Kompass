@@ -19,36 +19,6 @@ class ContactProcessor extends \App\Core\Database
     }
 
     
-    private $imapStream = null;
-
-    public function autoLinkContact($data) 
-    {
-        $email = strtolower(trim($data['email']));
-        $emailHash = hash('sha256', $email . HASH_SALT);
-        
-        // 1. Kontakt suchen oder erstellen (wie gehabt)
-        $check = $this->queryIt("SELECT contact_id FROM contact_emails WHERE email_hash = :hash AND tenant_id = :tenant_id", [
-            'hash' => $emailHash
-        ]);
-
-        $contactId = !empty($check) ? $check[0]['contact_id'] : $this->insertContact($data['name'], $email, 'company');
-
-        // 2. Verknüpfung in mails über den sender_hash
-        if ($idHash) {
-            $binHash = hex2bin($data['hash']);
-            $searchHash = hash('sha256', $messageId . $salt, true);
-            $ret = $this->queryIt(
-                "UPDATE mails SET contact_id = :cid WHERE id_hash = :hash AND tenant_id = :tenant_id",
-                [
-                    'hash' => $binHash
-                ]
-            ,true, false);
-        }
-    
-        return ['success' => true, 'contact_id' => $contactId, "details"=> $ret];
-    
-    }
-
     /**
     * Legt einen neuen Hauptkontakt und die zugehörige E-Mail-Adresse an.
     * * @param string $name Der Anzeigename des Kontakts
@@ -57,66 +27,115 @@ class ContactProcessor extends \App\Core\Database
     * @param int $paperless_id Paperless-Verknüpfung
     * @return int|bool Die neue Contact-ID bei Erfolg, sonst false
     */
-    public function insertContact(string $name, string $email, string $type = 'company', int $paperless_id=null) {
+    public function insertContact(string $name, string $email, string $type) : int|bool
+    {
         $name = trim($name);
         $email = strtolower(trim($email));
         $tenantId = $_SESSION['tenant_id'] ?? null;
-        $salt = $this->dashboard->getHashSalt();
 
-        if (empty($name) || empty($email) || !$tenantId) {
+        if (empty($name) || empty($email) || empty($tenantId)) {
+            error_log("Kontakt konnte nicht angelegt werden: Daten fehlen.");
             return false;
         }
-                
-        // 1. Kontakt anlegen
-        // Nutze LAST_INSERT_ID() oder PDO::lastInsertId(), um die ID sofort zu bekommen
-        $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, paperless_id) 
-                VALUES (:name, :type, :tenant_id, :paperless_id) 
-                ON DUPLICATE KEY UPDATE 
-                    paperless_id = VALUES(paperless_id),
-                    type = VALUES(type);";
-        
-        $contactId = $this->queryIt(
-            $sqlContact, 
-            ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId, 'paperless_id' => $paperless_id]
-            ,false
-            , true
-        );
 
-        //error_log("contact ID nach speichern 1:" . print_r($contactId, true));
-        if (empty($contactId)) {
-            $sqlGetId = "SELECT id FROM contacts WHERE display_name = :name AND tenant_id = :tenant_id LIMIT 1";
-            $result = $this->queryIt($sqlGetId, ['name' => $name, 'tenant_id' => $tenantId]);
-            
-            // Angenommen, queryIt gibt bei Selects ein Array zurück
-            $contactId = $result[0]['id'] ?? null;
-        
+        $salt = $this->dashboard->getHashSalt();
+
+        // 1. ZUERST schauen, ob es die E-Mail schon gibt (Tenant-bezogen!)
+        $contactEmailId = $this->getContactEmailId($email, $tenantId);
+        if ($contactEmailId) {
+            return (int)$contactEmailId;
         }
 
+        // 2. Wenn nein: Kontakt suchen oder anlegen
+        $contactId = $this->getContactId($name, $email, $type);
+        
         if (!$contactId) {
-            throw new Exception("Kontakt konnte weder angelegt noch gefunden werden.");
+            // Kontakt neu anlegen
+            $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, is_active) VALUES (:name, :type, :tenant_id, 1);";
+            $dbResult = $this->queryIt($sqlContact, ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId], true, true, false);
+            
+            if (!$dbResult->success) return false;
+            $contactId = $dbResult->data->lastId;
         }
 
-        //error_log("SELECT ID nach speichern 2:" . print_r($contactId, true));
-
-        // 2. E-Mail-Adresse speichern
-        $emailHash = hash('sha256', $email . $salt);
-        
-        $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) 
-                    VALUES (:cid, :email, :hash, :tenant_id)  
-                    ON DUPLICATE KEY UPDATE 
-                    contact_id = VALUES(contact_id),
-                    email = VALUES(email);";
-
-        $this->queryIt($sqlEmail, [
-            'cid'       => $contactId,
-            'email'     => $email,
-            'hash'      => $emailHash,
-            'tenant_id' => $tenantId
-        ]);
-
-        return $contactId;
+        // 3. E-Mail Eintrag erzwingen (da wir hier gelandet sind, existiert sie noch nicht für diesen Tenant)
+        return $this->insertContactEmail($contactId, $email, $salt);
     }
 
+    /**
+     * Sucht in der DB nach einem Kontakt mit genau diesem Namen, E-Mail und Typ.
+     */
+    private function getContactId($name, $email, $type):int|bool
+    {
+        #error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
+        $sql = "SELECT id FROM contacts WHERE tenant_id = :tenant_id AND display_name = :name AND type = :type LIMIT 1;";
+        $params = [
+            "tenant_id" => $_SESSION['tenant_id'] ?? null,
+            "name" => $name,
+            "type" => $type
+        ];
+
+        $dbResult = $this->queryIt(
+            $sql,
+            $params,
+            false,
+            false,
+            false
+        );
+
+        return ($dbResult->success && !empty($dbResult->data->fetched)) ? $dbResult->data->fetched[0]["id"] : false;
+        
+    }
+    
+    private function getContactEmailId($email, $tenantId): int|bool
+    {
+        // Sicherheitscheck: Ohne TenantId ist die Suche in einer Multi-Tenant Umgebung ungültig
+        if (empty($tenantId)) return false;
+
+        $sql = "SELECT id FROM contact_emails WHERE tenant_id = :tenant_id AND email = :email LIMIT 1;";
+        $dbResult = $this->queryIt($sql, ["tenant_id" => $tenantId, "email" => $email], false, false, false);
+
+        return ($dbResult->success && !empty($dbResult->data->fetched)) ? (int)$dbResult->data->fetched[0]["id"] : false;
+    }
+
+    private function insertContactEmail($contactId, $email, $salt)
+    {
+        #error_log("insertContactEmail aufgerufen mit: ContactID='$contactId', Email='$email'");
+
+        $tenantId = $_SESSION['tenant_id'] ?? null;
+        if ($tenantId === null
+            || empty($email) 
+            //|| !filter_var($email, FILTER_VALIDATE_EMAIL)
+            ) 
+            {
+            error_log("Ungültige Daten für insertContactEmail: ContactID='$contactId', Email='$email', TenantID='$tenantId'");
+            return false;
+        }
+
+        $ceId = $this->getContactEmailId($email, $tenantId);
+
+        if (!$ceId) {
+            $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) 
+                    VALUES (:cid, :email, :hash, :tenant_id);";
+            
+            $dbResult = $this->queryIt(
+                $sqlEmail,
+                [
+                    'cid' => $contactId,
+                    'email' => $email,
+                    'hash' => hash('sha256', $email . $salt),
+                    'tenant_id' => $tenantId
+                ],
+                true,
+                true,
+                false
+            );
+
+            $ceId = $dbResult->success ? $dbResult->data->lastId : error_log("Kontakt-E-Mail konnte nicht angelegt werden: " . $email);
+        }
+        
+        return $ceId;
+    }
 
     /**
      * Kontakte anhand von hashed ID
@@ -126,6 +145,7 @@ class ContactProcessor extends \App\Core\Database
     {
         $sql ="SELECT 
                 c.id AS contact_id,
+                c.is_active,
                 c.display_name,
                 c.type,
                 GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails
@@ -144,74 +164,75 @@ class ContactProcessor extends \App\Core\Database
     }
 
     /**
+     * OBSOLET
      * Speicher die Kontakte und Mails
      * 1 Konakt n Emails
      */
-    public function saveContactEmails($contact_id, $emails)
+    public function saveContactEmails($target_contact_id, $emails)
     {
-        
-        $contact_ids=[];
-        $email_list = [];
-        error_log("saveContactEmails");
-        #error_log(print_r($emails, true));
+        $tenant_id = is_int($_SESSION['tenant_id']) ? $_SESSION['tenant_id'] : "";
+        error_log("--- START: " . __FUNCTION__ . " für Kontakt: $target_contact_id ---");
+        error_log(print_r($emails, true));
 
-        foreach ($emails as $_email)
-        {
-            #error_log(__FILE__ . ": " . __LINE__ . " => " . print_r($_email, true));
+        if ($tenant_id==="") {
+            error_log("--- TENANT ID ist leer ---");
+            return ['success' => false, 'message' => 'Keine E-Mails'];
 
-            if (is_array($_email) && isset($_email['id'])) {
-                $contact_ids[] = $_email['id'];
-            }
-            if (is_array($_email) && isset($_email['email'])) {
-                $email_list[] = $_email['email'];
-            }
-
-            //Verknüpfung auf sich selbst
-            $sqlClear = "UPDATE contact_emails SET contact_id = :ce_id WHERE tenant_id = :tenant_id AND contact_id = :contact_id";
-            $this->queryIt(
-                $sqlClear, ["contact_id" => $contact_id, 'ce_id' => $_email['ceid']]
-            ,true, false);
-        };
-
-        $ids_string = implode(',', array_map('intval', $contact_ids));
-        
-
-        // --- SCHRITT 2: NEU ZUORDNEN ---
-        if (!empty($email_list)) {
-            $quoted_emails = array_map(function($email) {
-                return "'" . addslashes($email) . "'";
-            }, $email_list);
-            $mails_string = implode(',', $quoted_emails);
-
-            $sqlCE = "UPDATE contact_emails 
-                    SET contact_id = :contact_id 
-                    WHERE tenant_id = :tenant_id 
-                    AND email IN ($mails_string)";
-            
-            $this->queryIt($sqlCE, ["contact_id" => $contact_id],true, false);
+        }
+        if (empty($emails)) {
+            error_log("Keine E-Mails übergeben.");
+            return ['success' => false, 'message' => 'Keine E-Mails'];
         }
 
-        //3. contct aktualisieren
-        $sqlC = "UPDATE contacts SET is_active =0 WHERE tenant_id=:tenant_id AND id IN ($ids_string);";
-        $this->queryIt($sqlC, [],true, false);
-        #error_log("idstring:" . print_r($ids_string, true));
 
-
-        $quoted_emails = array_map(function($email) {
-            return "'" . addslashes($email) . "'";
-        }, $email_list);
-
-        $mails_string = implode(',', $quoted_emails); // Ergebnis: 'a@b.com','c@d.com'
-
-        $sqlCE = "UPDATE contact_emails SET contact_id =:contact_id WHERE tenant_id=:tenant_id AND email IN($mails_string);";
-        $ret = $this->queryIt($sqlCE, ["contact_id" => $contact_id], true, false);
-
-        return [
-            'success' => true, 
-            'details' => $ret
-        ];
-            
+    
+        $email_list = array_column($emails, 'email');
         
+        // Nutze $email_list statt $emails
+        $quotedEmails = array_map(function($email) {
+            return "'" . addslashes($email) . "'";
+        }, $email_list); // Hier auf email_list zeigen!
+
+        $mails_string = implode(',', $quotedEmails);
+
+        
+        $sql = "UPDATE contact_emails 
+                SET contact_id = :contact_id 
+                WHERE tenant_id = :tenant_id AND email IN ($mails_string)";
+        
+        $params = [
+            'contact_id' => $target_contact_id,
+            'tenant_id'  => $tenant_id
+        ];
+
+        $this->queryIt($sql, $params, true, false, true);
+        
+        error_log("Erfolgreich umgehängt: " . implode(', ', $email_list) . " auf Kontakt $target_contact_id");
+
+        // 3. Status der alten Kontakte prüfen & inaktiv setzen
+        // Wir identifizieren Kontakte, die nun keine E-Mails mehr besitzen
+        $this->cleanupOrphanedContacts($tenant_id);
+
+        error_log("--- END: saveContactEmails erfolgreich abgeschlossen ---");
+        
+        return ['success' => true];
+
+    }
+
+    /**
+     * Hilfsfunktion zum Inaktivsetzen leerer Kontakte
+     */
+    private function cleanupOrphanedContacts($tenant_id)
+    {
+        // Setzt alle Kontakte auf inaktiv, die keine Einträge in contact_emails haben
+        $sql = "UPDATE contacts c
+                SET c.is_active = 0
+                WHERE c.tenant_id = :tenant_id 
+                AND NOT EXISTS (SELECT 1 FROM contact_emails ce WHERE ce.contact_id = c.id)
+                AND c.is_active != 0";
+                
+        $this->queryIt($sql, [], true, false, true);
+        error_log("Orphaned Cleanup abgeschlossen (inaktive Kontakte markiert).");
     }
 
     /**
@@ -219,66 +240,141 @@ class ContactProcessor extends \App\Core\Database
      */
     public function getContactListByContactID(int $contact_id)
     {
+        error_log(__FUNCTION__);
+
         $sql = "SELECT 
-                    c.id AS id,
-                    c.is_active AS is_active,
-                    c.display_name AS displayname,
-                    c.paperless_id AS paperless_id,
-                    c.type AS type, 
-                    GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
-                    -- Logik: 1, wenn es Einträge in contact_emails gibt, 
-                    -- deren contact_id nicht mit der c.id übereinstimmt 
-                    -- (oder eine andere Bedingung deiner Wahl)
-                    MAX(CASE WHEN ce.contact_id IS NOT NULL AND ce.id != c.id THEN 1 ELSE 0 END) AS is_connected
-                FROM contacts AS c
-                LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name,
+                    c.type,
+                    ce.id AS ceid,
+                    ce.email
+                FROM contacts c
+                LEFT JOIN contact_emails ce ON c.id = ce.contact_id
                 WHERE c.tenant_id = :tenant_id
-                AND c.id = :contact_id
-                GROUP BY ce.id, c.is_active, c.display_name, c.paperless_id, c.type";
+                  AND ce.contact_id=:contact_id
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY c.display_name, ce.email";
                             
         $ret = $this->queryIt($sql,
-            ["contact_id" => $contact_id]
+            ["contact_id" => $contact_id], false, false, false
         );
-        return $ret;
+
+        $contacts=[];
+        foreach ($ret as $row) {
+            $cid = $row['contact_id'];
+            if (!isset($contacts[$cid])) {
+                $contacts[$cid] = [
+                    'id' => $cid,
+                    'is_active' => $row['is_active'],
+                    'displayname' => $row['display_name'],
+                    'type' => $row['type'],
+                    'emails' => []
+                ];
+            }
+            if ($row['ceid']) {
+                $contacts[$cid]['emails'][] = [
+                    'ceid' => $row['ceid'],
+                    'email' => $row['email']
+                ];
+            }
+        }
+        $finalContacts = array_values($contacts);
+
+        return $finalContacts;
     }
 
     public function getContactList(string $query="", int $contact_id=null)
     {
+        error_log(__FUNCTION__);
         $sql = "SELECT 
-                    c.id AS id,
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name,
+                    c.type,
                     ce.id AS ceid,
-                    c.is_active AS is_active,
-                    c.display_name AS displayname,
-                    c.paperless_id AS paperless_id,
-                    ce.email,
-                    c.type AS type, 
-                    -- GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
-                    -- Logik: 1, wenn es Einträge in contact_emails gibt, 
-                    -- deren contact_id nicht mit der c.id übereinstimmt 
-                    -- (oder eine andere Bedingung deiner Wahl)
-                    MAX(CASE WHEN ce.contact_id IS NOT NULL AND ce.id != c.id THEN 1 ELSE 0 END) AS is_connected
-            FROM contacts AS c
-            -- INNER JOIN mails AS m ON c.id = m.contact_id
-            LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-            WHERE c.tenant_id =:tenant_id
-            AND (ce.email LIKE :search OR c.display_name LIKE :search)
-            GROUP BY c.id, ce.id, c.is_active, ce.email, c.display_name, c.paperless_id, c.type;";
+                    ce.email
+                FROM contacts c
+                LEFT JOIN contact_emails ce ON c.id = ce.contact_id
+                WHERE c.tenant_id = :tenant_id
+                  AND
+                    (c.display_name like :search OR ce.email like :search)
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY c.display_name, ce.email";
+
+        $dbResult = $this->queryIt($sql,
+            ["search" =>"%" . $query . "%"], false, false, false
+        );
+
+        if (!$dbResult->success){
+            return false;
+
+        }
+
+        $ret = $dbResult->data->fetched;
+
+        $contacts=[];
+        foreach ($ret as $row) {
+            $cid = $row['contact_id'];
+            if (!isset($contacts[$cid])) {
+                $contacts[$cid] = [
+                    'id' => $cid,
+                    'is_active' => $row['is_active'],
+                    'displayname' => $row['display_name'],
+                    'type' => $row['type'],
+                    'emails' => []
+                ];
+            }
+            if ($row['ceid']) {
+                $contacts[$cid]['emails'][] = [
+                    'ceid' => $row['ceid'],
+                    'email' => $row['email']
+                ];
+            }
+        }
+
+        $finalContacts = array_values($contacts);
+        return $finalContacts;
+
+    }
+
+    public function getEmailsBySearch($query)
+    {
+        $sql = "SELECT 
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name,
+                    c.type,
+                    ce.id AS ceid,
+                    ce.email
+                FROM contacts c
+                LEFT JOIN contact_emails ce ON c.id = ce.contact_id
+                WHERE c.tenant_id = :tenant_id
+                  AND ce.email like :search
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY c.display_name, ce.email";
 
         $ret = $this->queryIt($sql,
-            ["search" =>"%" . $query . "%"]
+            ["search" =>"%" . $query . "%"], false, false, false
         );
-        return $ret;
+        
+        $finalContacts = array_values($ret);
+        return $finalContacts;
     }
 
     /**
      * Erzeugt die TimeLine von Kontakten
      */
-    public function getTimelineData(mixed $hash, string $salt, int $tenantId)
+    public function getTimelineData(mixed $hash, string $salt)
     {
+        error_log(__FUNCTION__);
+
         if ($salt===null)
         {
             $salt = $this->dashboard->getHashSalt();
         }
+
+        $tenantId = $_SESSION['tenant_id'];
         
         // 1. Daten aus allen Quellen sammeln und normalisieren
         $items = [];
@@ -352,13 +448,20 @@ class ContactProcessor extends \App\Core\Database
         }else{
             error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Dokumente gefunden");
         }
+        
 
         usort($timeline, function($a, $b) {
             return $b['date'] <=> $a['date'];
         });
+
+        error_log("### TIMELINE RES ###");
+        error_log(print_r($timeline, true));
+        error_log("### EOF TIMELINE RES ###");
+
+        $bT = $this->buildTimeline($timeline);
         
         // 2. Timeline aufbauen
-        return $this->buildTimeline($timeline);
+        return $bT;
     }
 
     /**
@@ -366,34 +469,68 @@ class ContactProcessor extends \App\Core\Database
      */
     private function getMailItems($hash, $salt, $tenantId)
     {
-        
+        error_log(__FUNCTION__);
         $sql = "SELECT 
                     'mail' AS type,
                     m.id AS item_id,
-                    ref.paperless_id as paperlesscontact,
-                    -- ce.paperless_id as paperlesscorrespondent
-                    m.paperless_id as paperlessdocument,
+                    m.paperless_id AS paperlessdocument,
                     m.date_received AS event_date,
                     m.subject_hash AS title,
                     m.sender AS detail
                 FROM mails AS m
                 INNER JOIN (
-                    SELECT sender_ceid, recipient_ceid, paperless_id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1
-                ) AS ref ON m.sender_ceid = ref.sender_ceid AND m.recipient_ceid = ref.recipient_ceid
-                WHERE m.tenant_id = :tenant_id AND m.status NOT IN ('deleted')
-                ORDER BY m.date_received DESC LIMIT 100;"; // Dein SQL von oben
-        $rawMails = $this->queryIt($sql, ["hash" => $hash, "tenant_id" => $tenantId]);
-        //error_log(print_r($rawMails,true));
+                    SELECT sender_ceid, recipient_ceid 
+                    FROM mails 
+                    WHERE id_hash = UNHEX(:hash) 
+                    LIMIT 1
+                ) AS ref ON (
+                    -- LOGIK 1: Dialog (Paar-Match)
+                    ((m.sender_ceid = ref.sender_ceid AND m.recipient_ceid = ref.recipient_ceid) OR
+                    (m.sender_ceid = ref.recipient_ceid AND m.recipient_ceid = ref.sender_ceid))
+                    OR
+                    -- LOGIK 2: Einbahnstraße (Newsletter/System)
+                    -- Wenn der Sender gleich ist und wir den Empfänger ignorieren dürfen
+                    (m.sender_ceid = ref.sender_ceid AND ref.sender_ceid != 0)
+                )
+                WHERE m.tenant_id = :tenant_id 
+                AND m.status != 'deleted'
+                GROUP BY m.id
+                ORDER BY m.date_received DESC
+                LIMIT 100;"; // Dein SQL von oben
 
-        $items = [];
-        foreach ($rawMails as $row) {
-            $items[] = $this->formatItem($row, 'mail', $row['event_date'], $row['detail'], $hash);
+        $dbResult = $this->queryIt(
+            $sql, 
+            [
+                "hash" => $hash, 
+                "tenant_id" => $tenantId
+            ],
+            false,
+            false,
+            false
+        );
+        //error_log(print_r($rawMails,true));
+        if ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
+        {
+            $rawMails = $dbResult->data->fetched;
+            //error_log(print_r($rawMails, true));
+            $items = [];
+            foreach ($rawMails as $row) {
+                $items[] = $this->formatItem($row, 'mail', $row['event_date'], $row['detail'], $hash);
+            }
+            return $items;
+        }else{
+            error_log("!! NO ITEMS");
+            error_log(print_r($dbResult, true));
+
+            return [];
         }
-        return $items;
+
+        
     }
 
     private function getPaperlessIdsByMailHash(string $hash, string $salt, int $tenantId): array
     {
+        error_log(__FUNCTION__);
         $salt = $this->dashboard->getHashSalt();
 
         $sql = "SELECT 
@@ -412,11 +549,12 @@ class ContactProcessor extends \App\Core\Database
             -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
             WHERE m.id_hash = UNHEX(:hash) AND m.tenant_id=:tenant_id;";
 
-        $result = $this->queryIt($sql, ['hash' => $hash, 'tenant_id' => $tenantId]);
+        $dbResult = $this->queryIt($sql, ['hash' => $hash, 'tenant_id' => $tenantId]);
+
         // 1. Prüfen, ob überhaupt ein Ergebnis da ist
-        if (!empty($result) && is_array($result)) {
+        if (!empty($dbResult->data) && is_array($dbResult->data->fetched)) {
             // Da GROUP_CONCAT nur eine Zeile liefert, nehmen wir den ersten Index [0]
-            $row = $result[0];
+            $row = $dbResult->data->fetched[0];
 
             // Filtert leere Strings (falls nur NULL vorhanden war) und gibt ein sauberes Array
             $resAr['dokumente'] = array_filter(explode(',', $row['dokumente'] ?? ''));
@@ -434,29 +572,35 @@ class ContactProcessor extends \App\Core\Database
 
     public function getContactByMail(string $hash)
     {
-        $sql="SELECT 
-                c.id AS contact_id,
-                c.display_name,
-                c.type,
-                GROUP_CONCAT(DISTINCT ce.email SEPARATOR ', ') AS additional_emails,
-                GROUP_CONCAT(DISTINCT c.paperless_id SEPARATOR ', ') AS paperless_ids
-            FROM contacts AS c
-            /* 1. Schritt: Finde den Kontakt anhand des Mails-Hash */
-            INNER JOIN mails AS m ON c.id = m.sender_ceid
-            /* 2. Schritt: Verknüpfe alle E-Mails, die zu DIESEM Kontakt gehören */
-            LEFT JOIN contact_emails AS ce ON c.id = ce.contact_id
-            WHERE id_hash = UNHEX(:hash)
-            AND m.tenant_id = :tenant_id
-            GROUP BY c.id, c.display_name, c.type;";
+        error_log(__FUNCTION__);
 
-        $ret = $this->queryIt($sql,
-            ["hash" => $hash]
+        $sql="SELECT 
+                    c.id AS contact_id,
+                    c.display_name,
+                    c.type,
+                    c.paperless_id,
+                    GROUP_CONCAT(ce.email SEPARATOR ', ') AS additional_emails
+                FROM mails AS m
+                -- 1. Verbindung zur E-Mail-Tabelle über die sender_ceid
+                INNER JOIN contact_emails AS ce ON m.sender_ceid = ce.id
+                -- 2. Verbindung zur Kontakt-Tabelle
+                INNER JOIN contacts AS c ON ce.contact_id = c.id
+                WHERE m.id_hash = UNHEX(:hash)
+                AND m.tenant_id = 6
+                GROUP BY c.id, c.display_name, c.type, c.paperless_id;";
+
+        $dbResult = $this->queryIt($sql,
+            ["hash" => $hash],
+            false,
+            false,
+            true
         );
 
-        if (is_array($ret) && count($ret)>0){
-            return $ret;
+        
+        if ($dbResult->success && !empty($dbResult->data->fetched)){
+            return $dbResult->data->fetched;
         }else{
-            return ["return" => $ret];
+            return ["return" => $dbResult->error];
         }
         
     }
@@ -468,6 +612,8 @@ class ContactProcessor extends \App\Core\Database
      */
     private function getDocumentItemsByCorrespondent($docIDs)
     {
+        error_log(__FUNCTION__);
+
         if (empty($docIDs)) {
             return [];
         }
@@ -567,6 +713,8 @@ class ContactProcessor extends \App\Core\Database
         foreach ($timeline as &$yearData) {
             $yearData['months'] = array_values($yearData['months']);
         }
+
+
         return array_values($timeline);
     }
 

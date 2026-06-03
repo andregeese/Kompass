@@ -86,8 +86,9 @@ try {
         'get_contact_context'           => [App\Api\ContactController::class, 'getContactContext'],
         'auto_link_contact'             => [App\Api\ContactController::class, 'autoLinkContact'],
         'get_contact_timeline'          => [App\Api\ContactController::class, 'getTimeLineContact'],
+        'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],  
+        'get_emails_by_search'           => [App\Api\ContactController::class, 'getEmailsBySearch'],  
         'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],
-        'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],    
         'get_graph'                     => [App\Api\ContactController::class, 'getContacts'],    
         
         // System

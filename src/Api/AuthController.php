@@ -10,9 +10,6 @@ class AuthController extends \App\Core\BaseController
     */    
     public function login() 
     {
-        //error_log(print_r($_POST, true));
-        error_log("RAW INPUT: " . file_get_contents('php://input'));
-        error_log("POST VARS: " . print_r($_POST, true));
 
         $email    = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
@@ -34,16 +31,22 @@ class AuthController extends \App\Core\BaseController
     /**
      * Benutzer anlegen
      */
-    public function register($email, $plainPassword) {
-        // 1. Passwort sicher hashen
-        // PASSWORD_DEFAULT nutzt aktuell den sichersten Algorithmus (aktuell bcrypt)
-        $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+    public function register()
+    {
+        try{
+            $email = $_POST['email'];
+            $plainPassword = $_POST['password'];
+            $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
 
-        // 2. Hash in der Datenbank speichern
-        $stmt = $this->db->prepare("INSERT INTO users (username, password_hash) VALUES (:email, :hash)");
-        $stmt->execute([
-            'email' => $email,
-            'hash'  => $hashedPassword
-        ]);
+            $ret = $this->dashboard->registerUser($email, $hashedPassword);
+
+            // 1. Passwort sicher hashen
+            // PASSWORD_DEFAULT nutzt aktuell den sichersten Algorithmus (aktuell bcrypt)
+            
+            return $this->dashboard->sendResponse(true, print_r($ret, true), "", 'success');
+        }catch(\Throwable $e) {
+            return $this->dashboard->sendResponse(false, "", $e->getMessage(), 'error');
+        }
+        
     }
 }

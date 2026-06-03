@@ -584,7 +584,7 @@ class PaperlessProcessor extends \App\Core\Database
      */
     public function linkContact(int $contact_id, int $paperless_id):array
     {
-        $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
+        $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND cid= :cid;";
         
         $rows = $this->queryIt($sql, [
             'paperless' =>  $paperless_id,

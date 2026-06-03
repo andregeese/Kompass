@@ -5,7 +5,9 @@ use PDO;
 use Exception;
 use Throwable;
 
-
+/**
+ * @method void dashboard() 
+ */
 class Dashboard
 {
     protected \App\Core\Database $db;
@@ -56,22 +58,33 @@ class Dashboard
 
     public function verifyCredentials(string $email, string $password): ?array 
     {
-        error_log("verifyCredentials");
 
-        $sql = "SELECT id, password_hash FROM users WHERE username = :email LIMIT 1";
+        $sql = "SELECT id, tenant_id, password_hash FROM users WHERE username = :email LIMIT 1";
         
-        $userList = $this->db->queryIt(
+        $dbResult = $this->db->queryIt(
             $sql,
-            ['email' => $email]
+            ['email' => $email],
+            false,
+            false,
+            true
         );
 
-        $user = $userList[0] ?? null; // Nimm das erste Element aus der Liste
+        if ($dbResult->success)
+        {
+            $userList = $dbResult->data->fetched;
+        }else{
+            $userList = null;
+        }
 
+        $user = $userList[0] ?? null; // Nimm das erste Element aus der Liste
+        
+        //error_log("LOGIN RESULT FÜR user:" . print_r($dbResult->data->fetched[0], true));
         //if ($user && password_verify($password, $user['password_hash'])) {
         if ($user) {
+            //error_log("LOGIN RESULT FÜR " . $email . ": " . $user['id'] . ", tenant_id: " . $user['tenant_id']);
             return [
                 'id'        => (int)$user['id'],
-                'tenant_id' => (int)$user['id']
+                'tenant_id' => (int)$user['tenant_id']
             ];
         }
 
@@ -92,10 +105,15 @@ class Dashboard
             return self::$tenantValidated;
         }
 
-        $result = $this->db->queryIt(
+        $dbResult = $this->db->queryIt(
             "SELECT id FROM contacts WHERE id = :tid AND type = 'company' LIMIT 1", 
             ['tid' => $tenantId]
         );
+        if ($dbResult->success){
+            return $dbResult->data["fetched"];
+        }else{
+
+        }
 
         self::$tenantValidated = !empty($result);
         return self::$tenantValidated;
@@ -104,42 +122,29 @@ class Dashboard
     public function checkUserInDB(string $user): bool
     {
         try {
-            $res = $this->db->queryIt(
+            $dbResult = $this->db->queryIt(
                 "SELECT id FROM users WHERE username = :email", 
                 ["email" => $user]
             );
-            return !empty($res);
+
+            return !empty($dbResult->fetched);
         } catch (Throwable $t) {
             error_log("Fehler bei checkUserInDB: " . $t->getMessage());
             return false;
         }
     }
 
-    public function registerUser(string $mail, string $pwHash, array $configParam)
+    public function registerUser(string $mail, string $pwHash)
     {
         try {
             $sqlUser = "INSERT INTO users (username, password_hash) VALUES (:mail, :pwHash)";
-            $this->db->queryIt($sqlUser, [
+            $dbResult = $this->db->queryIt($sqlUser, [
                 "mail"   => $mail,
                 "pwHash" => $pwHash
-            ]);
+            ],false, true);
 
-            $tenantId = (int)$this->db->getConnection()->lastInsertId();
+            $tenantId = (int)$dbResult->data->lastId;// (int)$this->db->getConnection()->lastInsertId();
 
-            if ($tenantId <= 0) {
-                throw new Exception("User ID konnte nicht ermittelt werden.");
-            }
-
-            $sqlConfig = "INSERT INTO tenant_config (tenant_id, config_key, config_value) 
-                        VALUES (:tenant_id, :config_key, :config_value)";
-
-            foreach ($configParam as $key => $val) {
-                $this->db->queryIt($sqlConfig, [
-                    "tenant_id"    => $tenantId,
-                    "config_key"   => $key,
-                    "config_value" => $val
-                ]);
-            }
 
             return $tenantId; 
 
@@ -170,6 +175,9 @@ class Dashboard
         return defined('HASH_SALT') ? HASH_SALT : '';
     }
 
+    /**
+     * Standard-Antwort an JSON
+     */
     public static function sendResponse(bool $success, $data = null, ?string $error = null, string $status = 'success'): void 
     {
         header('Content-Type: application/json');
@@ -185,6 +193,7 @@ class Dashboard
             'details' => $details,
             'error'   => $error
         ]);
+
         exit;
     }
 

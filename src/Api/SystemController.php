@@ -95,7 +95,7 @@ class SystemController extends \App\Core\BaseController
 
         try {
             // Aufruf der Sync-Methode
-            $result = $this->mailProcessProc->syncWithICloud(true, 1, $folder);
+            $result = $this->mailProcessProc->syncWithICloud(1, $folder);
             echo json_encode($result);
 
         } catch (\Throwable $e) {
