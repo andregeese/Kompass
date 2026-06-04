@@ -88,6 +88,7 @@ try {
         'save_settings'                 => [App\Api\SettingsController::class, 'save'],
         
         // Mails
+        'get_mail_by_hash'              => [App\Api\MailController::class, 'getMailByHash'],
         'list_mails'                    => [App\Api\MailController::class, 'listMails'],
         'view'                          => [App\Api\MailController::class, 'viewMail'],
         'delete'                        => [App\Api\MailController::class, 'deleteMail'],

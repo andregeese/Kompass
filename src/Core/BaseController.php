@@ -23,8 +23,6 @@ abstract class BaseController {
      */
     private function parseRequest(): array 
     {
-        error_log(__FUNCTION__ . ": " . $_SERVER['REQUEST_METHOD']);
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             return json_decode(file_get_contents('php://input'), true) ?? [];
         }

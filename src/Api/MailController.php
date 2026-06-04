@@ -83,6 +83,28 @@ class MailController extends \App\Core\BaseController
         ];
     }
 
+    public function getMailByHash()
+    {
+        $hash = $this->request['hash'] ?? null;
+        if (empty($hash)) {
+            throw new \Exception("Kein Mail-Id-Hash übergeben.");
+        }
+
+        $mailDetails = $this->mailProcess->getMailByHash($hash); 
+        
+        if (!$mailDetails) {
+            throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
+        }
+
+        return [
+            'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
+            'date'         => $mailDetails['date_received'],
+            'sender'       => $mailDetails['sender'],
+            'paperless_id' => $mailDetails['paperless_id']
+        ];
+
+    }
+
     /**
      * Zeige die E-Mail an
      */

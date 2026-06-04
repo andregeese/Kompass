@@ -7,43 +7,58 @@ const mailViewComponent = () => ({
     hasMore: true,
     loading: false,
     query: false,
+    isSidebarOpen: true,
+    currentMailHtml:'',
     
     async init_mails() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashValue = urlParams.get('hash'); // mail_hash
+        
+        // 1. Initialisierung des Infinite Scrolls
         this.initInfiniteScroll();
-        // --- NEU: Such-Watcher ---
-        this.$watch('mailSearchQuery', (val) => {
-            clearTimeout(this.searchTimeout);
-            
-            this.searchTimeout = setTimeout(() => {
-                this.loadMails(false);
-                this.query= true;
-            }, 300);
-        });
 
+        // 2. Mails laden (warten bis fertig, damit wir den Hash auch finden können)
         if (this.$data.isOnline) {
             await this.loadMails(false);
-        };
+        }
+
+        // 3. Logik: Hash verarbeiten
+        if (hashValue) {
+            this.isSidebarOpen = false;
+            console.log("Hash gefunden, öffne Mail:", hashValue);
+            
+            // Suche die Mail in der bereits geladenen Liste
+            const dataMail = await apiCall('get_mail_by_hash', {hash:hashValue}, 'GET');
+            console.log(dataMail);
+
+            const foundMail = this.mails.find(m => m.hash === hashValue);
+            
+            if (foundMail) {
+                this.viewMail(foundMail);
+            } else {
+                console.warn("Mail mit Hash nicht in der Liste gefunden.");
+                // Optional: Hier könntest du einen API-Call machen, um die einzelne Mail 
+                // explizit zu holen, falls sie nicht auf Seite 1 ist.
+            }
+
+            // Kontakt-Suche wie gehabt
+            const data = await apiCall('get_emails_by_hash', {hash: hashValue}, 'GET');
+            this.searchQueryContacts = data?.details?.contacts?.[0]?.displayname || '';
+            this.loadContacts(); 
+        } else {
+            // --- Such-Watcher nur, wenn kein Hash (keine direkte Mail-Ansicht) ---
+            this.$watch('mailSearchQuery', (val) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.loadMails(false);
+                    this.query = true;
+                }, 300);
+            });
+        }
 
         this.$nextTick(() => {
-            console.log(this.$refs.mailList); // Jetzt sollte es definiert sein
+            console.log(this.$refs.mailList); 
         });
-    },
-
-    handleScroll(el) {
-        if (!el) return;
-    
-        // Die Berechnung:
-        // Ist der Abstand zum Boden weniger als 150px?
-        const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) <= 150;
-        
-        // Nur laden, wenn:
-        // - Wir nicht schon laden (loading)
-        // - Noch mehr Daten da sind (hasMore)
-        // - Wir am unteren Ende sind
-        if (!this.loading && this.hasMore && isNearBottom) {
-            console.log("Trigger Infinite Scroll...");
-            this.loadMails(true); // append=true
-        }
     },
 
     get filteredMails() {
@@ -96,6 +111,9 @@ const mailViewComponent = () => ({
     },
     
     async loadMails(append = false) {
+        console.log(this.loading);
+        console.log(this.hasMore);
+        console.log(append);
         // Abbruch, wenn bereits geladen wird oder wir am Ende sind (bei nicht-Suche)
         if (this.loading || (append && !this.hasMore)) return;
 
@@ -204,6 +222,7 @@ const mailViewComponent = () => ({
     },
 
     async viewMail(mail) {
+
         if (!mail?.hash) return;
 
         this.$data.currentMail = mail;
@@ -401,19 +420,20 @@ const mailViewComponent = () => ({
             const container = document.getElementById('mail-list');
             if (!container) return;
             
-            // Definiere den Handler als Funktion, damit wir ihn sauber binden
-            const scrollHandler = () => {
-                // Check: Lädt er schon? Sind noch Daten da?
+            // Wir binden den Listener direkt an das Element
+            container.onscroll = () => {
+                // Debug-Log: Erscheint das in der Konsole beim Scrollen?
+                console.log("Scrolling...", container.scrollTop);
+                this.hasMore=true;
                 if (this.loading || !this.hasMore) return;
                 
-                // Check: Ist genug gescrollt?
-                if (container.scrollHeight - (container.scrollTop + container.clientHeight) <= 150) {
-                    console.log("Nachladen Seite:", this.page);
-                    this.loadMails(true); // append=true
+                const threshold = 150;
+                const position = container.scrollHeight - (container.scrollTop + container.clientHeight);
+                
+                if (position <= threshold) {
+                    this.loadMails(true); 
                 }
             };
-
-            container.addEventListener('scroll', scrollHandler);
         });
     },
 

@@ -41,6 +41,20 @@ const loginComponent = () => ({
                             document.head.appendChild(meta);
                         }
                     }
+                    if (action === 'login') {
+                        if (typeof showNotify === 'function') {
+                            showNotify('Erfolgreich', 'Login erfolgreich! Leite weiter...', 'success');
+                        }
+                        // Leite den Browser auf die Mail-Ansicht um
+                        window.location.href = 'index.php?view=mails';
+                    }else {
+                        // Wenn es eine Registrierung war, schalte das Formular um
+                        if (typeof showNotify === 'function') {
+                            showNotify('Erfolgreich', 'Registrierung abgeschlossen. Du kannst dich jetzt einloggen.', 'success');
+                        }
+                        this.isRegister = false;
+                        this.formData.password = ''; // Passwort aus Sicherheitsgründen leeren
+                    }
                 } else {
                     // Jetzt passt die Struktur wieder korrekt zum if-Block
                     if (typeof showNotify === 'function') {

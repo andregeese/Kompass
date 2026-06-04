@@ -139,21 +139,30 @@ class MailProcessor extends \App\Core\Database
      * @param int $msgNumber Die Nummer der Mail im Postfach
      * @return string HTML-Inhalt oder leerer String
      */
-    public function getHtmlBody($hash, $folder) 
+    public function getHtmlBody($hash) 
     {
-        error_log("## " . __FUNCTION__ . " mit $hash aufgerufen ##");
         $mail = $this->getMailByHash($hash);
+        $folder = $mail['imap_folder'];
 
+        error_log("## " . __FUNCTION__ . " mit $hash und $folder aufgerufen ##");
 
         if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
             error_log("NO MAIL OR UID");
-            $this->dashboard->sendResponse(false, "", "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
-            return false;
+            throw new \Exception(  "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
         }
         
         
         $uid = (int)$mail['uid'];
-        $imapStream = $this->connectIMAP($folder);
+
+        $mailboxPath = $this->getIMAPFolderByHash($hash);
+
+        $imapStream = $this->connectIMAP($mailboxPath);
+        
+        if ($folder!=='INBOX') {
+            if (!imap_reopen($imapStream, $mailboxPath)) {
+                throw new \Exception("Konnte Ordner $folder nicht öffnen: " . imap_last_error());
+            }
+        }
 
         try {
             $structure = imap_fetchstructure($imapStream, $uid, FT_UID);
@@ -170,9 +179,11 @@ class MailProcessor extends \App\Core\Database
             // 2. Security: HTML Purifier zum Säubern
             $config = \HTMLPurifier_Config::createDefault();
             $purifier = new \HTMLPurifier($config);
-            
+            imap_close($imapStream);
             return $purifier->purify($htmlContent);
+
         } catch (\Throwable $e) {
+            imap_close($imapStream);
             // Logge den Fehler für deine Analyse
             error_log("IMAP-Struktur Fehler bei UID $uid: " . $e->getMessage());
             
@@ -193,11 +204,9 @@ class MailProcessor extends \App\Core\Database
     {
         $imapPath = "{" . $this->systemProcess->getRequiredEnv('IMAP_HOST') . ":" . $this->systemProcess->getRequiredEnv('IMAP_PORT'). "/imap/ssl}";
 
-        error_log($imapPath . " FOLDER: $folder");
         if ($folder !== "INBOX")
         {
             $finalPath = $imapPath .= $folder;
-            error_log($finalPath);
             return $finalPath;
         }
 
@@ -229,10 +238,13 @@ class MailProcessor extends \App\Core\Database
                 return "<i>(Kein lesbarer Textinhalt gefunden)</i>";
             }
 
+            imap_close($imapStream);
+
             $cleanText = mb_convert_encoding($plainText, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
             return nl2br(htmlspecialchars($cleanText));
 
         }catch (\Throwable $e) {
+            imap_close($imapStream);
             // Reicht den Fehler mit Kontext nach oben an getMails2Paperless weiter
             throw new \Exception("Fehler beim Lesen des Mail-Inhalts: " . $e->getMessage());
         }
@@ -283,39 +295,34 @@ class MailProcessor extends \App\Core\Database
      */
     public function moveToDMS($hash, $targetFolder = 'DMS') 
     {
-        try {
-            // Verbindung sicherstellen (nutzt die private connect Methode)
-            $imapStream = $this->connectIMAP();
+        // Verbindung sicherstellen (nutzt die private connect Methode)
+        $imapStream = $this->connectIMAP();
 
-            $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailByHash($hash);
 
-            
-            $msgUid = $mail['uid']; 
+        $msgUid = $mail['uid']; 
 
-            // Verschieben via UID
-            $moveSuccess = imap_mail_move($imapStream, $msgUid, $targetFolder, CP_UID);
+        // Verschieben via UID
+        $moveSuccess = imap_mail_move($imapStream, $msgUid, $targetFolder, CP_UID);
 
-            if (!$moveSuccess) {
-                throw new \Exception("IMAP-Move nach $targetFolder fehlgeschlagen: " . imap_last_error());
-            }
-            
-            // Wichtig, um die Mail aus der INBOX zu löschen
-            imap_expunge($imapStream);
-
-            // Lokalen DB Status aktualisieren
-            
-            $res = $this->queryIt(
-                "UPDATE mails SET status = 'archived' 
-                    WHERE tenant_id=:tenant_id 
-                    AND id_hash = UNHEX(:hash)", 
-                ['hash' =>$hash]
-            );
-
-            return true;
-
-        } catch (Throwable $e) {
-            throw new \Exception("Fehler in moveToDMS: " . $e->getMessage());
+        if (!$moveSuccess) {
+            throw new \Exception("IMAP-Move nach $targetFolder fehlgeschlagen: " . imap_last_error());
         }
+        
+        // Wichtig, um die Mail aus der INBOX zu löschen
+        imap_expunge($imapStream);
+
+        // Lokalen DB Status aktualisieren
+        
+        $res = $this->queryIt(
+            "UPDATE mails SET status = 'archived' 
+                WHERE tenant_id=:tenant_id 
+                AND id_hash = UNHEX(:hash)", 
+            ['hash' =>$hash]
+        );
+
+        imap_close($imapStream);
+        return true;
     }
 
     private function loadAllEmailsIntoCache(): array
@@ -506,7 +513,7 @@ class MailProcessor extends \App\Core\Database
                 
             }catch(\Throwable $e)
             {
-                //imap_close($imapStream);
+                imap_close($imapStream);
                 error_log("Fehler bei Mail: " . $e->getMessage());
             }
 
@@ -666,7 +673,7 @@ class MailProcessor extends \App\Core\Database
             ['folder' => $folder],
             false,
             false,
-            true
+            false
         );
 
         if ($dbResult->success) {
@@ -983,42 +990,33 @@ class MailProcessor extends \App\Core\Database
      */
     public function deleteMailByHash($hash) 
     {
-        
-        //in TRASH schieben
-        try {
-            // Verbindung sicherstellen (nutzt die private connect Methode)
-            $imapStream = $this->connectIMAP();
+        // Verbindung sicherstellen (nutzt die private connect Methode)
+        $imapStream = $this->connectIMAP();
 
-            $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailByHash($hash);
 
-            //error_log(print_r($mail, true));
-            
-            $msgUid = $mail['uid']; 
-            $destFolder = "Deleted Messages"; // Oder dynamisch basierend auf $targetFolder
+        $msgUid = $mail['uid']; 
+        $destFolder = "Deleted Messages"; // Oder dynamisch basierend auf $targetFolder
 
-            // Verschieben via UID
-            $moveSuccess = imap_mail_move($imapStream, $msgUid, $destFolder, CP_UID);
+        // Verschieben via UID
+        $moveSuccess = imap_mail_move($imapStream, $msgUid, $destFolder, CP_UID);
 
-            if (!$moveSuccess) {
-                throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
-            }
-            
-            // Wichtig, um die Mail aus der INBOX zu löschen
-            imap_expunge($imapStream);
-
-            // Lokalen DB Status aktualisieren
-            
-            //$res = $this->queryIt("DELETE FROM mails WHERE tenant_id = :tenant_id AND id = :id", 
-            $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = UNHEX(:hash)", 
-            [
-                'hash' => $hash
-            ] );
-
-            return true;
-
-        } catch (Throwable $e) {
-            throw new \Exception("Fehler in löschen: " . $e->getMessage());
+        if (!$moveSuccess) {
+            throw new \Exception("IMAP-Move nach $destFolder fehlgeschlagen: " . imap_last_error());
         }
+        
+        // Wichtig, um die Mail aus der INBOX zu löschen
+        imap_expunge($imapStream);
+
+        $res = $this->queryIt("UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = UNHEX(:hash)", 
+        [
+            'hash' => $hash
+        ] );
+
+        imap_close($imapStream);
+
+        return true;
+
 
     }
 

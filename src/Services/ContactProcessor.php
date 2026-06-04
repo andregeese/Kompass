@@ -502,7 +502,7 @@ class ContactProcessor extends \App\Core\Database
         });
 
         error_log("### TIMELINE RES ###");
-        error_log(print_r($timeline, true));
+        //error_log(print_r($timeline, true));
         error_log("### EOF TIMELINE RES ###");
 
         $bT = $this->buildTimeline($timeline);

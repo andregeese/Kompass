@@ -184,7 +184,7 @@
                 
                                             <template x-for="(item, index) in monthGroup.items" :key="item.id || index">
                                                 <div class="relative group pl-4 py-1.5 flex items-center hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
-                                                    @click="$dispatch('select-mail-hash', { hash: item.hash })">
+                                                    @click.stop="item.link ? window.location.href = item.link : $dispatch('select-mail-hash', { hash: item.hash })">
                                                     
                                                     <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
                                                     <div class="absolute left-[-3px] top-2.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-slate-300 dark:bg-gray-600 group-hover:bg-emerald-500 transition-colors"></div>
@@ -202,6 +202,7 @@
                                                             <span x-show="item.type === 'document'">📝</span>
                                                             <span x-show="item.type === 'paperless'">📄</span>
                                                             </span>
+                                                        <span x-show="item.is_flagged" class="text-[10px] shrink-0 animate-pulse" title="Markiert">📌</span>
 
                                                         <span class="flex-1 font-medium truncate transition-colors"
                                                             :class="{
@@ -213,6 +214,18 @@
                                                             x-text="(item.title || 'Unbenannt').substring(0, 30) + (item.title?.length > 30 ? '...' : '')"
                                                             :title="item.title">
                                                         </span>
+                                                        <div class="opacity-0 group-hover:opacity-100 flex items-center space-x-1 transition-opacity duration-150 shrink-0 bg-slate-50 dark:bg-gray-800/90 pl-1 rounded">
+                                                            <button @click.stop="// Deine Funktion für Termin hier hin, z.B.: openAppointmentModal(item)" 
+                                                                    title="Termin erstellen" 
+                                                                    class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
+                                                                📅
+                                                            </button>
+                                                            <button @click.stop="// Deine Funktion für Notiz hier hin, z.B.: openNoteModal(item)" 
+                                                                    title="Notiz hinzufügen" 
+                                                                    class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
+                                                                📝
+                                                            </button>
+                                                        </div>
                                                         <span class="text-slate-400 font-mono text-[10px] shrink-0" 
                                                             x-text="item.date">
                                                         </span>
