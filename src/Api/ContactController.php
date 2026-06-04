@@ -2,6 +2,7 @@
 namespace App\Api;
 use App\Services\ContactProcessor; // Importiere den Prozessor
 use App\Services\PaperlessProcessor;
+use Exception;
 
 class ContactController extends \App\Core\BaseController {
 
@@ -13,56 +14,39 @@ class ContactController extends \App\Core\BaseController {
     
     public function getContacts()
     {
-        try{
-            //Array ( [action] => list_contacts [page] => 1 [limit] => 20 [query] => [CF_AppSession] => d8145ad5e1ccd7ca [PHPSESSID] => a4023d5e3ce512989a14d53d3f4f4c5b )
+        $query = $this->request['query'] ?? null;
+        $id = $this->request['id'] ?? null;
 
-            $query = trim($_REQUEST['query'] ?? '');
-            $id = trim($_REQUEST['id'] ?? '');
+        //tbd: hashed
 
-            //return ['success' => false, 'error' => print_r($_GET, true)];
-
-            //tbd: hashed
-
-            if (empty($query) && empty($id)) {
-                return ['success' => false, 'error' => 'Kein Query übergeben.'];
-            }
-            
-            //Suche mail mit Hash
-            if (!empty($id)){
-                $contacts = $this->contactProcess->getContactById($id);
-            }else{
-                $contacts = $this->contactProcess->getContactList($query);
-            }
-
-            $this->dashboard->sendResponse(
-                true, 
-                ['contacts' => $contacts],
-                "",
-                "success"
-            );
-        }catch(\Throwable $e){
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        if (empty($query) && empty($id)) {
+            throw new \Exception("Kontakt nicht auffindbar (id / query nicht gesetzt)");
         }
+        
+        //Suche mail mit Hash
+        if (!empty($id)){
+            $contacts = $this->contactProcess->getContactById($id);
+        }else{
+            $contacts = $this->contactProcess->getContactList($query);
+        }
+
+        return ['contacts' => $contacts];        
     }
 
 
     public function getContactByEmailHash()
     {
-         try{
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
-            $hash = $data['hash'];
+         
+        $hash = $this->request['hash'] ?? null;
 
-            if (empty($hash)) {
-                return ['success' => false, 'error' => 'Kein Hash übergeben.'];
-            }
-            
-            $contacts = $this->contactProcess->getContactByEmailHash($hash);
-            
-            $this->dashboard->sendResponse(true, ['contact_emails' => $contacts], "", 'success');
-        }catch(\Throwable $e){
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        if (empty($hash)) {
+            return ['success' => false, 'error' => 'Kein Hash übergeben.'];
         }
+        
+        $contacts = $this->contactProcess->getContactByEmailHash($hash);
+        
+        return ['contact_emails' => $contacts];
+        
     }
 
     /**
@@ -70,22 +54,16 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getEmailsBySearch()
     {
-         try{
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
-            error_log(__FUNCTION__ . ": ". print_r($data, true));
-            $query = $data['query'];
+        $query = $this->request['query'];
 
-            if (empty($query)) {
-                return ['success' => false, 'error' => 'Keine Query übergeben.'];
-            }
-            
-            $contacts = $this->contactProcess->getEmailsBySearch($query);
-            
-            $this->dashboard->sendResponse(true, ['contact_emails' => $contacts], "", 'success');
-        }catch(\Throwable $e){
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        if (empty($query)) {
+            throw new \Exception("Emailsuche ist leer");
         }
+        
+        $contacts = $this->contactProcess->getEmailsBySearch($query);
+        
+        return ['contact_emails' => $contacts];
+        
     }
 
     /**
@@ -93,44 +71,35 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getEmailsByContact()
     {
-        try{
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
+        $query = $this->request['query'] ?? null;
 
-            $query = $data['query'];
-
-            if (empty($query)) {
-                return ['success' => false, 'error' => 'Keine Query übergeben.'];
-            }
-            
-            if (is_numeric($query))
-            {
-                $contacts = $this->contactProcess->getContactListByContactID($query);
-            }else{
-                $contacts = $this->contactProcess->getContactList($query);
-            }
-            
-            $this->dashboard->sendResponse(true, ['contacts' => $contacts], "", 'success');
-        }catch(\Throwable $e){
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        if (empty($query)) {
+            throw new \Exception('Keine Query übergeben.');
         }
+        
+        if (is_numeric($query))
+        {
+            $contacts = $this->contactProcess->getContactListByContactID($query);
+        }else{
+            $contacts = $this->contactProcess->getContactList($query);
+        }
+        
+        return ['contacts' => $contacts];
+    
     }
 
     
     public function getContactByHashMail() 
     {
-        $hash = trim($_REQUEST['hash'] ?? '');
+        $hash = $this->request['hash'] ?? '';
         
         if (empty($hash)) {
-            return ['success' => false, 'error' => 'Kein Mail-Hash übergeben.'];
+            throw new \Exception("Kein E-Mail-Hash übergeben");            
         }
         
         $email = $this->contactProcess->getContactByMail($hash); 
 
-        return [
-            'success' => true,
-            'details' => ['contact' => $email]
-        ];
+        return ['contact' => $email];
     }
 
 
@@ -139,33 +108,26 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getTimeLineContact()
     {
-        try{
-            //$rawInput = file_get_contents('php://input');
-            $data = $_GET;
-
-            $salt = $this->dashboard->getHashSalt();
-            $hash = $data['hash'] ?? '';
-
-            // 2. Validierung
-            if (!isset($data['hash'])) {
-                return ['success' => false, 'error' => 'Kein Hash übergeben'];
-            }
-
-            return $this->dashboard->sendResponse(
-                true,
-                $this->contactProcess->getTimelineData($hash, $salt)
-            );
-
-        } catch (\Throwable $e) {   
-            $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__.  ": ". $e->getMessage());
+        $hash = $this->request['hash'] ?? null;
+        
+        if (empty($hash)) {
+            throw new \Exception("Kein Hash übergeben");
         }
+
+        $salt = $this->dashboard->getHashSalt();
+        $TL = $this->contactProcess->getTimelineData($hash, $salt);
+        return ["timeline" => $TL];
+
     }
 
     /**
+     * @unused / @deprecated
      * Verknüpft Mail mit Konakt
      */
     public function autoLinkContact() 
     {
+        return ["das darf nicht mehr gehen!"];
+
         try {
             $rawInput = file_get_contents('php://input');
             $data = json_decode($rawInput, true);
@@ -193,18 +155,18 @@ class ContactController extends \App\Core\BaseController {
     /**
      * Hole alle Informationen zu dem Kontakt
      */
-    public function getContactContext($hash='') {
-        $hash = trim($_REQUEST['hash'] ?? '');
+    public function getContactContext($hash='') 
+    {
+        $hash = $this->request['hash'] ?? null;
         
         if (empty($hash)) {
-            return ['success' => false, 'error' => 'Kein Mail-Hash übergeben.'];
+            throw new \Exception('Kein Mail-Hash übergeben.');
         }
         
         //tbd: $hash nicht korrekt
         $contacts = $this->dashboard->getContactContext($hash); 
 
         return [
-            'success' => true,
             'details' => $contacts
         ];
     }
@@ -214,48 +176,28 @@ class ContactController extends \App\Core\BaseController {
      */
     public function insert() 
     {
-        $data = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $rawInput = file_get_contents('php://input');
-            $decoded = json_decode($rawInput, true);
-            error_log(__FILE__.":".__LINE__."=> " . print_r($decoded, true));
+        // 1. Daten direkt aus dem zentralen Request-Objekt holen
+        $name         = trim($this->request['name'] ?? '');
+        $email        = trim($this->request['email'] ?? '');
+        $type         = trim($this->request['type'] ?? 'company');
+        $paperless_id = trim($this->request['paperless_id'] ?? '??');
 
-            // Wenn $decoded ein Array ist, haben wir JSON empfangen
-            if (is_array($decoded)) {
-                $data = $decoded;
-            } else {
-                // Fallback auf FormData
-                $data = $_POST;
-            }
-        }
-
-        // 2. Daten sicher extrahieren (jetzt aus dem $data Array)
-        $name  = trim($data['name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $type  = trim($data['type'] ?? 'company');
-        $paperless_id  = trim($data['paperless_id'] ?? '??');
-
-        // 3. Validierung
+        // 2. Validierung (Exception wirft Fehler für den Dispatcher)
         if (empty($name) || empty($email)) {
-            return ['success' => false, 'error' => 'Name und E-Mail dürfen nicht leer sein.'];
+            throw new \Exception('Name und E-Mail dürfen nicht leer sein.');
         }
 
-        // 4. Kontakt speichern
+        // 3. Kontakt speichern
         $contactId = $this->contactProcess->insertContact($name, $email, $type, $paperless_id);
 
-        if ($contactId) {
-            return [
-                'success' => true,
-                'details' => [
-                    'message'    => 'Kontakt erfolgreich angelegt!',
-                    'contact_id' => $contactId
-                ]
-            ];
+        // 4. Erfolg zurückgeben
+        if (!$contactId) {
+            throw new \Exception('Fehler beim Erstellen des Kontakts in der Datenbank.');
         }
 
         return [
-            'success' => false,
-            'error'   => 'Fehler beim Erstellen des Kontakts in der Datenbank.'
+            'message'    => 'Kontakt erfolgreich angelegt!',
+            'contact_id' => $contactId
         ];
     }
 
@@ -264,28 +206,25 @@ class ContactController extends \App\Core\BaseController {
      */
     public function saveSmallContact()
     {
-        try{
-            $input = json_decode(file_get_contents('php://input'), true);
-        
-            // 2. Variablen sicher aus dem Array extrahieren
-            // Wir nutzen das Null-Coalescing-Operator (??) für Standardwerte
-            $id          = $input['id'] ?? null;
-            $name        = $input['displayname'] ?? '';
-            $email       = $input['email'] ?? '';
-            $type        = $input['type'] ?? 'company';
+        $id          = $this->request['id'] ?? null;
+        $name        = $this->request['displayname'] ?? null;
+        $email       = $this->request['email'] ?? null;
+        $type        = $this->request['type'] ?? 'person';
 
-            error_log(print_r($input, true));
-
-            if (!$id) {
-                throw new \Exception("Kontakt-ID fehlt.");
-            }
-            $this->contactProcess->insertContact($name, $email, $type);
-            
-            $this->dashboard->sendResponse(true, "Kontakt wurde aktualisiert");
-
-        } catch (\Throwable $e) {   
-            $this->dashboard->sendResponse(false, "Fehler in " . __FILE__. ":" . __LINE__ . ": ". $e->getMessage());
+    
+        if (!$id) {
+            throw new \Exception("Kontakt-ID fehlt.");
         }
+        $contactId = $this->contactProcess->insertContact($name, $email, $type);
+        
+        return [
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'Kontakt',
+                'message' => 'Kontakt wurde gespeichert.',
+                'type'    => 'success'
+            ]
+        ];
     }
 
     /**
@@ -293,36 +232,38 @@ class ContactController extends \App\Core\BaseController {
      */
     public function saveContact()
     {
-        try{
-            
-            $input = json_decode(file_get_contents('php://input'), true);
-            error_log("saveContact: " . print_r($input, true));
-            $emails = $input['emails'];
+        // Wir verlassen uns darauf, dass der BaseController das JSON bereits in $this->request gemappt hat.
+        $contact_id = $this->request['id'] ?? null;
+        $input_emails = $this->request['emails'] ?? [];
 
-            $contact_id = $input['id']; // Die ID des Hauptkontakts
-            $emails_to_link = [];
-
-            foreach ($input['emails'] as $email_entry) 
-            {
-                if (is_array($email_entry)) {
-                    // Fall: Array mit ID und Email
-                    $emails_to_link[] = $email_entry;
-                } else {
-                    // Fall: Nur String (hier nehmen wir id => null an)
-                    $emails_to_link[] = ['ceid' => null, 'email' => $email_entry];
-                }
-            }
-            
-            $ret = $this->contactProcess->saveContactEmails($contact_id, $emails_to_link);
-            
-            return [
-                'success' => true,
-                'details'   => 'Kontakt wurde aktualisiert.'
-            ];
-        } catch (\Throwable $e) {   
-            //throw new \Exception("Fehler in " . __FUNCTION__. ":" . __LINE__);
-            $this->dashboard->sendResponse(false, "Fehler in " . __FILE__. ":" . __LINE__ . ": ". $e->getMessage());            
+        // 2. Validierung
+        if (!$contact_id) {
+            throw new \Exception("Kontakt-ID fehlt.");
         }
+
+        // 3. Logik-Vorbereitung (Daten transformieren)
+        $emails_to_link = [];
+        foreach ($input_emails as $email_entry) {
+            if (is_array($email_entry)) {
+                $emails_to_link[] = $email_entry;
+            } else {
+                $emails_to_link[] = ['ceid' => null, 'email' => $email_entry];
+            }
+        }
+        
+        // 4. Geschäftslogik ausführen
+        // Wir gehen davon aus, dass saveContactEmails eine Exception wirft, wenn was schiefgeht
+        $this->contactProcess->saveContactEmails($contact_id, $emails_to_link);
+        
+        // 5. Antwort mit "UI-Anweisung" (nach unserem neuen Standard)
+        return [
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'Erfolg',
+                'message' => 'Kontakt wurde aktualisiert.',
+                'type'    => 'success'
+            ]
+        ];
     }
 }
 

@@ -230,11 +230,8 @@ const mailViewComponent = () => ({
     async moveToDMS(mail) {
         if (!this.isOnline || !mail?.hash) return;
     
-        const fd = new FormData();
-        fd.append('id', mail.hash); // Schickt NUR den Hash an die ${this.$data.apiUrl}
-        
         try {
-            const data = await apiCall('dms', fd, 'POST');
+            const data = await apiCall('dms', {'id': mail.hash}, 'POST');
             mail.paperless_id = true; // Markiert die Mail im Frontend als übertragen
         } catch (err) {
             console.error("Fehler beim Verschieben ins DMS:", err);

@@ -230,47 +230,5 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             </div>
         </div>
     </div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registriert:', registration.scope);
-
-                    // 🚀 DER RETTER FÜR DIE HOMESCREEN-APP:
-                    // Prüft im Hintergrund sofort, ob sich die sw.js geändert hat
-                    registration.update();
-
-                    // Wenn ein neuer Service Worker gefunden wurde und wartet (skipWaiting)
-                    registration.onupdatefound = () => {
-                        const installingWorker = registration.installing;
-                        if (installingWorker == null) return;
-                        
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed') {
-                                if (navigator.serviceWorker.controller) {
-                                    // Ein neues Update ist da! Wir leeren den Cache und laden neu.
-                                    console.log('🔄 Neue App-Version gefunden. Cache wird erneuert...');
-                                    
-                                    /*if ('caches' in window) {
-                                        caches.keys().then(names => {
-                                            for (let name of names) caches.delete(name);
-                                        });
-                                    }*/
-                                    
-                                    // Kurzer Delay, damit der Cache sicher leer ist, dann Reload
-                                    setTimeout(() => {
-                                        window.location.reload(true);
-                                    }, 2000);
-                                }
-                            }
-                        };
-                    };
-                })
-                .catch(err => console.error('ServiceWorker Registrierungsfehler:', err));
-            });
-        }
-    </script>
 </body>
 </html>

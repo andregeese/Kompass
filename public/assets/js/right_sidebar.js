@@ -148,11 +148,8 @@ const rightSidebarComponent = () => ({
 
             //wichtig, reagiert auf timelineData!!
             if (data && data.success && data.details) {
-                this.timelineData = data.details; 
+                this.timelineData = data.details.timeline ? data.details.timeline : data.details;
                 
-                if (this.$data?.debug) {
-                    console.log("Timeline erfolgreich geladen:", data.details);
-                }
             } else {
                 this.timelineData = [];
             }
@@ -167,8 +164,7 @@ const rightSidebarComponent = () => ({
         const mailHash = mail ? (mail.hash || '') : '';
 
         try {
-            const url = `api.php?action=paperless_mail_tree&query=${encodeURIComponent(searchQuery)}&hash=${mailHash}`;
-            const data = await safeFetch(url);
+            const data = await apiCall('paperless_mail_tree', {query:searchQuery, hash:mailHash}, 'GET');
 
             if (data?.success && data.details?.tree) {
                 this.paperlessTree = data.details.tree;
@@ -193,8 +189,7 @@ const rightSidebarComponent = () => ({
 
         //this.paperlessLoading = true;
         try {
-            const url = `api.php?action=paperless_search&query=${encodeURIComponent(this.manualSearchQuery)}`;
-            const data = await safeFetch(url);
+            const data = await apiCall('paperless_search', {query:this.manualSearchQuery}, 'GET');
             
             if (data?.success && data.details?.documents) {
                 console.log("SEARCH DMS RESPONSE");
@@ -215,13 +210,8 @@ const rightSidebarComponent = () => ({
         const mail = this.$data.currentMail;
         if (!mail || !mail.hash) return;
         try {
-            const url = `api.php?action=link_mail_to_paperless`;
-            const data = await safeFetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hash: mail.hash, paperless_id: documentId })
-            });
-
+            const data = apiCall('link_mail_to_paperless', { hash: mail.hash, paperless_id: documentId }, 'POST')
+            
             if (data?.success) {
                 this.$data.currentMail.paperless_id = documentId;
                 showNotify('Zuordnung erfolgreich', 'E-Mail verknüpft.', 'success');
@@ -239,11 +229,7 @@ const rightSidebarComponent = () => ({
 
         try {
             const url = `api.php?action=unlink_mail_from_paperless`;
-            const data = await safeFetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hash: mail.hash })
-            });
+            const data = await apiCall('unlink_mail_from_paperless', { hash: mail.hash }, 'POST');
 
             if (data?.success) {
                 this.$data.currentMail.paperless_id = null;
@@ -319,7 +305,7 @@ const rightSidebarComponent = () => ({
 
         try {
             // Ersetze 'query' durch den Parameter, den deine api.php erwartet
-            const data = await safeFetch(`api.php?action=get_correspondets&force_query=${encodeURIComponent(searchTerm)}`);
+            const data = await apiCall('get_correspondets', {force_query:searchTerm}, 'GET');
             
             if (data && data.success === true) {
                 this.paperlessContacts = []; // Erst leeren
@@ -367,10 +353,9 @@ const rightSidebarComponent = () => ({
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
             const data = await apiCall('search_contact', {hash:hash}, 'GET');
-            console.log(data);
+            
             if (data?.success && data?.details?.contact) {
                 const c = data.details.contact[0];
-                console.log(c);
 
                 this.$data.contactState = {
                     success: true,

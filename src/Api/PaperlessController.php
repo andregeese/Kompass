@@ -6,6 +6,9 @@ use Exception;
 
 class PaperlessController extends \App\Core\BaseController {
     
+    /**
+     * @deprecated
+     */
     public function sync() 
     {
         $hash = $_GET['hash'] ?? $_POST['hash'] ?? null;
@@ -22,8 +25,7 @@ class PaperlessController extends \App\Core\BaseController {
         $errorMessage = !$isSuccess ? ($syncResult['error'] ?? 'Unbekannter Fehler beim Abgleich.') : null;
 
         $this->cleanBuffer();
-        \App\Dashboard::sendResponse($isSuccess, $syncResult, $errorMessage, $statusType); 
-        exit;
+        return [];
     }
 
     /**
@@ -32,8 +34,8 @@ class PaperlessController extends \App\Core\BaseController {
      * @param string $query
      */
     public function search() {
-        $query = $_REQUEST['query'] ?? ''; 
-        $date  = $_REQUEST['date'] ?? ''; 
+        $query = $this->request['query'] ?? null; 
+        $date  = $this->request['date'] ?? null; 
         
         if (empty($query)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
@@ -41,10 +43,7 @@ class PaperlessController extends \App\Core\BaseController {
     
         $documents = $this->paperlessProcess->search($query, $date);
 
-        return [
-            'success' => true,
-            'details' => ['documents' => $documents]
-        ];
+        return ['documents' => $documents];
     }
 
     /**
@@ -52,39 +51,38 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function linkMail() 
     {
-        // JSON-Body lesen
-        $rawInput = file_get_contents('php://input');
-        $data = json_decode($rawInput, true);
+        $hash        = $this->request['hash'] ?? null; // Achte auf den Key 'hash', nicht 'id'!
+        $paperlessId = $this->request['paperless_id'] ?? null;
 
-        $hash        = $data['hash'] ?? ''; // Achte auf den Key 'hash', nicht 'id'!
-        $paperlessId = $data['paperless_id'] ?? '';
-
-        error_log(print_r($data, true));
 
         if (empty($hash) || empty($paperlessId)) {
-            throw new \Exception("Fehlende Parameter für das Verknüpfen.");
+            throw new \Exception("Fehlende Parameter für das Verknüpfen der E-Mail.");
         }
 
     
-        $this->paperlessProcess->linkMailToPaperless($hash, $paperlessId);
-
+        $ret = $this->paperlessProcess->linkMailToPaperless($hash, $paperlessId);
 
         return [
-            'success' => true,
-            'details' => ['message' => 'Erfolgreich mit Paperless-Dokument verknüpft!']
+            "paperless"=> $ret,
+            "ui" => [
+                'notify'  => true,
+                'title'   => 'Suche',
+                'message' => 'Erfolgreich mit Paperless-Dokument verknüpft!',
+                'type'    => 'info'
+            ]
         ];
+
     }
 
     public function getCorrespondentById() 
     {
-        $query        = trim($_REQUEST['query'] ?? '');
+        $query        = $this->request['query'] ?? null;
         
         $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
         $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
 
         return [
-            'success' => true,
-            'details' => $finalDetails
+            $finalDetails
         ];
         
     }
@@ -94,22 +92,23 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function linkContact()
     {
-        try{
-            // JSON-Body lesen
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
-            $contactid        = $data['contactId'] ?? null;
-            $correspondentId  = $data['correspondentId'] ?? null;
-            
-    
-            $ret = $this->paperlessProcess->linkContact($contactid, $correspondentId);
+        
+        $contactid        = $this->request['contactId'] ?? null;
+        $correspondentId  = $this->request['correspondentId'] ?? null;
+        
 
-            $this->dashboard->sendResponse(true, $ret, null, 'success');
+        $ret = $this->paperlessProcess->linkContact($contactid, $correspondentId);
 
-        }catch(\Throwable $e)
-        {
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
-        }
+        return [
+            "paperless"=> $ret,
+            "ui" => [
+                'notify'  => true,
+                'title'   => 'Suche',
+                'message' => 'Keine E-Mails gefunden.',
+                'type'    => 'info'
+            ]
+        ];
+
     }
 
     /**
@@ -117,9 +116,8 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function getCorrespondents() 
     {
-        $rawInput = file_get_contents('php://input');
-        $data = json_decode($rawInput, true);
-        $query = $data['query'];
+        $query = $this->request['query'];
+        $forceQuery = $this->request['forceQuery'];
 
         error_log("getCorrespondents aufgerufen mit query: " . print_r($_REQUEST, true));
         
@@ -134,60 +132,49 @@ class PaperlessController extends \App\Core\BaseController {
             error_log("Keine Sucheingabe, hole alle Korrespondenten");
             $correspondents = $this->paperlessProcess->getAllCorrespondents($query);
             
-            $this->dashboard->sendResponse(
-                true, 
-                ['correspondents' => $correspondents],
-                null,
-                'success'
-            );
+            return ['correspondents' => $correspondents];
 
         }else{
 
             $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
             $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
 
-            $this->dashboard->sendResponse(
-                true, 
-                ['correspondents' => $finalDetails],
-                null,
-                'success'
-            );
+            return ['correspondents' => $finalDetails];
 
         }
     }
 
     /**
+     * @deprecated
      * Holt die Mails und Korrespondeten zu einer mail
      */
     public function getMailTree() 
     {
-        try{
-            $hash = $_GET['hash'] ?? '';
-
-            //Finde die Mail zu dem hash
-            $mailDetails = $this->mailProcess->getMailByHash($hash); 
-
-            //Kontakte ermitteln
-            $contacts = $this->contactProcess->getEmailsAndContactsByHash($hash, $mailDetails["contact_id"]); 
-
-            $paperlessCorres = $contacts[0]["paperless_id"];
-
-            $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
-
-            $this->dashboard->sendResponse(true, $ret);
-        } catch (\Throwable $e) {   
-            $this->dashboard->sendResponse(false, "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
-        }
         
-        //return $ret;    
+        $hash = $this->request['hash'] ?? null;
+
+        //Finde die Mail zu dem hash
+        $mailDetails = $this->mailProcess->getMailByHash($hash); 
+
+        //Kontakte ermitteln
+        $contacts = $this->contactProcess->getEmailsAndContactsByHash($hash, $mailDetails["contact_id"]); 
+
+        $paperlessCorres = $contacts[0]["paperless_id"];
+
+        $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
+
+        return [$ret];
+        
     }
 
 
     /**
-     * obsolete
+     * Erstellt den Baum in ganz schön!
      */
-    public function getTree() {
-        $sender = $_GET['sender'] ?? '';
+    public function getTree() 
+    {
+        
+        $sender = $this->request['sender'] ?? null;
         if (empty($sender)) {
             throw new \Exception("Kein Absender übergeben");
         }
@@ -219,9 +206,6 @@ class PaperlessController extends \App\Core\BaseController {
         }
 
         krsort($tree);
-        return [
-            'success' => true,
-            'details' => ['tree' => $tree]
-        ];
+        return ['tree' => $tree];
     }
 }

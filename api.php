@@ -159,9 +159,15 @@ try {
     $controller = new $controllerClass($dashboard);
     $result = $controller->$method();
 
-    echo json_encode(array_merge(['success' => true], (array)$result));
+    \App\Dashboard::sendResponse(true, $result ?? new \stdClass());
 
 } catch (Throwable $e) { 
+    error_log("API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    \App\Dashboard::sendResponse(
+        false, 
+        null, 
+        $e->getMessage()
+    );
+    
 }

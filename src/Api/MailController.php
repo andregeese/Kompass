@@ -12,36 +12,24 @@ class MailController extends \App\Core\BaseController
     
     public function listMails() 
     {
-        try{
-            
-            $page   = isset($_GET['page'])   ? (int)$_GET['page']   : 1;
-            $limit  = isset($_GET['limit'])  ? (int)$_GET['limit']  : 20;
-            $folder = isset($_GET['folder']) ? $_GET['folder']      : 'INBOX';
-            $search = isset($_GET['search']) ? $_GET['search']      : '';
+        // 1. Parameter aus dem zentralen Request-Objekt holen
+        $page   = (int)($this->request['page'] ?? 1);
+        $limit  = (int)($this->request['limit'] ?? 20);
+        $folder = $this->request['folder'] ?? 'INBOX';
+        $search = $this->request['search'] ?? '';
 
-            if (!empty($search) && $page > 1) {
-                $this->cleanBuffer();
-                return ['success' => true, 'details' => ['mails' => []]];
-            }
-            
-
-            $mails = $this->mailProcess->getMailsPaginated($page, $limit, $folder, $search);
-            $cleanMails = $this->recursiveUtf8Encode($mails);
-            
-            return [
-                'success' => true,
-                'details' => [
-                    'mails' => $cleanMails
-                ]
-            ];
-        } catch (\Throwable $e) {
-            throw new \Exception($e->getMessage());
-
-            return [
-                'success' => false,
-                'error'   => 'Fehler beim Laden der E-Mails: ' . $e->getMessage()
-            ];
+        if (!empty($search) && $page > 1) {
+            $this->cleanBuffer();
+            return ['mails' => []];
         }
+        
+        $mails = $this->mailProcess->getMailsPaginated($page, $limit, $folder, $search);
+        $cleanMails = $this->recursiveUtf8Encode($mails);
+        
+        return [
+            'mails' => $cleanMails
+        ];
+
     }
 
     private function recursiveUtf8Encode(array $data) {
@@ -63,10 +51,10 @@ class MailController extends \App\Core\BaseController
      */
     public function searchMail()
     {
-        $search = $_GET['query'] ?? '';
-        $folder = $_GET['folder'] ?? 'INBOX'; // Standardwert, falls kein Ordner übergeben wird
-        $page   = (int)($_GET['page'] ?? 1);
-        $limit  = (int)($_GET['limit'] ?? 50);
+        $search = $this->request['query'] ?? '';
+        $folder = $this->request['folder'] ?? 'INBOX'; 
+        $page   = (int)$this->request['page'] ?? 1;
+        $limit  = (int)$this->request['limit'] ?? 50;
         
         // 2. Validierung: Suchbegriff darf nicht komplett leer sein
         if (empty($search)) {
@@ -77,28 +65,30 @@ class MailController extends \App\Core\BaseController
         $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit); 
         
         if (!$mailDetails) {
-            $this->dashboard->sendResponse(false, null, "keine Mails gefunden",'success');
-            //return ['success' => false, 'message' => "Keine Mails gefunden."];
+            if (empty($mailDetails)) {
+                return [
+                    "mails" => [],
+                    "ui" => [
+                        'notify'  => true,
+                        'title'   => 'Suche',
+                        'message' => 'Keine E-Mails gefunden.',
+                        'type'    => 'info'
+                    ]
+                ];
+            }
         }
 
-        $this->dashboard->sendResponse(true, ["mails" => $mailDetails], null,'success');
-
-        // ACHTUNG: Hier hast du einen Design-Fehler im Controller:
-        // Dein MailProcessor gibt jetzt eine LISTE (Array von Mails) zurück, 
-        // aber dein Code unten geht von EINEM Objekt aus.
-        /*return [
-            'success' => true,
-            'details' => [
-                'mails' => $mailDetails // Gib einfach das Array der gefundenen Mails zurück
-            ]
-        ];*/
+        return [
+            "mails" => $mailDetails
+        ];
     }
 
     /**
      * Zeige die E-Mail an
      */
     public function viewMail() {
-        $hash = $_GET['id'] ?? '';
+        $hash = $this->request['id'] ?? '';
+
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
@@ -110,59 +100,70 @@ class MailController extends \App\Core\BaseController
         }
 
         return [
-            'success' => true,
-            'details' => [
-                'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
-                'date'         => $mailDetails['date_received'],
-                'sender'       => $mailDetails['sender'],
-                'paperless_id' => $mailDetails['paperless_id']
-            ]
+            'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
+            'date'         => $mailDetails['date_received'],
+            'sender'       => $mailDetails['sender'],
+            'paperless_id' => $mailDetails['paperless_id']
         ];
     }
 
     /**
      * lösche die E-Mail
      */
-    public function deleteMail() {
-        $hash = $_POST['id'] ?? '';
+    public function deleteMail() 
+    {
+        $hash = $this->request['id'] ?? '';
         if (!$hash) {
-            header('HTTP/1.1 400 Bad Request');
-            return ['success' => false, 'error' => 'ID fehlt'];
+            throw new \Exception("die ID zum löschen fehlt");
         }
-        try{
-            return $this->mailProcess->deleteMailByHash($hash);
+    
+        $success= $this->mailProcess->deleteMailByHash($hash);
+        if (!$success) {
+            throw new \Exception("Löschen fehlgeschlagen.");
+        }
 
-        } catch (Exception $e) {
-            error_log("Fehler bei deleteMail: " . $e->getMessage());
-            header('HTTP/1.1 500 Internal Server Error');
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
+        return [
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'E-Mail',
+                'message' => 'E-Mail wurde erfolgreich gelöscht.',
+                'type'    => 'success'
+            ]
+        ];
     }
 
     /**
      * Verschiebe die E-Mail nach DMS
      */
     public function moveToDms() {
-        $hash = $_POST['id'] ?? '';
+        $hash = $this->request['id'] ?? null;
         if (!$hash) {
-            header('HTTP/1.1 400 Bad Request');
-            return ['success' => false, 'error' => 'ID fehlt'];
+            throw new \Exception("ID zum verschieben fehlt");
         }
 
-        try {
-            // 2. Logik delegieren (Kein method_exists mehr, wir vertrauen unserer IDE!)
-            $this->mailProcess->moveToDMS($hash);
-            
-            // 3. Antwort zurückgeben
-            return ['success' => true];
-
-        } catch (Exception $e) {
-            error_log("Fehler bei moveToDms: " . $e->getMessage());
-            header('HTTP/1.1 500 Internal Server Error');
-            return ['success' => false, 'error' => $e->getMessage()];
+    
+        // 2. Logik delegieren (Kein method_exists mehr, wir vertrauen unserer IDE!)
+        $success = $this->mailProcess->moveToDMS($hash);
+        
+        if (!$success) {
+            throw new \Exception("Verschieben fehlgeschlagen.");
         }
+
+        // 2. Einheitliche Antwort
+        // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
+        return [
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'DMS Archiv',
+                'message' => 'E-Mail wurde erfolgreich verschoben.',
+                'type'    => 'success'
+            ]
+        ];
     }
 
+    /**
+     * @deprecated
+     */
     public function handlePdf() {
         $hash = $_POST['id'] ?? '';
         $mail = $this->mailProcess->getMailByHash($hash); 
@@ -187,64 +188,54 @@ class MailController extends \App\Core\BaseController
             session_write_close();
         }
         
-        $folder = isset($_GET['folder']) ? trim($_GET['folder']) : 'INBOX';
+        $folder = $this->request['folder'] ?? null;
         $allowedFolders = ['INBOX', 'DMS', 'DMSDone','Sent Messages'];
         
         if (!in_array($folder, $allowedFolders)) {
             throw new \Exception("Ungültiger Ordner-Name übergeben.");
         }
         ob_start();
-        try{
+        
+        $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
+        
+        ob_end_clean();
 
-            $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
-            
-            ob_end_clean();
-            return $syncResult; // Gibt das komplette Sync-Array direkt zurück
-        } catch (Exception $e) {
-            ob_end_clean();
-            error_log("Fehler bei syncCloud: " . $e->getMessage());
-            header('HTTP/1.1 500 Internal Server Error');
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
+        return [$syncResult]; // Gibt das komplette Sync-Array direkt zurück
     }
 
     /**
      * 
      */
-    public function trackFolders() {
+    public function trackFolders() 
+    {
         ignore_user_abort(false);
         //$syncResult = $this->mailProcess->trackAndSyncFolderStatus();
         return [
-            'success' => true,
-            'details' => [
-                'updated' => $syncResult['updated'] ?? 0,
-                'logs'    => $syncResult['logs'] ?? []
-            ]
+            'updated' => $syncResult['updated'] ?? 0,
+            'logs'    => $syncResult['logs'] ?? []
         ];
     }
 
     /**
-     * stream die Mail
+     * streamt die Mail
      */
     public function streamHtml() 
     {
-        $hash = $_GET['hash'] ?? '';
+        $hash = $this->request['hash'] ?? ''; // Nutze dein zentrales Request-Objekt!
 
         if (empty($hash)) {
-            throw new \Exception("Fehler: Kein gültiger Mail-Hash übergeben.");
+            throw new \Exception("Kein gültiger Mail-Hash übergeben.");
         }
 
-        try{
-            $BODY = $this->mailProcess->getMailBody($hash);
-            // Sonderfall: Direkter HTML-Stream an den Browser unterbricht JSON-Rückgabe
-            header('Content-Type: text/html; charset=utf-8');
-            header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
-            echo $BODY;
-            exit;
-        }catch(\Throwable $e)
-        {
-            error_log(__FUNCTION__. ": ". $e->getMessage() . ", Trace: ". $e->getTraceAsString());
-        }
+        // Die Logik bleibt im Processor
+        $body = $this->mailProcess->getMailBody($hash);
+
+        // Jetzt die Ausnahme-Ausgabe
+        header('Content-Type: text/html; charset=utf-8');
+        header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
+        
+        echo $body;
+        exit; // Wichtig: Hier hart beenden, damit der Dispatcher nicht mehr greift
         
     }
 }

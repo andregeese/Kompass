@@ -213,15 +213,15 @@ class PaperlessProcessor extends \App\Core\Database
     /**
      * Durchsucht die Paperless-Instanz nach einem Suchbegriff, mit optionaler Datumseins- oder -eingrenzung. Dokumente, deren Erstelldatum exakt mit dem Mail-Datum übereinstimmt, erhalten eine höhere Gewichtung für die Sortierung und werden im Frontend hervorgehoben. Das ermöglicht es, relevante Dokumente schneller zu erkennen, selbst wenn die Volltextsuche nicht perfekt ist.
       * @param string $query Der Suchbegriff für Titel und Inhalt
-      * @param string $mailDate Optionales Datum der Mail (z.B. "2024-06-15"), um die Suche auf Dokumente mit diesem Erstelldatum zu fokussieren
+      * @param string|null $mailDate Optionales Datum der Mail (z.B. "2024-06-15"), um die Suche auf Dokumente mit diesem Erstelldatum zu fokussieren
       * @return array Eine Liste von gefundenen Dokumenten mit ID, Titel, Erstelldatum, Link und einem Flag für Datumstreffer
      */
-    public function search(string $query, string $mailDate = ''): array
+    public function search(string $query, mixed $mailDate = ''): array
     {
         $params = [
-            'query'   => $query,
-            'sort'             => '-created',
-            'page'    => '1',
+            'query'     => $query,
+            'sort'      => '-created',
+            'page'      => '1',
             'page_size' => '30' // Begrenzung direkt an der API schont den RAM
         ];
 
@@ -233,11 +233,6 @@ class PaperlessProcessor extends \App\Core\Database
         }
         
         $url = '/api/documents/' . '?' . http_build_query($params);
-
-        // Wenn das immer noch 400er wirft, liegt es am Slash. 
-        // Probiere in diesem Fall:
-        //$url = '/api/documents/' . '?title__icontains=' . urlencode($query) . '&sort=created&page=1&page_size=30';
-
 
         //$url = '/api/documents/?' . http_build_query($params);
         $jsonResponse = $this->request($url);
@@ -587,16 +582,16 @@ class PaperlessProcessor extends \App\Core\Database
      * @param $contact_id Kontakt
      * @param $paperless_id Paperless
      */
-    public function linkContact(int $contact_id, int $paperless_id):array
+    public function linkContact(int $contact_id, int $paperless_id):bool
     {
         $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
         
-        $dbResult = $this->queryIt($sql, [
+        $this->queryIt($sql, [
             'paperless' =>  $paperless_id,
             'cid' => $contact_id
         ]);
         
-        return $dbResult->data;
+        return true;
     }
 
     /**

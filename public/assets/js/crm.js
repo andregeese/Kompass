@@ -152,8 +152,6 @@ async function safeFetch(url, customOptions = {}) {
         finalOptions.body = JSON.stringify(finalOptions.body);
     }
 
-    
-
     try {
         const response = await fetch(url, finalOptions);
 
@@ -165,17 +163,25 @@ async function safeFetch(url, customOptions = {}) {
         }
 
         const data = await response.json();
-
-        // 4. Business-Logik (Erfolg prüfen)
+        
         if (data && data.success === false) {
+            // Hier schlägt dein Dispatcher zu!
             console.error("API Error:", data.error);
+            showNotify("Fehler", data.error || "Ein unbekannter Fehler ist aufgetreten", "danger");
             return data;
+        }
+
+        // 2. NEU: Zentrale Notification-Logik
+        // Wenn der Server UI-Anweisungen mitgeschickt hat
+        if (data.details && data.details.ui && data.details.ui.notify) {
+            const ui = data.details.ui;
+            showNotify(ui.title, ui.message, ui.type || 'info');
         }
 
         return data;
 
     } catch (error) {
-        console.error("Fetch kritischer Fehler:", error);
+        showNotify("Systemfehler", error.message, "danger");
         return { success: false, error: error.message };
     }
 };
@@ -454,4 +460,35 @@ window.crmEngine = function() {
             }, { passive: true });
         }
     };
+};
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+        .then(registration => {
+            console.log('ServiceWorker registriert:', registration.scope);
+            registration.update();
+
+            registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (!installingWorker) return;
+                
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        window.updateAvailable = true;
+                        showNotify("Update bereit", "Eine neue Version ist installiert. <button onclick='performAppUpdate()'>Jetzt aktualisieren</button>", "info");
+                    }
+                };
+            };
+        })
+        .catch(err => console.error('ServiceWorker Registrierungsfehler:', err));
+    });
+}
+
+// Zentrale Funktion für den Update-Prozess (Global verfügbar)
+window.performAppUpdate = function() {
+    if ('caches' in window) {
+        caches.keys().then(names => names.forEach(name => caches.delete(name)));
+    }
+    window.location.reload(true);
 };

@@ -164,7 +164,7 @@ const contactsViewComponent = () => ({
      */
     async linkToMatch(contactId, itemId) 
     {
-        const data = await apiCall(link_contact_item, { contactId: contactId, correspondentId: itemId }, 'POST');
+        const data = await apiCall('link_contact_item', { contactId: contactId, correspondentId: itemId }, 'POST');
         
         if (data?.success) {
             console.log("YEAH, Kontakt verknüpft!");

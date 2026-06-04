@@ -136,7 +136,7 @@
                     </div>
                 </div>
 
-                <!-- Iframe Container -->
+                
                 <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
                     <div class="flex-1 bg-white rounded-xl shadow-inner m-3 border border-slate-200 overflow-hidden relative flex items-center justify-center">
                         <div x-show="mailLoading" x-cloak class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 z-10">
