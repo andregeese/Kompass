@@ -158,13 +158,13 @@
                             </button>
                             
                             <div x-show="openSection === 'match'" x-collapse class="mt-2 space-y-2">
-                                <input type="text" x-model="matchSearchQuery" @input.debounce="performMatchSearch()"
+                                <input type="text" x-model="paperlessQuery" @input.debounce="performPaperlessSearch()"
                                     placeholder="Suche Korrespondent...." 
                                     class="w-full p-2 border border-slate-200 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800">
-                                
-                                <template x-for="result in matchResults" :key="result.id">
+                                <div x-show="loadingPaperless" class="text-xs text-blue-500 italic">Suche...</div>
+                                <template x-for="result in paperlessResults" :key="result.id">
                                     <div class="p-3 bg-slate-50 dark:bg-gray-750 rounded-lg flex justify-between items-center text-xs">
-                                        <span x-text="result.displayname"></span>
+                                        <span x-text="result.name"></span>
                                         <button @click="linkToMatch(activeContact.id, result.id)" class="text-emerald-600 font-bold">🔗 Link</button>
                                     </div>
                                 </template>
@@ -173,14 +173,14 @@
 
                         <div>
                             <button @click="openSection = (openSection === 'emails' ? null : 'emails')" 
-                                    class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 gb-whtie dark:bg-gray-700 rounded-lg dark:text-white">
+                                    class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 bg-whtie dark:bg-gray-700 rounded-lg dark:text-white">
                                 <span>✉️ E-Mail Adressen</span>
                                 <span x-text="openSection === 'emails' ? '−' : '+'"></span>
                             </button>
                             
                             <div x-show="openSection === 'emails'" x-collapse class="mt-2 space-y-3">
                                 <input type="email" 
-                                    x-model="matchSearchQuery" 
+                                    x-model="emailQuery" 
                                     @input.debounce.500ms="performMatchSearch()"
                                     placeholder="E-Mails suchen..."
                                     class="w-full text-sm p-3 rounded-xl border border-slate-200 bg-white focus:border-blue-500 outline-none">

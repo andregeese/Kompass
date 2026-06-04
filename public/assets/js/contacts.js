@@ -2,7 +2,15 @@ const contactsViewComponent = () => ({
     // State
     contacts: [],
     searchQueryContacts: '',
-    matchSearchQuery: '',
+    
+    emailQuery: '',
+    emailResults: [],     // Gefundene E-Mails zum Kontakt
+    loadingEmails: false,
+    
+    paperlessQuery: '',
+    paperlessResults: [], // Ergebnisse von Paperless
+    loadingPaperless: false,
+
     matchResults: [],
     loading: false,
     loadingMatch: false,
@@ -16,26 +24,18 @@ const contactsViewComponent = () => ({
         const urlParams = new URLSearchParams(window.location.search);
         const hashValue = urlParams.get('hash'); //mail_hash
         
-
+        //Wenn ein Hash mitkommt suche den Kontakt dirket!
         if (hashValue) {
-            console.log(hashValue);
-
-            const res = await safeFetch('api.php?action=get_emails_by_hash', {
-                method: 'POST',
-                body: JSON.stringify({hash: hashValue})
-            });
+            const data = await apiCall('get_emails_by_hash', {hash:hashValue},'GET');
 
             // 1. Wert setzen
-            this.searchQueryContacts = res?.details?.contacts?.[0]?.displayname || '';
+            this.searchQueryContacts = data?.details?.contacts?.[0]?.displayname || '';
             
-            // 2. WICHTIG: Die Suche sofort explizit triggern!
-            // Da du ein Debounce (setTimeout) im Watcher hast, 
-            // rufst du hier am besten direkt die Ladefunktion auf.
             this.loadContacts(); 
             
             // Optional: Falls performMatchSearch auch automatisch laufen soll
             this.$nextTick(() => {
-                this.performMatchSearch();
+                //this.performMatchSearch();
             });
         }
         
@@ -81,10 +81,16 @@ const contactsViewComponent = () => ({
     },
 
     // --- Kontakt-Logik ---
-    async loadContacts() {
+    async loadContacts() 
+    {
         this.loading = true;
         try {
-            const data = await safeFetch(`api.php?action=list_contacts&query=${encodeURIComponent(this.searchQueryContacts)}`);
+            const data = await apiCall(
+                'list_contacts',
+                {query: this.searchQueryContacts},
+                'GET'
+            );
+            //const data = await apiCall('list_contacts', {query:this.searchQueryContacts}, 'POST');
             this.contacts = data.details?.contacts || [];
             this.drawNetwork(this.contacts);
         } finally {
@@ -94,11 +100,8 @@ const contactsViewComponent = () => ({
 
     async saveContact(contact = this.activeContact) {
         try {
-            const res = await safeFetch('api.php?action=save_contact', {
-                method: 'POST',
-                body: JSON.stringify(contact)
-            });
-            if (res.success) {
+            const data = await apiCall('save_contact', contact, 'POST');
+            if (data.success) {
                 Object.assign(contact, res.data || contact);
                 this.closeMatchModal();
             }
@@ -130,7 +133,7 @@ const contactsViewComponent = () => ({
 
     async fetchEmailsForContact(id) {
         this.loadingMatch = true;
-        const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_contact&query=${id}`);
+        const data = await apiCall('get_emails_by_contact', {query:id},'GET');
         if (data?.success) {
             this.activeContact.emails = data.details.contacts || [];
             this.matchResults = [...this.activeContact.emails];
@@ -142,20 +145,13 @@ const contactsViewComponent = () => ({
     {
        try {
             
-            const response = await safeFetch('api.php?action=save_contact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                // Hier schicken wir das ganze Objekt mit dem aktualisierten E-Mail-Array
-                body: JSON.stringify(this.activeContact)
-            });
+            const data = await apiCall('save_contact', this.activeContact, 'POST');
 
-            if (response.success) {
-                console.log('Kontakt gespeichert:', response.message);
+            if (data.success) {
+                console.log('Kontakt gespeichert:', data.message);
                 // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
             } else {
-                alert('Fehler: ' + (response.error || 'Unbekannt'));
+                alert('Fehler: ' + (data.error || 'Unbekannt'));
             }
         } catch (err) {
             console.error('Speicherfehler:', err);
@@ -163,27 +159,74 @@ const contactsViewComponent = () => ({
 
     },
 
-    async linkToMatch(contactId, itemId) {
-        // Finde das ausgewählte Ergebnis, um den Typ zu bestimmen
-        const result = this.matchResults.find(r => r.id === itemId);
-        if (!result) return;
-
-        if (result.type === 'mail') {
-            await this.linkToMail(contactId, itemId); // itemId ist hier der hash
-        } else {
-            await this.linkToPaperless(contactId, itemId);
+    /**
+     * Paperless-Verknüpfung
+     */
+    async linkToMatch(contactId, itemId) 
+    {
+        const data = await apiCall(link_contact_item, { contactId: contactId, correspondentId: itemId }, 'POST');
+        
+        if (data?.success) {
+            console.log("YEAH, Kontakt verknüpft!");
         }
         
         // UI aktualisieren: Panel schließen
-        this.closeMatchModal();
+        //this.closeMatchModal();
     },
 
     /**
      * E-Mail Suche für das Matching
      * @returns 
      */
-    async performMatchSearch() {
-        if (this.matchSearchQuery.length < 2) {
+    // --- E-MAIL: Interne E-Mail-Adressen Suche/Liste ---
+    async fetchEmailsForContact(contactId = this.activeContact?.id) 
+    {
+        if (!contactId) return;
+        this.loadingEmails = true;
+
+        try {
+            // 1. Entscheide nur noch über Action und Parameter
+            const isSearch = this.emailQuery.length >= 2;
+            const action = isSearch ? 'get_emails_by_search' : 'get_emails_by_contact';
+            const params = isSearch ? { query: this.emailQuery } : { query: contactId };
+            const method = isSearch ? 'POST' : 'GET';
+
+            // 2. Ein sauberer Aufruf
+            const data = await apiCall(action, params, method);
+
+            // 3. Ergebnis verarbeiten
+            if (data?.success) {
+                this.activeContact.emails = data.details?.contact_emails || [];
+            }
+        } finally {
+            this.loadingEmails = false;
+        }
+    },
+
+    //Paperless-Suche
+    async performPaperlessSearch() 
+    {
+        if (this.paperlessQuery.length < 2) {
+            this.paperlessResults = [];
+            return;
+        }
+
+        this.loadingPaperless = true;
+        try {
+            // Der Aufruf reduziert sich auf die fachliche Logik:
+            // Action, Daten-Objekt und Methode
+            const data = await apiCall('get_correspondets', { query: this.paperlessQuery }, 'POST');
+            
+            this.paperlessResults = data.details?.correspondents || [];
+        } catch (e) {
+            console.error("Paperless Suche fehlgeschlagen", e);
+        } finally {
+            this.loadingPaperless = false;
+        }
+    },
+
+     async performMatchSearch() {
+        if (this.emailQuery.length < 2) {
             // Zeige nur die bereits verknüpften E-Mails an
             this.matchResults = [...this.activeContact.emails];
             return;
@@ -193,21 +236,16 @@ const contactsViewComponent = () => ({
             // 1. ABSICHERUNG: Wenn kein Kontakt offen ist, darf nichts passieren!
             if (!this.activeContact) return;
 
-            if (this.matchSearchQuery.length < 2) {
+            if (this.emailQuery.length < 2) {
                 this.matchResults = [...(this.activeContact.emails ?? [])];
                 return;
             }
 
             this.loadingMatch = true;
         
+            const data = await apiCall('get_emails_by_search', {query: this.emailQuery}, 'GET');
             
-            const res = await safeFetch('api.php?action=get_emails_by_search', {
-                method: 'POST',
-                body: JSON.stringify({query: encodeURIComponent(this.matchSearchQuery)})
-            });
-            //const data = await safeFetch(`${this.apiUrl}?action=get_emails_by_search&query=${encodeURIComponent(this.matchSearchQuery)}`);
-            
-            const rawResults = res.details?.contact_emails || [];
+            const rawResults = data.details?.contact_emails || [];
             const normalizedResults = rawResults.map(item => ({
                 ceid: item.ceid,
                 email: item.email

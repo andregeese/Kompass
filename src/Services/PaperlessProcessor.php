@@ -580,18 +580,23 @@ class PaperlessProcessor extends \App\Core\Database
 
 
     /**
-     * Verknüpft Korrespondent mit Kontakt
+     * tbd: Sicherstellen, dass es DER Kontakt ist!
+     * security-patch notwendig
+     * 
+     * Verknüpft Korrespondent aus Paperless mit Kontakt
+     * @param $contact_id Kontakt
+     * @param $paperless_id Paperless
      */
     public function linkContact(int $contact_id, int $paperless_id):array
     {
-        $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND cid= :cid;";
+        $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
         
-        $rows = $this->queryIt($sql, [
+        $dbResult = $this->queryIt($sql, [
             'paperless' =>  $paperless_id,
             'cid' => $contact_id
         ]);
         
-        return $rows;
+        return $dbResult->data;
     }
 
     /**

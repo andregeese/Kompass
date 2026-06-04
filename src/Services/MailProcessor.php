@@ -914,7 +914,7 @@ class MailProcessor extends \App\Core\Database
      */
     public function getMailBody($hash): string
     {
-       $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailByHash($hash);
         if (!$mail) return 'Inhalt nicht gefunden.';
 
         // 1. Erst versuchen, aus der DB zu laden (entschlüsselt)
@@ -939,7 +939,9 @@ class MailProcessor extends \App\Core\Database
 
         // 3. Hier kommt die finale Bereinigung (HTML Purifier!)
         // Sicherheit: Erst hier wird das HTML für die Anzeige/Ausgabe "geputzt"
-        return $this->purifyHtml($htmlContent);        
+        $purified = $this->purifyHtml($htmlContent);
+        $this->dashboard->sendResponse(true, ["mail" => $purified], null, 'success');
+        //return $this->purifyHtml($htmlContent);        
     }
 
     private function purifyHtml(string $html): string

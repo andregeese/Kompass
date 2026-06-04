@@ -36,18 +36,42 @@ class Auth {
      * Erschwert Session-Hijacking (Diebstahl der Session-ID).
      */
     public static function getFingerprint(): string {
-        return hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown') . session_id());
+        // Wir nehmen zusätzlich Teile der Accept-Header, die sich bei 
+        // einer Session-Übernahme durch einen Angreifer meist ändern.
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+        $lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'unknown';
+        
+        // Ein statischer "Pepper" schützt vor einfachem Brute-Force des Hashes
+        $pepper = 'CRM_SECURE_2026_'; 
+
+        return hash('sha256', $pepper . $ua . $lang . session_id());
+    }
+
+    public static function validateFingerprint(): bool {
+        // 1. Prüfen, ob überhaupt ein Fingerprint in der Session hinterlegt ist
+        if (empty($_SESSION['fingerprint'])) {
+            return false;
+        }
+
+        // 2. Den aktuellen Fingerprint des Requests berechnen
+        $currentFingerprint = self::getFingerprint();
+
+        // 3. Vergleichen (hash_equals schützt auch hier vor Timing-Attacken)
+        return hash_equals($_SESSION['fingerprint'], $currentFingerprint);
     }
 
     /**
      * Führt den Login durch und regeneriert die Session-ID.
      */
-    public static function login(int $userId, int $tenantId) {
+    public static function login(int $userId, int $tenantId) 
+    {
         session_regenerate_id(true);
         
         $_SESSION['user_id']   = $userId;
         $_SESSION['tenant_id'] = $tenantId;
         $_SESSION['fingerprint'] = self::getFingerprint();
+
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
 
     /**
@@ -63,5 +87,27 @@ class Auth {
             );
         }
         session_destroy();
+    }
+
+    /**
+     * Erzeugt ein Token, falls keines existiert, und speichert es in der Session
+     */
+    public static function getCSRFToken(): string {
+        return $_SESSION['csrf_token'] ?? '';
+    }
+
+    /**
+     * Prüft, ob das gesendete Token mit dem in der Session übereinstimmt
+     */
+    public static function verifyCsrfToken(?string $token): bool {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Logge hier explizit den Session-Zugriff
+        error_log("VERIFY: Session-Token-Status: " . (isset($_SESSION['csrf_token']) ? "Vorhanden" : "FEHLT"));
+        
+        if (empty($_SESSION['csrf_token'])) return false;
+        return !empty($token) && hash_equals($_SESSION['csrf_token'], $token);
     }
 }

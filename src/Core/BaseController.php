@@ -14,6 +14,10 @@ abstract class BaseController {
         }
     }
 
+    protected function getJsonInput(): array {
+        return json_decode(file_get_contents('php://input'), true) ?? [];
+    }
+
     /**
      * Zentrales Bereinigen der Ausgabe
      */

@@ -10,22 +10,35 @@ class AuthController extends \App\Core\BaseController
     */    
     public function login() 
     {
+        try{
+            $rawInput = file_get_contents('php://input');
+            $data     = json_decode($rawInput, true);
 
-        $email    = $_POST['email'] ?? '';
-        $password = $_POST['password'] ?? '';
-        
-        // 1. Benutzer validieren (Deine Dashboard-Logik)
-        $user = $this->dashboard->verifyCredentials($email, $password);
-        
-        if ($user) {
-            $uid = (int)$user['id'];
-            $tid = (int)$user['tenant_id'];
-            // 2. Jetzt erst die Auth-Logik aufrufen
-            Auth::login($uid, $tid);
-            return ['success' => true];
+            error_log("USERLOGIN" . print_r($data, true));
+
+            $email    = $data['email'] ?? '';
+            $password = $data['password'] ?? '';
+            
+            // 1. Benutzer validieren (Deine Dashboard-Logik)
+            $user = $this->dashboard->verifyCredentials($email, $password);
+            
+            if ($user) {
+                $uid = (int)$user['id'];
+                $tid = (int)$user['tenant_id'];
+                // 2. Jetzt erst die Auth-Logik aufrufen
+                Auth::login($uid, $tid);
+                $this->dashboard->sendResponse(true, "Logged In", null, 'success');
+                return ['success' => true];
+            }else{
+                $this->dashboard->sendResponse(false, null, "User not found: ". print_r($user, true), 'error');    
+            }
+
+        }catch(\Throwable $e) {
+            
+            $this->dashboard->sendResponse(false, null, "Login fehlgeschlagen! <br/>" . $e->getMessage(), 'error');
+            return ['success' => false, 'error' => 'Login fehlgeschlagen'];
         }
         
-        return ['success' => false, 'error' => 'Login fehlgeschlagen'];
     }
 
     /**

@@ -69,16 +69,7 @@ const settingsComponent = () => ({
     async saveSettings() {
         this.loading = true;
         try {
-            let fd = new FormData();
-            fd.append('action', 'save_settings');
-            for (let key in this.form) {
-                // sync_folders als JSON String für die DB
-                let value = key === 'sync_folders' ? JSON.stringify(this.form[key]) : this.form[key];
-                fd.append(key, value);
-            }
-            
-            let res = await safeFetch('api.php', { method: 'POST', body: fd });
-            this.loading = false;
+            const res = await apiCall('save_settings', this.form, 'POST');
             
             if (res.success) {
                 this.showMsg('Einstellungen erfolgreich gespeichert!', 'success');

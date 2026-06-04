@@ -1,7 +1,6 @@
 const CACHE_NAME = 'hub-v2.55'; 
 
 const ASSETS = [
-    './index.php',
     './manifest.json',
     './public/assets/js/crm.js',
     './public/assets/js/right_sidebar.js',
@@ -53,11 +52,18 @@ self.addEventListener('activate', event => {
 
 // 3. Fetch (KOMPLETT ENTKERNT GEGEN SCHLEIFEN)
 self.addEventListener('fetch', event => {
+    console.log("sw FETCH");
     const url = new URL(event.request.url);
 
-    // ABBRUCHKRITERIEN: Nur GET, keine APIs, keine Actions, keine WebSockets
+    // 1. ABSOLUTER DURCHREICH-MODUS:
+    // Wenn es sich um api.php handelt, greift der Service Worker NICHT ein.
+    // Dadurch bleiben alle Header (auch X-CSRF-TOKEN) unangetastet.
+    if (url.pathname.includes('api.php') || url.searchParams.has('action')) {
+        return; 
+    }
+
+    // 2. ABBRUCHKRITERIEN: Nur GET-Requests, die keine API sind
     if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
-    if (url.pathname.endsWith('api.php') || url.searchParams.has('action')) return;
 
     // Prüfen, ob die Datei exakt zu unseren Core-Assets gehört
     const isCoreAsset = ASSETS.some(asset => {
@@ -66,15 +72,9 @@ self.addEventListener('fetch', event => {
     });
 
     if (isCoreAsset) {
-        // REINES CACHE-FIRST: Keine Hintergrund-Anfragen (Stale-While-Revalidate) mehr, 
-        // die die Schleife triggern könnten!
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {
-                if (cachedResponse) {
-                    return cachedResponse; // 0ms aus dem Cache, fertig.
-                }
-                // Fallback ans Netzwerk, falls beim Installieren was schiefging
-                return fetch(event.request).then(networkResponse => {
+                return cachedResponse || fetch(event.request).then(networkResponse => {
                     if (networkResponse.status === 200) {
                         const responseClone = networkResponse.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
@@ -86,8 +86,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // FÜR ALLES ANDERE (Dynamische PHP-Seiten, HTML-Wechsel): 
-    // Reines Netzwerk. Wenn offline, dann lade die index.php aus dem Cache.
+    // 3. FÜR DYNAMISCHE SEITEN (Navigation)
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).catch(() => {

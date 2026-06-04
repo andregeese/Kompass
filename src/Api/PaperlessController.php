@@ -94,16 +94,22 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function linkContact()
     {
-        error_log(print_r($_POST, true));
+        try{
+            // JSON-Body lesen
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+            $contactid        = $data['contactId'] ?? null;
+            $correspondentId  = $data['correspondentId'] ?? null;
+            
+    
+            $ret = $this->paperlessProcess->linkContact($contactid, $correspondentId);
 
-        $contactid        = trim($_POST['sender_ceid'] ?? '');
-        $docId            = trim($_POST['item_id'] ?? '');
-        $ret = $this->paperlessProcess->linkContact($contactid, $docId);
+            $this->dashboard->sendResponse(true, $ret, null, 'success');
 
-        return [
-            'success' => true,
-            'details' => $ret
-        ];
+        }catch(\Throwable $e)
+        {
+            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+        }
     }
 
     /**
@@ -111,45 +117,41 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function getCorrespondents() 
     {
-        error_log("getCorrespondents aufgerufen mit query: " . print_r($_REQUEST, true));
-        $hash        = trim($_REQUEST['hash'] ?? '');
-        $forceQuery  = trim($_REQUEST['force_query'] ?? '');
-        $searchQuery = '';
+        $rawInput = file_get_contents('php://input');
+        $data = json_decode($rawInput, true);
+        $query = $data['query'];
 
-        if (!empty($forceQuery) && empty($hash)) {
+        error_log("getCorrespondents aufgerufen mit query: " . print_r($_REQUEST, true));
+        
+
+        if (!empty($forceQuery) && empty($query)) {
             error_log("Suche nach Korrespondenten mit force_query: $forceQuery");
             $searchQuery = $forceQuery;
-        } elseif (!empty($hash)) {
-            error_log("Suche nach Korrespondenten für Hash: $hash");
-            $email = $this->paperlessProcess->getSenderByHash($hash);
-            error_log("Gefundene E-Mail für Hash $hash: $email");
-
-            if (is_array($email) && count($email) === 0) {
-                error_log("Keine E-Mail für Hash $hash gefunden.");
-            }else{ 
-                error_log("E-Mail für Hash $hash: " . print_r($email, true));
-                $searchQuery = substr(strrchr($email, "@"), 1) ?: $email;
-            }
         }
         
         // Hole alle Kontakt, wenn Suche leer
-        if (empty($searchQuery)) {
+        if (empty($query)) {
             error_log("Keine Sucheingabe, hole alle Korrespondenten");
-            $correspondents = $this->paperlessProcess->getAllCorrespondents($searchQuery);
-            return [
-                'success' => true, 
-                'details' => $correspondents
-            ];
+            $correspondents = $this->paperlessProcess->getAllCorrespondents($query);
+            
+            $this->dashboard->sendResponse(
+                true, 
+                ['correspondents' => $correspondents],
+                null,
+                'success'
+            );
 
         }else{
 
-            $correspondents = $this->paperlessProcess->searchForCorrespondent($searchQuery);
+            $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
             $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
 
-            return [
-                'success' => true, 
-                'details'   => ['contacts' => $finalDetails]
-            ];
+            $this->dashboard->sendResponse(
+                true, 
+                ['correspondents' => $finalDetails],
+                null,
+                'success'
+            );
 
         }
     }

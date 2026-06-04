@@ -140,8 +140,9 @@ class ContactController extends \App\Core\BaseController {
     public function getTimeLineContact()
     {
         try{
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
+            //$rawInput = file_get_contents('php://input');
+            $data = $_GET;
+
             $salt = $this->dashboard->getHashSalt();
             $hash = $data['hash'] ?? '';
 

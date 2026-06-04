@@ -48,7 +48,7 @@ const detailViewComponent = () => ({
         this.dmsLoading = true;
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
-            const res = await safeFetch(`api.php?action=search_contact&hash=${hash}`);
+            const res = await apiCall('search_contact', {hash:hash}, 'GET');
             const json = await res.json();
             
             if (json.success) {
@@ -82,7 +82,7 @@ const detailViewComponent = () => ({
     async fetchDMSCorrespondents(hash, queryTerm) {
         try {
             // Wir encoden den QueryTerm, falls der User Leerzeichen oder Sonderzeichen eingibt
-            const response = await safeFetch(`api.php?action=get_paperless_correspondents&hash=${hash}&force_query=${encodeURIComponent(queryTerm)}`);
+            const response = await safeFetch('get_paperless_correspondents', {hash :hash, force_query:queryTerm}, 'GET');
             const data = await response.json();
             
             // HIER DIE NEUE PRÜFUNG: Auf "status === 'success'" checken!
@@ -120,9 +120,9 @@ const detailViewComponent = () => ({
         bodyData.append('type', this.formData.type);
 
         try {
-            const res = await safeFetch('api.php?action=insert_contact', { method: 'POST', body: bodyData });
-            const json = await res.json();
-            if (json.success) {
+            const data = await apiCall('insert_contact', { body: bodyData }, 'POST');
+            
+            if (data.success) {
                 const urlParams = new URLSearchParams(window.location.search);
                 await this.checkCRMStatus(urlParams.get('hash'));
             } else {

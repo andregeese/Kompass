@@ -10,6 +10,22 @@ $logFile = __DIR__ . "/php.log";
 ini_set('log_errors', 1);
 ini_set('error_log', $logFile); // Hier muss 'error_log' stehen, nicht deine Klasse
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+    header("Access-Control-Allow-Headers: X-CSRF-TOKEN, Content-Type");
+    header("HTTP/1.1 200 OK");
+    exit;
+}
+
+$all_headers = [];
+foreach ($_SERVER as $name => $value) {
+    if (substr($name, 0, 5) == 'HTTP_') {
+        $all_headers[$name] = $value;
+    }
+}
+//error_log("ALLE HTTP-HEADER: " . print_r($all_headers, true));
+
 // 3. Sicherstellen, dass die Datei beschreibbar ist
 if (!file_exists($logFile)) {
     touch($logFile);
@@ -21,10 +37,35 @@ require_once __DIR__ . '/vendor/autoload.php';
 \App\Core\ErrorLogs::register();
 \App\Core\Auth::init();
 
+$receivedToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($headers['X-CSRF-TOKEN'] ?? 'KEIN_TOKEN');
+$action = $_REQUEST['action'] ?? '';
+
+// Liste der Aktionen, die KEIN CSRF-Token benötigen
+$publicActions = ['login', 'register'];
+
+if (!in_array($action, $publicActions)) 
+{
+    // Hole das Token IMMER aus der korrekten $_SERVER Variable (da Nginx/PHP-FPM)
+    $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+
+    if (!\App\Core\Auth::verifyCsrfToken($csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'CSRF Token ungültig']);
+        exit;
+    }
+
+    if (!\App\Core\Auth::validateFingerprint()) {
+        error_log("SICHERHEITSWARNUNG: Fingerprint-Mismatch für User ID " . ($_SESSION['user_id'] ?? 'Guest'));
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Sitzung abgelaufen oder ungültig.']);
+        exit;
+    }
+    
+}
+
 header('Content-Type: application/json');
 
 $action = $_REQUEST['action'] ?? '';
-
 
 try {
     // 1. Instanz erzeugen
@@ -69,7 +110,6 @@ try {
         // Paperless
         'syncPaperless'                 => [App\Api\PaperlessController::class, 'sync'],
         'paperless_search'              => [App\Api\PaperlessController::class, 'search'],
-        'paperless_match'               => [App\Api\PaperlessController::class, 'match'],
         //'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondents'], //mail als 
         'paperless_mail_tree'           => [App\Api\PaperlessController::class, 'getMailTree'],
         'paperless_tree'                => [App\Api\PaperlessController::class, 'getTree'],
@@ -97,8 +137,16 @@ try {
         'repair_contacts'               => [App\Api\SystemController::class, 'repairTenantContacts'],
         'imap_mails'                    => [App\Api\SystemController::class, 'syncFolder'],
         'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
+        'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
 
     ];
+    
+    // 1. Spezieller Endpunkt für die Routen-Konfiguration
+    if ($action === 'get_allowed_actions') {
+        echo json_encode(['success' => true, 'data' => array_keys($routes)]);
+        exit;
+    }
+
     if (!array_key_exists($action, $routes)) {
         throw new \Exception("Aktion '$action' unbekannt.");
     }

@@ -11,33 +11,42 @@ const loginComponent = () => ({
         async handleSubmit() {
             this.loading = true;
             const action = this.isRegister ? 'register' : 'login';
-            
-            const fd = new FormData();
-            fd.append('email', this.formData.email);
-            fd.append('password', this.formData.password);
-            
+            const payload = {
+                email: this.formData.email,
+                password: this.formData.password
+            };
+
+            // 2. Felder für Register hinzufügen, falls nötig
             if (this.isRegister) {
-                fd.append('paperless_url', this.formData.paperless_url);
-                fd.append('paperless_name', this.formData.paperless_name);
-                fd.append('paperless_token', this.formData.paperless_token);
+                payload.paperless_url = this.formData.paperless_url;
+                payload.paperless_name = this.formData.paperless_name;
+                payload.paperless_token = this.formData.paperless_token;
             }
 
             try {
-                // Nutzt den in index.php definierten globalen Endpunkt
-                const data = await safeFetch(`${window.CRM_API_URL}?action=${action}`, {
-                    method: 'POST',
-                    body: fd
-                });
-                
-                
-                if (data.success) {
-                    // Erfolgreich! Wir leiten den User auf die Standard-Ansicht (Mails) um
-                    window.location.href = './index.php?view=mails';
+                const data = await apiCall(action, payload, 'POST');
+
+                if (data?.success) {
+                    // Greife auf data.csrf_token zu, nicht auf res
+                    const newToken = data.csrf_token; 
+                    
+                    if (newToken) {
+                        let meta = document.querySelector('meta[name="csrf-token"]');
+                        if (meta) {
+                            meta.content = newToken;
+                        } else {
+                            meta = document.createElement('meta');
+                            meta.name = 'csrf-token';
+                            meta.content = newToken;
+                            document.head.appendChild(meta);
+                        }
+                    }
                 } else {
+                    // Jetzt passt die Struktur wieder korrekt zum if-Block
                     if (typeof showNotify === 'function') {
-                        showNotify('Authentifizierung fehlgeschlagen', data.error || 'Fehler beim Login.', 'danger');
+                        showNotify('Authentifizierung fehlgeschlagen', data?.error || 'Fehler beim Login.', 'danger');
                     } else {
-                        alert(data.error || 'Fehler beim Login.');
+                        alert(data?.error || 'Fehler beim Login.');
                     }
                 }
             } catch (err) {

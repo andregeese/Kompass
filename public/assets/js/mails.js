@@ -22,6 +22,27 @@ const mailViewComponent = () => ({
 
         if (this.$data.isOnline) {
             await this.loadMails(false);
+        };
+
+        this.$nextTick(() => {
+            console.log(this.$refs.mailList); // Jetzt sollte es definiert sein
+        });
+    },
+
+    handleScroll(el) {
+        if (!el) return;
+    
+        // Die Berechnung:
+        // Ist der Abstand zum Boden weniger als 150px?
+        const isNearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) <= 150;
+        
+        // Nur laden, wenn:
+        // - Wir nicht schon laden (loading)
+        // - Noch mehr Daten da sind (hasMore)
+        // - Wir am unteren Ende sind
+        if (!this.loading && this.hasMore && isNearBottom) {
+            console.log("Trigger Infinite Scroll...");
+            this.loadMails(true); // append=true
         }
     },
 
@@ -87,21 +108,20 @@ const mailViewComponent = () => ({
         }
 
         try {
-            const isSearch = this.mailSearchQuery && this.mailSearchQuery.trim() !== '';
+            const isSearch = (typeof this.mailSearchQuery === 'string' && this.mailSearchQuery.trim().length > 0)
             const folder = this.currentFolder;
-            
-            // Aufbau der URL
-            let url = `${this.$data.apiUrl}?action=${isSearch ? 'search_mail' : 'list_mails'}&folder=${folder}`;
-            
-            if (isSearch) {
-                url += `&query=${encodeURIComponent(this.mailSearchQuery)}`;
-            } else {
-                url += `&page=${this.$data.page}&limit=${this.$data.limit}`;
-            }
+            const params = isSearch 
+                ? { folder: folder, query: this.mailSearchQuery } 
+                : { folder: folder, page: this.$data.page, limit: this.$data.limit };
 
-            const data = await safeFetch(url);
-            //HACK
-            const fetchedMails = data.details.mails; // Array(50)
+            // 2. Aktion bestimmen
+            const action = isSearch ? 'search_mail' : 'list_mails';
+
+            // 3. Aufruf über die neue API-Brücke
+            const data = await apiCall(action, params, 'GET');
+
+            // 4. Zugriff auf die Daten
+            const fetchedMails = data.details?.mails || [];
 
             const receivedCount = fetchedMails.length;
 
@@ -121,8 +141,8 @@ const mailViewComponent = () => ({
 
                 // Paging Logik: Nur bei normaler Liste erhöhen, Suche hat kein Paging
                 if (!isSearch) {
-                    this.$data.page++;
-                    this.hasMore = (receivedCount.length >= this.limit);
+                    this.page++;
+                    this.hasMore = this.hasMore = (receivedCount >= 50);;
                 } else {
                     this.hasMore = false; // Infinite Scroll bei Suche deaktivieren
                 }
@@ -145,9 +165,6 @@ const mailViewComponent = () => ({
     async fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
         let hash = mail.hash;
-        
-
-        // Das kommt direkt vom Mail-Sender (z.B. "VR-Bank Freudenberg-Niederfischbach eG <info@vr-bank-fn.de>")
         const rawSender = mail.sender || mail.from || ''; 
         
         let parsedName = '';
@@ -175,11 +192,7 @@ const mailViewComponent = () => ({
     {
         
         try {
-            const response = await safeFetch('api.php?action=auto_link_contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, email: email, hash: hash })
-            });
+            const response = await apiCall('auto_link_contact', {name: name, email: email, hash: hash }, 'POST');
             // Nach dem Linken aktualisierst du die Sidebar
             if (!response.success) {
                 showNotify("Verknüpfung des Kontakts fehlgeschlagen!");
@@ -194,29 +207,23 @@ const mailViewComponent = () => ({
         if (!mail?.hash) return;
 
         this.$data.currentMail = mail;
-        this.$data.selectedHash = mail.hash;
-        this.$data.showMobilePreview = true;
-        
         this.mailLoading = true; 
-        this.fillSidebarWithMailData(mail);
-        this.currentMailUrl = `${this.$data.apiUrl}?action=stream_mail_html&hash=${mail.hash}`;
-
-        if (this.$data.isOnline && mail.hash) {
-            this.paperlessTree = {}; 
-            try {
-                // Event abfeuern und Mail-Daten mitsenden -> right_sidebar
-                const event = new CustomEvent('mail-changed', {
-                    detail: {
-                        email: mail.sender_email || mail.from, // Je nachdem wie das Feld bei dir heißt
-                        subject: mail.subject,
-                        hash: mail.hash,
-                        mailObject: mail // Optional: Das ganze Objekt übergeben
-                    }
-                });
-                document.dispatchEvent(event);
-            } catch (err) {
-                console.error("Fehler beim Laden des Paperless-Baums:", err);
+        
+        try {
+            // CSRF-geschützter API-Call anstatt Iframe-URL
+            const data = await apiCall('stream_mail_html', { hash: mail.hash }, 'GET');
+            
+            if (data && data.success !== false) {
+                // Wenn die API das HTML direkt als String liefert:
+                this.currentMailHtml = data.details?.mail; 
+            } else {
+                this.currentMailHtml = '<p>Fehler beim Laden der E-Mail.</p>';
             }
+        } catch (err) {
+            console.error("Fehler beim Laden der Mail:", err);
+            this.currentMailHtml = '<p>Verbindungsfehler.</p>';
+        } finally {
+            this.mailLoading = false;
         }
     },        
 
@@ -227,29 +234,37 @@ const mailViewComponent = () => ({
         fd.append('id', mail.hash); // Schickt NUR den Hash an die ${this.$data.apiUrl}
         
         try {
-            await safeFetch(`${this.$data.apiUrl}?action=dms`, { method: 'POST', body: fd });
+            const data = await apiCall('dms', fd, 'POST');
             mail.paperless_id = true; // Markiert die Mail im Frontend als übertragen
         } catch (err) {
             console.error("Fehler beim Verschieben ins DMS:", err);
         }
     },
 
-    async deleteMail(mail) {
-        if (!confirm('Diese Mail wirklich löschen?')) return;
-        try {
-            const fd = new FormData();
-            fd.append('id', mail.hash);
-            await safeFetch(`${this.$data.apiUrl}?action=delete`, { method: 'POST', body: fd });
-            
-            this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
-            localStorage.setItem('cached_mails', JSON.stringify(this.$data.mails));
-            
-            if (this.$data.selectedHash === mail.hash) {
-                this.$data.currentMail = null;
+    async deleteMail(mail) 
+    {
+        confirmAction('Diese Mail wirklich löschen?', async() => {
+            try {
+                const fd = new FormData();
+                fd.append('id', mail.hash);
+                const data = await apiCall('delete', { id: mail.hash }, 'POST');
+                
+                if (data?.success) {
+                    // UI aktualisieren
+                    this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
+                    localStorage.setItem('cached_mails', JSON.stringify(this.$data.mails));
+                    
+                    if (this.$data.selectedHash === mail.hash) {
+                        this.$data.currentMail = null;
+                    }
+                } else {
+                    console.error("Löschen fehlgeschlagen:", data?.error);
+                }
+            } catch (err) { 
+                console.error("Netzwerkfehler beim Löschen:", err);
             }
-        } catch (err) { 
-            console.error(err); 
-        }
+        });
+        
     },
 
     async trackFoldersSilent(showLoadingIndicator, folderName = 'INBOX') {
@@ -257,7 +272,7 @@ const mailViewComponent = () => ({
         let syncSuccess = false;
         
         try {
-            const data = await safeFetch(`${this.$data.apiUrl}?action=sync&folder=${folderName}`);
+            const data = await apiCall('sync', {folder:folderName}, 'POST');
             if (data && data.success) {
                 syncSuccess = true;
             }
@@ -313,7 +328,7 @@ const mailViewComponent = () => ({
                         while (keepSyncing && safetyBuffer < 10) {
                             try {
                                 // Führe den Sync aus und warte auf das echte Ergebnis aus PHP
-                                const data = await safeFetch(`${this.$data.apiUrl}?action=sync&folder=${folder}`);
+                                const data = await apiCall('sync', {folder:folder}, 'POST');
                                 
                                 // Wenn PHP erfolgreich war und neue Mails hinzugefügt hat
                                 if (data && data.success) {
@@ -363,12 +378,13 @@ const mailViewComponent = () => ({
         }
 
         try {
-            if (this.currentFolder!=='')
-            {
-                const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&folder=${this.currentFolder}&limit=50`);
-            }else{
-                const data = await safeFetch(`${this.$data.apiUrl}?action=list_mails&limit=50`);
+            const params = { limit: 50 };
+            if (this.currentFolder) {
+                params.folder = this.currentFolder;
             }
+
+            // 2. Aufruf über die neue API-Brücke
+            const data = await apiCall('list_mails', params, 'GET');
             
             if (data && data.success && data.details?.mails) {
                 // 🚀 FIX: Einheitlich $data.mails prüfen und setzen
@@ -384,24 +400,23 @@ const mailViewComponent = () => ({
     },
 
     initInfiniteScroll() {
-        // Warte kurz, bis das DOM bereit ist
         this.$nextTick(() => {
-            const container = document.getElementById('mail-list') || document.querySelector('.overflow-y-auto');
-            if (!container) {
-                console.warn("Infinite Scroll Container nicht gefunden!");
-                return;
-            }
+            const container = document.getElementById('mail-list');
+            if (!container) return;
             
-            container.addEventListener('scroll', () => {
-                // Wenn er gerade lädt oder das Limit erreicht ist -> Nichts tun
-                if (this.$data.loading || !this.$data.hasMore) return;
+            // Definiere den Handler als Funktion, damit wir ihn sauber binden
+            const scrollHandler = () => {
+                // Check: Lädt er schon? Sind noch Daten da?
+                if (this.loading || !this.hasMore) return;
                 
-                // Toleranzgrenze: 150px vor dem Ende den nächsten Load triggern
+                // Check: Ist genug gescrollt?
                 if (container.scrollHeight - (container.scrollTop + container.clientHeight) <= 150) {
-                    console.log("Triggere Infinite Scroll für Seite:", this.$data.page);
-                    this.loadMails(true); // append = true
+                    console.log("Nachladen Seite:", this.page);
+                    this.loadMails(true); // append=true
                 }
-            });
+            };
+
+            container.addEventListener('scroll', scrollHandler);
         });
     },
 

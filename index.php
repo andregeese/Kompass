@@ -1,4 +1,9 @@
 <?php
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
+
 /**
  * Enterprise CRM Hub - Core Controller
  * Lädt Composer-Autoloading und steuert die modulare View-Injektion.
@@ -85,6 +90,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="csrf-token" content="<?= \App\Core\Auth::getCSRFToken(); ?>">
     <title>Enterprise CRM Hub</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -132,7 +138,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
     
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
-    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
+    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>_2" defer></script>
 
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -201,6 +207,29 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
         ?>
 
     </div>
+    <div x-data="{ 
+        show: false, 
+        message: '', 
+        onConfirm: null,
+        open(msg, callback) { 
+            this.message = msg; 
+            this.onConfirm = callback; 
+            this.show = true; 
+        } 
+    }" 
+    @confirm-modal.window="open($event.detail.message, $event.detail.callback)"
+    x-show="show" 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+    x-cloak>
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 class="text-lg font-bold mb-4">Bestätigung erforderlich</h3>
+            <p class="mb-6" x-text="message"></p>
+            <div class="flex justify-end gap-3">
+                <button @click="show = false" class="px-4 py-2 bg-gray-200 rounded">Abbrechen</button>
+                <button @click="onConfirm(); show = false" class="px-4 py-2 bg-red-600 text-white rounded">Löschen</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -232,7 +261,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
                                     
                                     // Kurzer Delay, damit der Cache sicher leer ist, dann Reload
                                     setTimeout(() => {
-                                        //window.location.reload(true);
+                                        window.location.reload(true);
                                     }, 2000);
                                 }
                             }

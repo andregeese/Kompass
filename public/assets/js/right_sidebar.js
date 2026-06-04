@@ -143,12 +143,8 @@ const rightSidebarComponent = () => ({
         if (!mail || !mail.hash) return;
         
         try {
-            const url = `api.php?action=get_contact_timeline`;
-            const data = await safeFetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hash: mail.hash })
-            });
+            const params = { hash: mail.hash };
+            const data = await apiCall('get_contact_timeline', params, 'GET');
 
             //wichtig, reagiert auf timelineData!!
             if (data && data.success && data.details) {
@@ -370,7 +366,7 @@ const rightSidebarComponent = () => ({
 
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
-            const data = await safeFetch(`api.php?action=search_contact&hash=${hash}`);
+            const data = await apiCall('search_contact', {hash:hash}, 'GET');
             console.log(data);
             if (data?.success && data?.details?.contact) {
                 const c = data.details.contact[0];
@@ -434,14 +430,9 @@ const rightSidebarComponent = () => ({
         this.crmLoading = true;
 
         try {
-            const res = await safeFetch('api.php?action=insert_contact', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.formData)
-            });
+            const data = await apiCall('insert_contact', this.formData, 'POST');
             
-            //const json = await res.json();
-            if (res.success) {
+            if (data.success) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const hash = urlParams.get('hash') || this.$data.currentMail.hash || '';
                 if (hash) await this.checkCRMStatus(this.$data.currentMail.hash);

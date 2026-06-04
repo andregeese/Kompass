@@ -21,8 +21,8 @@
             <a href="#" @click.prevent="mailSearchQuery = ''" class="text-blue-500 hover:underline">Leeren</a>
         </div>
 
-        <div id="mail-list" 
-            @scroll="if (!$data.loading && $data.hasMore && !$data.mailSearchQuery && ($el.scrollHeight - ($el.scrollTop + $el.clientHeight) <= 150)) { loadMails(true); }" 
+        <div id="mail-list"
+            @scroll.debounce.100ms="handleScroll($refs.mailList)"
             class="flex-1 overflow-y-auto p-2 space-y-1.5">
             
             <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -144,12 +144,10 @@
                             <span class="text-xs font-medium text-slate-500 dark:text-gray-400 mt-2">Hole E-Mail vom Server...</span>
                         </div>
 
-                        <iframe :src="currentMailUrl"
-                                @load="mailLoaded()"
-                                :class="{'opacity-0 pointer-events-none': mailLoading}"
-                                class="w-full h-full border-0 bg-white transition-opacity duration-200" 
-                                sandbox="allow-same-origin allow-popups allow-scripts">
-                        </iframe>
+                        <div x-show="!mailLoading" 
+                            x-html="currentMailHtml"
+                            class="w-full h-full p-4 overflow-auto bg-white transition-opacity duration-200">
+                        </div>
                     </div>
                 </div>
             </div>
