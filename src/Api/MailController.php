@@ -221,6 +221,7 @@ class MailController extends \App\Core\BaseController
         $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
         
         ob_end_clean();
+        error_log(print_r($syncResult, true));
 
         return [$syncResult]; // Gibt das komplette Sync-Array direkt zurück
     }

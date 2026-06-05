@@ -354,7 +354,6 @@ class MailProcessor extends \App\Core\Database
 
     public function syncWithICloud(int $maxNewMailsLimit, string $folder): array 
     {
-        
         //@set_time_limit(120);
         $pid = getmypid();
         error_log("[$pid] Starte Sync für Ordner: $folder");
@@ -362,8 +361,6 @@ class MailProcessor extends \App\Core\Database
         $added = 0;
         $result = ['success' => false, 'added' => 0, 'error' => null];
 
-        
-            
         $imapFolder = $this->getFullFolderPath($folder);
         $imapStream = $this->connectIMAP($folder);
 
@@ -384,7 +381,7 @@ class MailProcessor extends \App\Core\Database
         $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
 
         if (empty($uidsToProcess)) {
-            error_log("Sync: Keine neuen Mails gefunden.");
+            # error_log("Sync: Keine neuen Mails gefunden.");
             $result['success'] = true;
             return $result;
         }
@@ -405,8 +402,6 @@ class MailProcessor extends \App\Core\Database
                     
                     if (!empty($overview)) ;
 
-                    
-
                     if (empty($ov->from)) {
                         $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
                         $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
@@ -417,8 +412,15 @@ class MailProcessor extends \App\Core\Database
                         $ov->to = $header->toaddress ?? 'unknown@unknown.local';
                     }
 
-                    // E-Mail-Datum konvertieren
-                    $formattedDate = date('Y-m-d H:i:s', strtotime($ov->date));
+                    $mailDateRaw = $header->date ?? $mailHeader['date'] ?? 'now';
+                    $mailDateClean = preg_replace('/ \([^)]+\)$/', '', trim($mailDateRaw));
+                    try {
+                        $formattedDate = new \DateTime($mailDateClean);
+                    } catch (\Throwable $e) {
+                        // Absoluter Notfall-Fallback, falls der Header komplett Schrott ist
+                        error_log("Kritischer Mail-Date-Parsing-Fehler bei String: '$mailDateRaw'. Nutze 'now'.");
+                        $formattedDate = new \DateTime('now');
+                    }
 
                     $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
                     $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
@@ -445,7 +447,21 @@ class MailProcessor extends \App\Core\Database
                     $sceid = ($senderId > 0) ? (int)$senderId : null;
                     $rceid = ($reciepId > 0) ? (int)$reciepId : null;
 
-                    error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
+                    $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
+
+                    // 2. Extrahiere die echte, unberührte "Subject:"-Zeile (inkl. Schutz vor mehrzeiligen Betreffs)
+                    $rawSubject = $ov->subject; // Fallback
+                    if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
+                        $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                    }
+
+                    // 3. Jetzt jagen wir den garantiert unberührten Mime-Header durch deine neue Dekodierung
+                    $cleanSubject = $this->decodeMimeHeader($rawSubject);
+
+                    // 4. Und ab in die Verschlüsselung damit!
+                    $subjectHash = $this->dashboard->encrypt($cleanSubject);
+
+                    # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
                     $sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
                     $this->queryIt(
                         $sqlMaillog,
@@ -464,19 +480,12 @@ class MailProcessor extends \App\Core\Database
                         $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
                                     VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
                                     ;";
-                        /*ON DUPLICATE KEY UPDATE
-                                    date_received = VALUES(date_received),
-                                    sender = VALUES(sender),
-                                    status = 'active',
-                                    is_read = VALUES(is_read),
-                                    is_flagged = VALUES(is_flagged),
-                                    is_answered = VALUES(is_answered)*/
 
                         $params = [
                             'uid'           => $ov->uid,
                             'id_hash'       => $idHash,
                             'message_id'    => $ov->message_id ?? '',
-                            'subject_hash'  => $this->dashboard->encrypt($this->decodeMimeHeader($ov->subject)),
+                            'subject_hash'  => $subjectHash,
                             'sender'        => $senderString,
                             'recipient'     => $recipientString,
                             'date_received' => $formattedDate,
@@ -505,15 +514,13 @@ class MailProcessor extends \App\Core\Database
                         # error_log(" übegebene Parameter: " . print_r($paramsLog, true));
                         
                     }else{
-                        error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
+                        # error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
                     }
                 });
                 
-                
-                
             }catch(\Throwable $e)
             {
-                imap_close($imapStream);
+                @imap_close($imapStream);
                 error_log("Fehler bei Mail: " . $e->getMessage());
             }
 
@@ -643,24 +650,38 @@ class MailProcessor extends \App\Core\Database
      */
     private function decodeMimeHeader(mixed $text):string
     {
-        if (empty($text)&& !is_string($text)) return '';
+        if (empty($text)) return '';
+        if (!is_string($text)) $text = (string)$text;
 
-        // Sicherstellen, dass das System intern auf UTF-8 arbeitet
-        $internalEncoding = mb_internal_encoding();
-        mb_internal_encoding('UTF-8');
-
-        // Mime-Header dekodieren
-        $decoded = mb_decode_mimeheader($text);
-
-        // Zurücksetzen, falls das System anders konfiguriert war (gute Praxis)
-        mb_internal_encoding($internalEncoding);
-
-        // UTF-8 Validierung
-        if (!mb_check_encoding($decoded, 'UTF-8')) {
-            return mb_convert_encoding($decoded, 'UTF-8', 'ISO-8859-1, Windows-1252, ASCII');
+        // Nutze die native IMAP-Funktion statt mb_decode_mimeheader
+        $elements = imap_mime_header_decode($text);
+        if (!$elements) {
+            return $text;
         }
 
-        return $decoded;
+        $result = '';
+        foreach ($elements as $element) {
+            $charset = strtoupper($element->charset);
+            $partText = $element->text;
+
+            if ($charset === 'DEFAULT' || empty($charset)) {
+                // Falls kein Charset angegeben ist, prüfen wir auf valides UTF-8
+                if (!mb_check_encoding($partText, 'UTF-8')) {
+                    $partText = mb_convert_encoding($partText, 'UTF-8', 'ISO-8859-1, Windows-1252, ASCII');
+                }
+            } else {
+                // Konvertiere das vom Mailserver gemeldete Charset sauber nach UTF-8
+                try {
+                    $partText = mb_convert_encoding($partText, 'UTF-8', $charset);
+                } catch (\Throwable $e) {
+                    // Fallback bei völlig exotischen Charsets
+                    $partText = mb_convert_encoding($partText, 'UTF-8', 'ISO-8859-1, Windows-1252');
+                }
+            }
+            $result .= $partText;
+        }
+
+        return $result;
     }
 
     /**
@@ -734,6 +755,13 @@ class MailProcessor extends \App\Core\Database
     {
         // 1. Offset mathematisch berechnen und als sicheren Integer erzwingen
         $limit = (int)$limit;
+        if ($page < 1) {
+            $page = 1;
+        }
+        if ($limit < 1) {
+            $limit = 20; // Fällt zurück auf den Standard, falls 0 übergeben wurde
+        }
+        
         $offset = (int)(($page - 1) * $limit);
         
         // 2. Das SQL-Statement aufbauen
@@ -747,17 +775,21 @@ class MailProcessor extends \App\Core\Database
                 AND m.imap_folder = :folder
                 AND (
                     c.email LIKE :search 
-                    OR c.email LIKE :search 
                     OR m.sender LIKE :search
+                    OR m.recipient LIKE :search
                 )
                 ORDER BY m.date_received DESC;";
         
-        try {
+        
             // 3. Ausführung über deine native queryIt-Methode
             $dbResult = $this->queryIt($sql, [
                 'folder' => $folder,
                 'search' => '%' . $search . '%',
-            ]);
+            ],
+            false,
+            false,
+            false);
+
 
             if(!$dbResult->success){
                 return [];
@@ -791,12 +823,11 @@ class MailProcessor extends \App\Core\Database
 
             // 3. Paging auf dem gefilterten Array
             $offset = ($page - 1) * $limit;
-            return array_slice($filtered, $offset, $limit);
 
-        } catch (\Throwable $e) {
-            // Reicht den Fehler mit Kontext nach oben weiter, damit dein safeFetch ein Notify wirft
-            throw new \Exception("Fehler bei der Mail-Suche in der Datenbank: " . $e->getMessage());
-        }
+            #error_log("DEBUG SLICE -> Gesamt im Array: " . count($filtered) . " | Aktuelle Seite: " . $page . " | Berechneter Offset: " . $offset . " | Limit: " . $limit);
+            $ret = array_slice($filtered, $offset, $limit);
+
+            return $ret;
     }
 
     /**
@@ -979,7 +1010,6 @@ class MailProcessor extends \App\Core\Database
         {
             return "";
         }else{
-            error_log(print_r($dbResult, true));
             return $dbResult->data->fetched[0]['imap_folder'];
         }
     }

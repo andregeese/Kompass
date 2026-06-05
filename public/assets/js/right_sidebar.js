@@ -397,7 +397,7 @@ const rightSidebarComponent = () => ({
         } finally {
             this.crmLoading = false;
             this.dmsLoading = false;
-            console.log(this.data?.contactState);
+            //console.log(this.data?.contactState);
         }
     },
 

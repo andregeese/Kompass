@@ -155,6 +155,15 @@ async function safeFetch(url, customOptions = {}) {
     try {
         const response = await fetch(url, finalOptions);
 
+        // Falls der Server mit einem Fehlercode (z.B. 500) antwortet
+        if (!response.ok) {
+            const rawText = await response.text(); // Als Text auslesen, nicht als JSON!
+            console.error("Server-Fehler Rohdaten:", rawText);
+            showNotify("Server-Fehler Rohdaten: " + rawText, "danger");
+
+            throw new Error(`Server antwortete mit Status ${response.status}`);
+        }
+
         // Prüfen, ob der Server überhaupt JSON zurückgibt
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {

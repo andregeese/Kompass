@@ -28,6 +28,40 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
 
+set_error_handler(function($severity, $message, $file, $line) {
+    // Falls der Fehler durch ein '@' unterdrückt wurde, ignorieren
+    if (!(error_reporting() & $severity)) {
+        return;
+    }
+    // Verwandelt JEDE Warnung (z.B. Undefined array key) in eine Exception!
+    throw new \ErrorException($message, 0, $severity, $file, $line);
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    
+    // Prüfen, ob das Skript wegen eines fatalen Fehlers abgebrochen ist
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+        // Da wir nicht wissen, ob schon Header gesendet wurden, löschen wir den Buffer
+        if (ob_get_length()) ob_end_clean();
+        
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(500);
+        
+        echo json_encode([
+            'success' => false,
+            'status'  => 'fatal_error',
+            'error'   => 'Ein fataler Systemfehler ist aufgetreten (Shutdown-Handler).',
+            'details' => [
+                'message' => $error['message'],
+                'file'    => $error['file'],
+                'line'    => $error['line']
+            ]
+        ]);
+        exit;
+    }
+});
+
 $db = new \App\Core\Database();
 \App\Core\ErrorLogs::setDatabase($db);
 

@@ -27,14 +27,16 @@ class Dashboard
         return hash('sha256', $id . HASH_SALT);
     }
 
-    public function decrypt(string $data): ?string {
+    public function decrypt(string $data): ?string 
+    {
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
         $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);
         return openssl_decrypt($data, 'aes-256-cbc', $ENC_KEY, 0, $iv) ?: null;
     }
     
-    public function encrypt(string $data): ?string {
+    public function encrypt(string $data): ?string 
+    {
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
         $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);

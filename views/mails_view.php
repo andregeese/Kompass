@@ -82,8 +82,10 @@
             </div>
         </div>
 
-        <div x-show="!isSidebarOpen" class="hidden md:block h-full border-r border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-850 p-2 shrink-0">
-            <button @click="isSidebarOpen = true" class="bg-blue-600 text-white mt-2 p-2 rounded-lg shadow-md hover:bg-blue-700">
+        <div x-show="!isSidebarOpen" 
+            class="relative hidden md:block w-0 h-full z-50 shrink-0">
+            <button @click="isSidebarOpen = true" 
+                    class="absolute top-4 left-0 z-50 w-6 h-6 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-750 transition-all focus:outline-none text-[10px] pl-0.5">
                 ▶
             </button>
         </div>

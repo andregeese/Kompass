@@ -415,100 +415,95 @@ class ContactProcessor extends \App\Core\Database
     {
         error_log(__FUNCTION__);
 
-        if ($salt===null)
-        {
-            $salt = $this->dashboard->getHashSalt();
-        }
-
+        $salt ??= $this->dashboard->getHashSalt();
+        
         $tenantId = $_SESSION['tenant_id'];
-        
-        // 1. Daten aus allen Quellen sammeln und normalisieren
-        $items = [];
-        //Holt alle Mails
-        $mails = $this->getMailItems($hash, $salt, $tenantId);
-
-        $mailItems = array_merge($items, $mails);
-        
         $timeline = [];
 
+        error_log("## " . __FUNCTION__ . " ## START");
+        // ==========================================
+        // 1. MAILS QUELLE
+        // ==========================================
+        $mailItems = $this->getMailItems($hash, $salt, $tenantId);
+        error_log(print_r($mailItems, true));
         foreach ($mailItems as $row) {
-            $timeline[] = [
-                'type'      => 'mail',
-                'id'        => $row['id'],
-                'date'      => date('d.m.Y H:i', strtotime($row['date'])),
-                'title'     => $this->dashboard->decrypt($row['title']),
-                'detail'    => $row['detail'],
-                'is_recent' => true, // oder deine Logik
-                'hash'      => $hash,
-                'link'      => '#hash-' . $hash
-            ];
+            $timeline[] = $this->formatItemTL(
+                'mail',
+                $row['id'],
+                $row['mdate'] ?? null,
+                $this->dashboard->decrypt($row['title']),
+                $row['detail'] ?? '',
+                '#hash-' . bin2hex($row['id_hash']),
+                bin2hex($row['id_hash'])
+            );
         }
 
-        //hole die Correspondenten aus der DB contact
-        $PaperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
+        // Paperless IDs im Vorfeld holen
+        $paperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
 
-        //prüfe welche Dokumente es zu den Paperless-IDs gibt
-        $corres = $this->getDocumentItemsByCorrespondent($PaperlessIDs['korrespondenten']);
-
-        // 2. Prüfung: Ist es ein Array und enthält es Daten?
-        if (is_array($corres) && !empty($corres)) {
-            // 2. Paperless Dokumente mappen (hier machst du das gleiche für $docs)
+        error_log(print_r($paperlessIDs, true));
+        // ==========================================
+        // 2. DOKUMENTE QUELLE: KORRESPONDENTEN
+        // ==========================================
+        $corres = $this->getDocumentItemsByCorrespondent($paperlessIDs['korrespondenten'] ?? []);
+        if (!empty($corres) && is_array($corres)) {
             foreach ($corres as $_cor) {
-                $datumString = $_cor['created'] ?? $_cor['created_date'] ?? date('Y-m-d');
-                $timeline[] = [
-                    'type'      => 'document',
-                    'id'        => $_cor['id'],
-                    'date'      => date('d.m.Y', strtotime($datumString)),
-                    'title'     => $_cor['title'],
-                    'detail'    => 'Paperless Dokument',
-                    'is_recent' => false,
-                    'hash'      => '',
-                    'link'      => '/dms/document/' . $_cor['id']
-                ];
+                $timeline[] = $this->formatItemTL(
+                    'document',
+                    $_cor['id'],
+                    $_cor['created'] ?? $_cor['created_date'] ?? 'now',
+                    $_cor['title'],
+                    'Paperless Dokument',
+                    '/dms/document/' . $_cor['id']
+                );
             }
-        }else{
+        } else {
             error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Korrespondenten gefunden");
         }
 
-        //prüfe welche Dokumente es zu den Paperless-IDs gibt
-        $dokumenteIds = $PaperlessIDs['dokumente'] ?? [];
-
-        // 2. Prüfung: Ist es ein Array und enthält es Daten?
+        // ==========================================
+        // 3. DOKUMENTE QUELLE: DIREKTE IDS
+        // ==========================================
+        $dokumenteIds = $paperlessIDs['dokumente'] ?? [];
+        error_log(print_r($dokumenteIds, true));
         if (!empty($dokumenteIds)) {
             $cleanIdsD = implode(",", array_map('intval', $dokumenteIds));
-
             $resDocs = $this->getDocumentsById($cleanIdsD);
 
             foreach ($resDocs as $_doc) {
-                $datumString = $_doc['created'] ?? $_doc['created_date'] ?? '';
-                $timeline[] = [
-                    'type'      => 'document',
-                    'id'        => $_doc['id'],
-                    'date'      => date('d.m.Y', strtotime($datumString)),
-                    'title'     => $_doc['title'],
-                    'detail'    => 'Paperless Dokument',
-                    'is_recent' => false,
-                    'hash'      => '',
-                    'link'      => '/dms/document/' . $_doc['id']
-                ];
+                $timeline[] = $this->formatItemTL(
+                    'document',
+                    $_doc['id'],
+                    $_doc['created'] ?? $_doc['created_date'] ?? 'now',
+                    $_doc['title'],
+                    'Paperless Dokument',
+                    '/dms/document/' . $_doc['id']
+                );
             }
-        }else{
+        } else {
             error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Dokumente gefunden");
         }
         
-
+       // ==========================================
+        // 4. SORTIERUNG & FINISH
+        // ==========================================
+        // Fix: Wir sortieren jetzt bombenfest nach dem echten Unix-Timestamp!
+        
         usort($timeline, function($a, $b) {
-            return $b['date'] <=> $a['date'];
+            return $b['timestamp'] <=> $a['timestamp'];
         });
 
-        error_log("### TIMELINE RES ###");
-        //error_log(print_r($timeline, true));
-        error_log("### EOF TIMELINE RES ###");
+        error_log(print_r($timeline,true));
 
-        $bT = $this->buildTimeline($timeline);
+        error_log("buildTL");
+        $TL = $this->buildTimeline($timeline);
+
+        error_log(print_r($TL, true));
+
+        error_log("buildedTL");
+        return $TL;
+
         
-        // 2. Timeline aufbauen
-        return $bT;
     }
 
     /**
@@ -518,9 +513,11 @@ class ContactProcessor extends \App\Core\Database
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 'mail' AS type,
-                    m.id AS item_id,
+                    m.id AS id,
+                    m.id_hash as hash,
+                    LOWER(HEX(id_hash)) as as nHash,
                     m.paperless_id AS paperlessdocument,
-                    m.date_received AS event_date,
+                    m.date_received AS mdate,
                     m.subject_hash AS title,
                     m.sender AS detail
                     FROM mails m
@@ -551,22 +548,9 @@ class ContactProcessor extends \App\Core\Database
             false
         );
 
-        if ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
-        {
-            $rawMails = $dbResult->data->fetched;
-            //error_log(print_r($rawMails, true));
-            $items = [];
-            foreach ($rawMails as $row) {
-                $items[] = $this->formatItem($row, 'mail', $row['event_date'], $row['detail'], $hash);
-            }
-            return $items;
-        }else{
-            error_log("!! NO ITEMS");
-            error_log(print_r($dbResult, true));
-
-            return [];
-        }
-
+        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
+                $dbResult->data->fetched :
+                [];
         
     }
 
@@ -686,24 +670,30 @@ class ContactProcessor extends \App\Core\Database
         return $docs;
     }
 
-    private function formatItem($row, $type, $dateString, $detail, $hash)
+    /**
+     * Gibt ein einheitliches ITEM für die Timeline zurück
+     */
+    private function formatItemTL(string $type, $id, ?string $dateString, ?string $title, ?string $detail, ?string $link, ?string $hash = null): array
     {
-        $eventDate = new \DateTime($dateString);
         
-        // Logik für Farbe (vielleicht in eigene Funktion auslagern)
+        $eventDate = new \DateTime($dateString ?: 'now');
+        
+        // Dynamischer Farb-Index basierend auf der ID
         $colors = ['green', 'red', 'yellow', 'none'];
-        $colorIndex = (isset($row['item_id'])) ? (int)$row['item_id'] % count($colors) : 0;
+        $colorIndex = $id ? (int)$id % count($colors) : 0;
 
         return [
             'type'      => $type,
-            'id'        => $row['item_id'] ?? null,
-            'date'      => $eventDate->format('d.m.Y H:i'),
-            'title'     => $row['title'] ?? 'Kein Titel',
+            'id'        => $id,
+            // Mails bekommen Uhrzeit, Dokumente nur das Datum
+            'date'      => $eventDate->format($type === 'mail' ? 'd.m.Y H:i' : 'd.m.Y'),
+            'title'     => $title ?? 'Kein Titel',
             'detail'    => $detail,
             'is_recent' => ($eventDate >= new \DateTime('-30 days')),
-            'hash'      => $hash,
+            'hash'      => $hash ?? '',
             'critical'  => $colors[$colorIndex],
-            'link'      => ($type === 'mail') ? '#hash-' . $hash : '/dms/document/' . ($row['item_id'] ?? '')
+            'link'      => $link,
+            'timestamp' => $eventDate->getTimestamp() // Unverzichtbar für das usort() oben
         ];
     }
 

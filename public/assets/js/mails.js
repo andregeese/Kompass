@@ -11,42 +11,62 @@ const mailViewComponent = () => ({
     currentMailHtml:'',
     
     async init_mails() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashValue = urlParams.get('hash'); // mail_hash
-        
-        // 1. Initialisierung des Infinite Scrolls
+        // 1. Hash aus der URL extrahieren und säubern
+        const rawHash = window.location.hash; // Gibt z.B. '#hash-ID' oder '#ID' zurück
+        const hashValue = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;
+
+        if (hashValue) {
+            this.currentMailHash = hashValue;
+        }
+
+        // 2. Infinite Scroll initialisieren
         this.initInfiniteScroll();
 
-        // 2. Mails laden (warten bis fertig, damit wir den Hash auch finden können)
+        // 3. Mails initial laden (warten, bis die Liste da ist)
         if (this.$data.isOnline) {
             await this.loadMails(false);
         }
 
-        // 3. Logik: Hash verarbeiten
+        // 4. Logik: Direkt auf Hash reagieren, falls vorhanden
         if (hashValue) {
             this.isSidebarOpen = false;
             console.log("Hash gefunden, öffne Mail:", hashValue);
             
-            // Suche die Mail in der bereits geladenen Liste
-            const dataMail = await apiCall('get_mail_by_hash', {hash:hashValue}, 'GET');
-            console.log(dataMail);
-
-            const foundMail = this.mails.find(m => m.hash === hashValue);
+            // Erst lokal in den geladenen Mails suchen
+            let foundMail = this.mails.find(m => m.hash === hashValue);
             
+            // Fallback: Wenn nicht auf Seite 1, direkt per API aus der DB holen
+            if (!foundMail) {
+                try {
+                    const dataMail = await apiCall('get_mail_by_hash', { hash: hashValue }, 'GET');
+                    if (dataMail) {
+                        foundMail = dataMail;
+                        // Optional: In die Liste schieben, damit sie im UI existiert
+                        this.mails.push(foundMail); 
+                    }
+                } catch (error) {
+                    console.error("Fehler beim Abrufen der Mail via API:", error);
+                }
+            }
+
+            // Mail anzeigen, wenn sie entweder lokal oder per API gefunden wurde
             if (foundMail) {
                 this.viewMail(foundMail);
             } else {
-                console.warn("Mail mit Hash nicht in der Liste gefunden.");
-                // Optional: Hier könntest du einen API-Call machen, um die einzelne Mail 
-                // explizit zu holen, falls sie nicht auf Seite 1 ist.
+                console.warn("Mail mit Hash konnte nicht gefunden werden.");
             }
 
-            // Kontakt-Suche wie gehabt
-            const data = await apiCall('get_emails_by_hash', {hash: hashValue}, 'GET');
-            this.searchQueryContacts = data?.details?.contacts?.[0]?.displayname || '';
-            this.loadContacts(); 
+            // Kontakt-Suche für diese Mail ausführen
+            try {
+                const contactData = await apiCall('get_emails_by_hash', { hash: hashValue }, 'GET');
+                this.searchQueryContacts = contactData?.details?.contacts?.[0]?.displayname || '';
+                this.loadContacts(); 
+            } catch (error) {
+                console.error("Fehler beim Laden der Kontakte zum Hash:", error);
+            }
+
         } else {
-            // --- Such-Watcher nur, wenn kein Hash (keine direkte Mail-Ansicht) ---
+            // --- Such-Watcher nur aktivieren, wenn KEIN Hash aufgerufen wurde ---
             this.$watch('mailSearchQuery', (val) => {
                 clearTimeout(this.searchTimeout);
                 this.searchTimeout = setTimeout(() => {
@@ -56,8 +76,9 @@ const mailViewComponent = () => ({
             });
         }
 
+        // DOM-Tick abwarten für Refs
         this.$nextTick(() => {
-            console.log(this.$refs.mailList); 
+            console.log("Mail-Liste Ref:", this.$refs.mailList); 
         });
     },
 
@@ -423,7 +444,7 @@ const mailViewComponent = () => ({
             // Wir binden den Listener direkt an das Element
             container.onscroll = () => {
                 // Debug-Log: Erscheint das in der Konsole beim Scrollen?
-                console.log("Scrolling...", container.scrollTop);
+                //console.log("Scrolling...", container.scrollTop);
                 this.hasMore=true;
                 if (this.loading || !this.hasMore) return;
                 
