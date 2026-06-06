@@ -198,6 +198,7 @@
                                                                 'text-slate-500': !item.critical
                                                             }">
                                                             <span x-show="item.type === 'mail'">✉️</span>
+                                                            <span x-show="item.type === 'mail_send'">📤</span>
                                                             <span x-show="item.type === 'appointment'">📅</span>
                                                             <span x-show="item.type === 'document'">📝</span>
                                                             <span x-show="item.type === 'paperless'">📄</span>

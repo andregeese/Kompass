@@ -157,18 +157,18 @@ const mailViewComponent = () => ({
             const action = isSearch ? 'search_mail' : 'list_mails';
 
             // 3. Aufruf über die neue API-Brücke
-            const data = await apiCall(action, params, 'GET');
+            const jResponse = await apiCall(action, params, 'GET');
 
             // 4. Zugriff auf die Daten
-            const fetchedMails = data.details?.mails || [];
+            const fetchedMails = jResponse.details?.mails || [];
 
             const receivedCount = fetchedMails.length;
 
-            if (data?.success && data.details?.mails) {
+            if (jResponse?.success && jResponse.details?.mails) {
                 // Sicherstellen, dass mails immer ein Array ist
-                const fetchedMails = Array.isArray(data.details.mails) 
-                    ? data.details.mails 
-                    : Object.values(data.details.mails);
+                const fetchedMails = Array.isArray(jResponse.details.mails) 
+                    ? jResponse.details.mails 
+                    : Object.values(jResponse.details.mails);
 
                 if (append) {
                     this.mails.push(...fetchedMails);
@@ -193,7 +193,7 @@ const mailViewComponent = () => ({
                 this.hasMore = false;
             }
         } catch (err) {
-            console.error(data);
+            console.error(jResponse);
             console.error("Fehler beim Laden:", err);
         } finally {
             this.loading = false;
@@ -251,11 +251,11 @@ const mailViewComponent = () => ({
         
         try {
             // CSRF-geschützter API-Call anstatt Iframe-URL
-            const data = await apiCall('stream_mail_html', { hash: mail.hash }, 'GET');
+            const jResponse = await apiCall('stream_mail_html', { hash: mail.hash }, 'GET');
             
-            if (data && data.success !== false) {
+            if (jResponse && jResponse.success !== false) {
                 // Wenn die API das HTML direkt als String liefert:
-                this.currentMailHtml = data.details?.mail; 
+                this.currentMailHtml = jResponse.details?.mail; 
             } else {
                 this.currentMailHtml = '<p>Fehler beim Laden der E-Mail.</p>';
             }
@@ -271,7 +271,7 @@ const mailViewComponent = () => ({
         if (!this.isOnline || !mail?.hash) return;
     
         try {
-            const data = await apiCall('dms', {'id': mail.hash}, 'POST');
+            const jResponse = await apiCall('dms', {'id': mail.hash}, 'POST');
             mail.paperless_id = true; // Markiert die Mail im Frontend als übertragen
         } catch (err) {
             console.error("Fehler beim Verschieben ins DMS:", err);
@@ -284,9 +284,9 @@ const mailViewComponent = () => ({
             try {
                 const fd = new FormData();
                 fd.append('id', mail.hash);
-                const data = await apiCall('delete', { id: mail.hash }, 'POST');
+                const jResponse = await apiCall('delete', { id: mail.hash }, 'POST');
                 
-                if (data?.success) {
+                if (jResponse?.success) {
                     // UI aktualisieren
                     this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
                     localStorage.setItem('cached_mails', JSON.stringify(this.$data.mails));
@@ -295,7 +295,7 @@ const mailViewComponent = () => ({
                         this.$data.currentMail = null;
                     }
                 } else {
-                    console.error("Löschen fehlgeschlagen:", data?.error);
+                    console.error("Löschen fehlgeschlagen:", jResponse?.error);
                 }
             } catch (err) { 
                 console.error("Netzwerkfehler beim Löschen:", err);
@@ -309,8 +309,8 @@ const mailViewComponent = () => ({
         let syncSuccess = false;
         
         try {
-            const data = await apiCall('sync', {folder:folderName}, 'POST');
-            if (data && data.success) {
+            const jResponse = await apiCall('sync', {folder:folderName}, 'POST');
+            if (jResponse && jResponse.success) {
                 syncSuccess = true;
             }
         } catch (e) {
@@ -365,13 +365,13 @@ const mailViewComponent = () => ({
                         while (keepSyncing && safetyBuffer < 10) {
                             try {
                                 // Führe den Sync aus und warte auf das echte Ergebnis aus PHP
-                                const data = await apiCall('sync', {folder:folder}, 'POST');
+                                const jResponse = await apiCall('sync', {folder:folder}, 'POST');
                                 
                                 // Wenn PHP erfolgreich war und neue Mails hinzugefügt hat
-                                if (data && data.success) {
-                                    console.log(data);
+                                if (jResponse && jResponse.success) {
+                                    console.log(jResponse);
                                 
-                                    const addedCount = parseInt(data.added || 0);
+                                    const addedCount = parseInt(jResponse.added || 0);
                                     console.log(`📥 [${folder}] ${addedCount} Mails importiert.`);
 
                                     // Wenn das Limit erreicht wurde, gibt es vermutlich noch mehr Mails!
@@ -421,12 +421,12 @@ const mailViewComponent = () => ({
             }
 
             // 2. Aufruf über die neue API-Brücke
-            const data = await apiCall('list_mails', params, 'GET');
+            const jResponse = await apiCall('list_mails', params, 'GET');
             
-            if (data && data.success && data.details?.mails) {
+            if (jResponse && jResponse.success && jResponse.details?.mails) {
                 // 🚀 FIX: Einheitlich $data.mails prüfen und setzen
-                if (JSON.stringify(this.$data.mails) !== JSON.stringify(data.details.mails)) {
-                    this.$data.mails = data.details.mails;
+                if (JSON.stringify(this.$data.mails) !== JSON.stringify(jResponse.details.mails)) {
+                    this.$data.mails = jResponse.details.mails;
                 }
             }
         } catch (err) {

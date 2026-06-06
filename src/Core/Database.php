@@ -196,6 +196,8 @@ class Database
             $this->getCallerInfo();
             $result->error = "Fehler in " .__FUNCTION__ .": " . $e->getMessage();
 
+            throw new \Exception($e->getMessage());
+
         }
 
         if ($debug){

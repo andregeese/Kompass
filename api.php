@@ -1,5 +1,6 @@
 <?php
 //api.php
+date_default_timezone_set('Europe/Berlin');
 define('ROOT_PATH', __DIR__);
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 1);
@@ -126,7 +127,7 @@ $routes = [
     'get_contact_context'           => [App\Api\ContactController::class, 'getContactContext'],
     'auto_link_contact'             => [App\Api\ContactController::class, 'autoLinkContact'],
     'get_contact_timeline'          => [App\Api\ContactController::class, 'getTimeLineContact'],
-    'get_emails_by_hash'         => [App\Api\ContactController::class, 'getContactByEmailHash'],  
+    'get_emails_by_hash'            => [App\Api\ContactController::class, 'getContactByEmailHash'],  
     'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],  
     'get_emails_by_search'           => [App\Api\ContactController::class, 'getEmailsBySearch'],  
     'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],
@@ -138,6 +139,10 @@ $routes = [
     'imap_mails'                    => [App\Api\SystemController::class, 'syncFolder'],
     'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
     'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
+
+    'get_notes'                     => [App\Api\NotesController::class, 'getNotes'],
+    'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],
+    'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
 
 ];
 

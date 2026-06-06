@@ -381,7 +381,10 @@ class MailProcessor extends \App\Core\Database
         $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
 
         if (empty($uidsToProcess)) {
-            # error_log("Sync: Keine neuen Mails gefunden.");
+            // FIX: Auch hier die Verbindung sauber schließen, bevor wir vorzeitig abbrechen!
+            if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
+                @imap_close($imapStream);
+            }
             $result['success'] = true;
             return $result;
         }
@@ -400,7 +403,16 @@ class MailProcessor extends \App\Core\Database
                     $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
                     $ov = $overview[0];
                     
+                    //error_log("DEBUG ov". print_r($ov, true));
+
                     if (!empty($overview)) ;
+
+                    $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
+                    $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
+
+                    // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
+                    $idHash = hash('sha256', $messageId . $salt, true);
+
 
                     if (empty($ov->from)) {
                         $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
@@ -412,22 +424,9 @@ class MailProcessor extends \App\Core\Database
                         $ov->to = $header->toaddress ?? 'unknown@unknown.local';
                     }
 
-                    $mailDateRaw = $header->date ?? $mailHeader['date'] ?? 'now';
-                    $mailDateClean = preg_replace('/ \([^)]+\)$/', '', trim($mailDateRaw));
-                    try {
-                        $formattedDate = new \DateTime($mailDateClean);
-                    } catch (\Throwable $e) {
-                        // Absoluter Notfall-Fallback, falls der Header komplett Schrott ist
-                        error_log("Kritischer Mail-Date-Parsing-Fehler bei String: '$mailDateRaw'. Nutze 'now'.");
-                        $formattedDate = new \DateTime('now');
-                    }
-
-                    $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
-                    $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
-
-                    // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
-                    $idHash = hash('sha256', $messageId . $salt, true);
-
+                    // E-Mail-Datum konvertieren
+                    $formattedDate = $ov->date ? date('Y-m-d H:i:s', strtotime($ov->date)) : null;
+                    
                     $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
                     
                     // Anwendung in deinem Loop
@@ -520,17 +519,22 @@ class MailProcessor extends \App\Core\Database
                 
             }catch(\Throwable $e)
             {
-                @imap_close($imapStream);
                 error_log("Fehler bei Mail: " . $e->getMessage());
             }
 
-            
             $added++;
             $highestUid = max($highestUid, (int)$uid);
         }
 
 
-        imap_close($imapStream);
+        // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen und PHP 8+ absichern
+        if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
+            try {
+                @imap_close($imapStream);
+            } catch (\Throwable $ex) {
+                // Falls sie serverseitig schon zu war: Stumm ignorieren
+            }
+        }
 
         if ($added > 0) {
             $this->saveSyncCheckpoint($folder, $highestUid);

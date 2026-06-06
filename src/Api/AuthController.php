@@ -14,8 +14,6 @@ class AuthController extends \App\Core\BaseController
             $rawInput = file_get_contents('php://input');
             $data     = json_decode($rawInput, true);
 
-            error_log("USERLOGIN" . print_r($data, true));
-
             $email    = $data['email'] ?? '';
             $password = $data['password'] ?? '';
             

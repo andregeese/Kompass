@@ -20,6 +20,7 @@ trait ServiceTrait {
         'systemProcess'    => \App\Services\SystemProcessor::class,
         'settingProcess'   => \App\Services\SettingProcessor::class,
         'appointProcess'   => \App\Services\AppointmentsProcessor::class,
+        'notesProcess'     => \App\Services\NotesProcessor::class,
     ];
 
     // Greift auf die Eigenschaft $this->dashboard zu

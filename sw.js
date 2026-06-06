@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hub-v2.58'; 
+const CACHE_NAME = 'crm_1.84'; 
 
 // Nur lokale Assets cachen! CDNs gehören nicht in den Cache.
 const ASSETS = [

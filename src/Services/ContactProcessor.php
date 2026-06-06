@@ -425,23 +425,24 @@ class ContactProcessor extends \App\Core\Database
         // 1. MAILS QUELLE
         // ==========================================
         $mailItems = $this->getMailItems($hash, $salt, $tenantId);
-        error_log(print_r($mailItems, true));
+        //error_log(print_r($mailItems, true));
+
         foreach ($mailItems as $row) {
             $timeline[] = $this->formatItemTL(
-                'mail',
+                $row['type'],
                 $row['id'],
                 $row['mdate'] ?? null,
                 $this->dashboard->decrypt($row['title']),
                 $row['detail'] ?? '',
-                '#hash-' . bin2hex($row['id_hash']),
-                bin2hex($row['id_hash'])
+                '#hash-' . $row['hash'],
+                $row['hash']
             );
         }
 
         // Paperless IDs im Vorfeld holen
         $paperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
 
-        error_log(print_r($paperlessIDs, true));
+        //error_log(print_r($paperlessIDs, true));
         // ==========================================
         // 2. DOKUMENTE QUELLE: KORRESPONDENTEN
         // ==========================================
@@ -465,7 +466,8 @@ class ContactProcessor extends \App\Core\Database
         // 3. DOKUMENTE QUELLE: DIREKTE IDS
         // ==========================================
         $dokumenteIds = $paperlessIDs['dokumente'] ?? [];
-        error_log(print_r($dokumenteIds, true));
+        //error_log(print_r($dokumenteIds, true));
+
         if (!empty($dokumenteIds)) {
             $cleanIdsD = implode(",", array_map('intval', $dokumenteIds));
             $resDocs = $this->getDocumentsById($cleanIdsD);
@@ -493,17 +495,15 @@ class ContactProcessor extends \App\Core\Database
             return $b['timestamp'] <=> $a['timestamp'];
         });
 
-        error_log(print_r($timeline,true));
+        //error_log(print_r($timeline,true));
 
-        error_log("buildTL");
+        //error_log("buildTL");
         $TL = $this->buildTimeline($timeline);
 
-        error_log(print_r($TL, true));
+        //error_log(print_r($TL, true));
 
         error_log("buildedTL");
-        return $TL;
-
-        
+        return $TL;   
     }
 
     /**
@@ -512,10 +512,13 @@ class ContactProcessor extends \App\Core\Database
     private function getMailItems($hash, $salt, $tenantId)
     {
         error_log(__FUNCTION__);
-        $sql = "SELECT 'mail' AS type,
+        $sql = "SELECT CASE 
+                        WHEN m.recipient_ceid = ce.id THEN 'mail_send'
+                        ELSE 'mail'
+                    END AS type,
                     m.id AS id,
-                    m.id_hash as hash,
-                    LOWER(HEX(id_hash)) as as nHash,
+                    m.id_hash as idhash,
+                    LOWER(HEX(id_hash)) as hash,
                     m.paperless_id AS paperlessdocument,
                     m.date_received AS mdate,
                     m.subject_hash AS title,

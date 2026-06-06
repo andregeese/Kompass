@@ -16,7 +16,8 @@ function confirmAction(message, callback) {
     window.dispatchEvent(new CustomEvent('confirm-modal', {
         detail: { message, callback }
     }));
-};
+}
+
 function showNotify(title, message, type = 'danger') {
     // 1. Notification zum globalen Array hinzufügen (für die Sidebar)
     const newNotification = {
@@ -83,6 +84,7 @@ async function initApiConfig() {
 }
 
 //Standardisierte aufrufe
+// Standardisierte Aufrufe
 async function apiCall(action, params = {}, method = 'POST') 
 {
     const publicActions = ['login', 'register'];
@@ -91,37 +93,34 @@ async function apiCall(action, params = {}, method = 'POST')
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     const currentToken = metaTag ? metaTag.content : '';
 
-    // CSRF nicht bei login und register
     if (!isPublic && (!currentToken || currentToken === '')) {
         console.error("[SECURITY] Abbruch: Kein CSRF-Token im DOM gefunden!");
         return { success: false, error: "Kein CSRF-Token gefunden. Bitte Seite neu laden." };
     }
+
     if (typeof ALLOWED_ACTIONS !== 'undefined' && ALLOWED_ACTIONS.length > 0 && !ALLOWED_ACTIONS.includes(action)) {
         console.error("Ungültige Aktion!");
         return { success: false, error: "Ungültige Aktion" };
     }
 
     let url = `${GLOBAL_API_URL}?action=${action}`;
-    let headers = { 'Content-Type': 'application/json' };
+    
+    // 💡 KORREKTUR: Wenn params ein FormData-Objekt ist, DARF kein Content-Type gesetzt werden!
+    // Der Browser setzt die Multi-Part-Boundaries sonst falsch.
+    let headers = {};
+    if (!(params instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
     if (currentToken) {
         headers['X-CSRF-TOKEN'] = currentToken;
     }
 
     let options = { method: method, headers: headers };
 
-    // 2. Debugging für POST-Payload
-    if (method === 'POST') 
-    {
-        options.body = params;
-
-        if (!params || Object.keys(params).length === 0) {
-            console.warn(`[API-DEBUG] POST-Aufruf für '${action}' ohne Parameter!`);
-        } else {
-            console.log(`[API-DEBUG] POST-Payload für '${action}':`, params);
-        }
-     
+    if (method === 'POST') {
+        options.body = params; // Kann nun JSON-kompatibles Objekt ODER FormData sein
     } else {
-        // GET-Logik
         const query = new URLSearchParams(params).toString();
         url += query ? `&${query}` : '';
     }
@@ -129,60 +128,85 @@ async function apiCall(action, params = {}, method = 'POST')
     return await safeFetch(url, options);
 }
 
+/**
+ * Der zentrale Verteiler für alle Website-weiten Aktionen
+ */
+function dispatchAction(action, context, triggerElement) {
+    console.log(`Zentrale Action getriggert: [${action}]`, context);
+
+    switch (action) {
+        case 'note_add':
+            // Kontext-Daten nutzen (z.B. context.uid)
+            openNoteModal(context.uid, context.folder);
+            break;
+
+        case 'mail_archive':
+            archiveMail(context.uid, triggerElement);
+            break;
+
+        case 'refresh_sync':
+            triggerImapSync();
+            break;
+
+        default:
+            console.warn(`Definition für Action "${action}" fehlt im Switch-Block!`);
+    }
+}
+
 async function safeFetch(url, customOptions = {}) {
-    // 1. Standard-Optionen definieren
     const defaultOptions = {
         method: 'POST',
         credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        }
+        headers: {}
     };
 
-    // 2. Header und Body sicher zusammenführen
     const finalOptions = {
         ...defaultOptions,
         ...customOptions,
         headers: { ...defaultOptions.headers, ...customOptions.headers }
     };
 
-
-    // 3. Wenn es ein POST-Aufruf mit Objekt ist, wandeln wir es hier in JSON um
-    if (finalOptions.method === 'POST' && typeof finalOptions.body === 'object') {
+    // 💡 KORREKTUR: Nur stringifizieren, wenn es ein flaches Objekt und KEIN FormData ist
+    if (finalOptions.method === 'POST' && finalOptions.body && !(finalOptions.body instanceof FormData) && typeof finalOptions.body === 'object') {
         finalOptions.body = JSON.stringify(finalOptions.body);
     }
 
     try {
         const response = await fetch(url, finalOptions);
 
-        // Falls der Server mit einem Fehlercode (z.B. 500) antwortet
-        if (!response.ok) {
-            const rawText = await response.text(); // Als Text auslesen, nicht als JSON!
-            console.error("Server-Fehler Rohdaten:", rawText);
-            showNotify("Server-Fehler Rohdaten: " + rawText, "danger");
-
-            throw new Error(`Server antwortete mit Status ${response.status}`);
+        if (response.redirected && response.url.includes('cloudflareaccess.com')) {
+            console.warn('Cloudflare Access Session abgelaufen!');
+            window.location.href = response.url;
+            return false;
         }
 
-        // Prüfen, ob der Server überhaupt JSON zurückgibt
+        if (!response.ok) {
+            const rawText = await response.text();
+            let errorMsg = `Server antwortete mit Status ${response.status}`;
+            try {
+                const json = JSON.parse(rawText);
+                if (json && json.error) errorMsg = json.error;
+            } catch(e) {}
+            showNotify("FEHLER", errorMsg, "danger");
+            throw new Error(errorMsg);
+        }
+
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             const raw = await response.text();
-            throw new Error("Server-Fehler: Antwort ist kein JSON. Inhalt: " + raw.substring(0, 100));
+            throw new Error("Server-Fehler: Antwort ist kein JSON.");
         }
 
+        // 💡 KORREKTUR: jResponse/data Variablen-Chaos beseitigt
         const data = await response.json();
         
         if (data && data.success === false) {
-            // Hier schlägt dein Dispatcher zu!
             console.error("API Error:", data.error);
             showNotify("Fehler", data.error || "Ein unbekannter Fehler ist aufgetreten", "danger");
             return data;
         }
 
-        // 2. NEU: Zentrale Notification-Logik
-        // Wenn der Server UI-Anweisungen mitgeschickt hat
-        if (data.details && data.details.ui && data.details.ui.notify) {
+        if (data.details?.ui?.notify) {
             const ui = data.details.ui;
             showNotify(ui.title, ui.message, ui.type || 'info');
         }
@@ -193,7 +217,7 @@ async function safeFetch(url, customOptions = {}) {
         showNotify("Systemfehler", error.message, "danger");
         return { success: false, error: error.message };
     }
-};
+}
 
 window.crmEngine = function() {
     // Fallback falls window.CRM_API_URL in index.php fehlt
@@ -249,25 +273,30 @@ window.crmEngine = function() {
                 return; 
             }
 
-            // Live-Überwachung des Netzwerkstatus
+            if (typeof initApiConfig === 'function') {
+                await initApiConfig();
+            }
+            // 1. EVENT-LISTENER: Reagiert nur auf Status-WECHSEL während der Laufzeit
             window.addEventListener('online', () => { 
                 this.isOnline = true; 
-                this.syncOfflineNotes();
+                this.syncOfflineNotes(); // Greift, wenn das Netz zwischendurch weg war
                 this.loadNotesBackend();
-                this.loadAppointmentsBackend();
             });
             window.addEventListener('offline', () => { 
                 this.isOnline = false; 
             });
 
-            // Theme- & Pull-To-Refresh Logik initialisieren
             this.evaluateTimeBasedTheme();
             this.initPullToRefresh();
-
-            // Erste Datensätze aus Backend abholen, falls Online
+            
+            // 2. INITIALER START-CHECK: Wenn beim Laden der App SCHON Internet da ist
             if (this.isOnline) {
+                // 💡 HIER GEHÖRT ES HIN!
+                // Erst syncen, falls noch Altlasten im LocalStorage liegen...
+                await this.syncOfflineNotes(); 
+                
+                // ...dann die frische Liste aus dem Backend holen
                 this.loadNotesBackend();
-                this.loadAppointmentsBackend();
             }
 
         },
@@ -285,11 +314,11 @@ window.crmEngine = function() {
                 this.loading = true;
                 try {
                     // Da du oben nach "Quast" suchst, übergeben wir den String hier direkt an deinen API-Pfad
-                    const data = await apiCall('search_contact', {hash: trimmed}, 'GET');
+                    const jResponse = await apiCall('search_contact', {hash: trimmed}, 'GET');
                     
-                    if (data?.success) {
+                    if (jResponse?.success) {
                         // Hier nimmst du die zurückgegebenen Treffer (die Liste mit dem herkunft-Flag) auf
-                        this.results = data.details.contacts || data.details || [];
+                        this.results = jResponse.details.contacts || jResponse.details || [];
                     }
                 } catch (err) {
                     console.error("Suchfehler im Backend:", err);
@@ -317,10 +346,10 @@ window.crmEngine = function() {
         // =========================================================================
         async loadNotesBackend() {
             if (!this.isOnline) return;
-            const data = await apiCall('crm_get_notes', {}, 'GET');
+            const jResponse = await apiCall('get_notes', {}, 'GET');
             
-            if (data?.success) {
-                this.notes = data.details.notes || [];
+            if (jResponse?.success) {
+                this.notes = jResponse.details.notes || [];
                 localStorage.setItem('cached_notes', JSON.stringify(this.notes));
             }
         },
@@ -334,9 +363,9 @@ window.crmEngine = function() {
             localStorage.setItem('cached_notes', JSON.stringify(this.notes));
 
             if (this.isOnline) {
-                const data = await apiCall('crm_save_note', payload, 'POST');
+                const jResponse = await apiCall('crm_save_note', payload, 'POST');
                 
-                if (data?.success && data.details?.db_id) payload.id = data.details.db_id;
+                if (jResponse?.success && jResponse.details?.db_id) payload.id = jResponse.details.db_id;
             } else {
                 let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
                 queue.push(payload);
@@ -353,15 +382,15 @@ window.crmEngine = function() {
 
             if (this.isOnline) {
                 
-                await apiCall('crm_toggle_note', {id: noteId, status: note.status}, 'GET');                
+                await apiCall('toggle_note', {id: noteId, status: note.status}, 'GET');                
             }
         },
 
         async syncOfflineNotes() {
-            let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
+            let queue = JSON.parse(localStorage.getItem('cached_notes') || '[]');
             if (!queue.length || !this.isOnline) return;
             for (const item of queue) {
-                await apiCall('crm_save_note', item, 'POST');
+                await apiCall('save_note', item, 'POST');
             }
             localStorage.removeItem('queue_notes');
             this.loadNotesBackend();
@@ -372,11 +401,11 @@ window.crmEngine = function() {
         // =========================================================================
         async loadAppointmentsBackend() {
             if (!this.isOnline) return;
-            /*const data = await apiCall('get_appointments`);
-            if (data?.success) {
-                this.appointments = data.details.appointments || [];
+            const jResponse = await apiCall('get_appointments', null, 'GET');
+            if (jResponse?.success) {
+                this.appointments = jResponse.details.appointments || [];
                 localStorage.setItem('cached_appointments', JSON.stringify(this.appointments));
-            }*/
+            }
         },
 
         async findMatchSuggestions(searchQuery) {
@@ -384,8 +413,8 @@ window.crmEngine = function() {
             let clean = searchQuery.replace(/^(Re|Aw|Fwd):\s*/i, '').trim();
             try {
                 // 🚀 NEU: Paperless-Suche über modulare API
-                const data = await apiCall('paperless_search', {query:clean}, 'GET');
-                if (data?.success) this.paperlessMatches = data.details.documents || [];
+                const jResponse = await apiCall('paperless_search', {query:clean}, 'GET');
+                if (jResponse?.success) this.paperlessMatches = jResponse.details.documents || [];
             } catch (err) { console.error(err); }
         },
 
@@ -396,8 +425,8 @@ window.crmEngine = function() {
             fd.append('paperless_id', docId);
 
             // 🚀 NEU: Matching über neue API-Struktur
-            const data = await apiCall('link_contact_item', fd, 'POST');
-            if (data?.success) {
+            const jResponse = await apiCall('link_contact_item', fd, 'POST');
+            if (jResponse?.success) {
                 this.currentMail.is_dms = true;
                 this.currentMail.paperless_id = docId;
             }
