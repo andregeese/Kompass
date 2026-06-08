@@ -1,3 +1,4 @@
+<?php
 /**
  * START_LICENSE
  * Enterprise CRM Hub
@@ -7,7 +8,6 @@
  * END_LICENSE
  */
 
-<?php
 //api.php
 date_default_timezone_set('Europe/Berlin');
 define('ROOT_PATH', __DIR__);
