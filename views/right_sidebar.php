@@ -228,7 +228,8 @@
                                                                 📝
                                                             </button>
                                                         </div>
-                                                        <span class="text-slate-400 font-mono text-[10px] shrink-0" 
+                                                        <span class="font-mono text-[10px] shrink-0 transition-colors" 
+                                                            :class="(new Date(item.date_raw) > new Date()) ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-400'"
                                                             x-text="item.date">
                                                         </span>
                                                     </div>

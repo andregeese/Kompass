@@ -102,10 +102,12 @@ $routes = [
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
 
     //Appointment
+    'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
     'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
     'get_events'                    => [App\Api\AppointmentsController::class, 'getEventsParsed'],
     'full_sync'                     => [App\Api\AppointmentsController::class, 'fullSync'],
     'get_parti'                     => [App\Api\AppointmentsController::class, 'getPartition'],
+    'save_appointment'              => [App\Api\AppointmentsController::class, 'saveAppointment'],
 
     //Sidebar
     
@@ -130,6 +132,7 @@ $routes = [
     'get_contact_context'           => [App\Api\ContactController::class, 'getContactContext'],
     'auto_link_contact'             => [App\Api\ContactController::class, 'autoLinkContact'],
     'get_contact_timeline'          => [App\Api\ContactController::class, 'getTimeLineContact'],
+    'get_all_emails'                => [App\Api\ContactController::class, 'getAllEmails'],
     'get_emails_by_hash'            => [App\Api\ContactController::class, 'getContactByEmailHash'],  
     'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],  
     'get_emails_by_search'           => [App\Api\ContactController::class, 'getEmailsBySearch'],  

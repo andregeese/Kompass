@@ -1,56 +1,92 @@
-const appointmentViewComponent = () => ({
-    loading: true,
+document.addEventListener('alpine:init', () => {
+    
+    // KOMPONENTE: Modal Editor
+    Alpine.data('appointmentEditor', () => ({
+        isOpen: false,
+        formData: { id: null, title: '', ceid: '' },
+        contacts: [],
+        contactSearch:'',
+        filteredContacts: [],
 
-    async initCalendar() {
-        // Warte kurz, damit Alpine das DOM bereitstellt
-        await new Promise(resolve => setTimeout(resolve, 50));
+        async performContactSearch() {
+            if (this.contactSearch.length < 2) return;
+            
+            this.loading = true;
+            // Backend Suche statt clientseitiger Filterung bei 1000+ Kontakten
+            const response = await apiCall('get_emails_by_search', { query: this.contactSearch }, 'GET');
+            this.filteredContacts = response.details.contact_emails || [];; 
+            this.loading = false;
+        },
+        
+        async loadAppointment(id) {
+            const response = await apiCall('get_appointment', { id: id }, 'GET');
+            this.formData = response.details; 
 
-        const calendarEl = document.getElementById('calendar');
-        if (!calendarEl) return;
 
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: 'today'
-            },
-            dayMaxEvents: 3, // Zeigt "+ X weitere" an, statt den Kalender zu sprengen
-            eventTimeFormat: { // Zeit im Stil "13:00" statt "13 Uhr"
-                hour: '2-digit',
-                minute: '2-digit',
-                meridiem: false
-            },
-            locale: 'de',
-            height: 'auto',
-            events: async (fetchInfo, successCallback, failureCallback) => {
-                try {
-                    const data = await safeFetch(`api.php?action=get_appointments`);
-                    console.log("APPOINTMENTS Data:", data);
+            if (response.success && response.details.appointment.length > 0) {
+                // WICHTIG: Das erste Element aus dem Array nehmen!
+                const apt = response.details.appointment[0];
+                
+                // Mappe die DB-Felder auf deine FormData-Struktur
+                this.formData = {
+                    id: apt.id,
+                    title: apt.summary, // Dein JSON sagt "summary"
+                    ceid: apt.ceid     // Dein JSON sagt "ce_id"
+                };
+                // Zurücksetzen der Suche
+                this.contactSearch = '';
+                this.filteredContacts = [];
+                this.isOpen = true;
+                console.log("Modal geöffnet mit:", this.formData);
+            } else {
+                console.error("Kein Termin gefunden oder API Fehler");
+            }
+        },
 
-                    // Mapping: Überprüfe genau deine API-Struktur aus dem Screenshot
-                    const events = data.details.appointment.map(item => ({
-                        title: item.title,      // Achte hier auf die Namen aus der DB!
+        async save() {
+            const response = await apiCall('save_appointment', this.formData, 'POST');
+            if (response.success) {
+                this.isOpen = false;
+                window.dispatchEvent(new CustomEvent('refresh-calendar'));
+            }
+        }
+    }));
+
+    // KOMPONENTE: Kalender Ansicht
+    Alpine.data('appointmentView', () => ({
+        loading: true,
+        calendar: null,
+
+        async initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            this.calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'de',
+                events: async (fetchInfo, successCallback, failureCallback) => {
+                    const data = await apiCall('get_appointments', {}, 'GET');
+                    this.loading = false;
+                    // Mappe die Daten aus deinem JSON-Struktur-Screenshot
+                    successCallback(data.details.appointments.map(item => ({
+                        title: item.title,
                         start: item.start,
                         id: item.id
-                    }));
-                    
-                    this.loading = false;
-                    successCallback(events);
-                } catch (e) {
-                    this.loading = false;
-                    failureCallback(e);
+                    })));
+                },
+                eventClick: (info) => {
+                    window.dispatchEvent(new CustomEvent('open-appointment-modal', { detail: info.event.id }));
                 }
-            },
-            eventClick: (info) => {
-                alert('Termin: ' + info.event.title);
-            }
-        });
-        calendar.render();
-    }
-});
+            });
+            this.calendar.render();
 
-// Registrierung für Alpine
-document.addEventListener('alpine:init', () => {
-    Alpine.data('appointmentView', appointmentViewComponent);
+            // Listener für Refresh
+            window.addEventListener('refresh-calendar', () => {
+                this.calendar.refetchEvents();
+            });
+        },
+        
+        async syncAppointments(){
+            //await apiCall('full_sync', {}, 'GET');
+            this.initCalendar();
+        }
+    }));
 });

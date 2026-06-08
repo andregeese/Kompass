@@ -33,7 +33,12 @@ class ContactController extends \App\Core\BaseController {
         return ['contacts' => $contacts];        
     }
 
+    public function getAllEmails()
+    {
+        $contacts = $this->contactProcess->getAllEmails();
 
+        return ["emails" => $contacts];
+    }
     public function getContactByEmailHash()
     {
          

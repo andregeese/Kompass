@@ -38,17 +38,33 @@ class AppointmentsProcessor extends BaseProcessor
     public function getAppointmentsFromDB()
     {
         $dbResult = $this->queryIt(
-            "SELECT summary as title, start_time as start, end_time as end FROM appointments WHERE tenant_id=:tenant_id",
+            "SELECT id, summary as title, start_time as start, end_time as end FROM appointments WHERE tenant_id=:tenant_id",
             [],
             false,
             false,
             true
         );
 
-        if ($dbResult->sucess)
-        {
-            return $dbResult->data->fetched;
+        if (!$dbResult->success){
+            throw new \Exception ("Kalender konnte nicht geladen werden");
         }
+        error_log(print_r($dbResult, true));
+        return $dbResult->data->fetched;
+    }
+
+    public function getAppointment($id)
+    {
+        $sql = "SELECT * FROM appointments WHERE tenant_id=:tenant_id AND id=:id";
+        $dbResult = $this->queryIt(
+            $sql, 
+            ['id' => $id]
+        );
+
+        if(!$dbResult->success){
+            throw new \Exception("Kein Termin gefunden.");
+        }
+
+        return $dbResult->data->fetched;
     }
 
     private function getPrincipalPath()
@@ -378,5 +394,27 @@ class AppointmentsProcessor extends BaseProcessor
             return $matches[1]; 
         }
         //return "Erfolgreich partitioniert.";
+    }
+
+
+    public function saveAppointment($data)
+    {
+        $sql = "UPDATE appointments 
+            SET summary = :summary, 
+                ceid = :ceid 
+            WHERE id = :id AND tenant_id = :tenant_id";
+
+
+        $dbResult = $this->queryIt($sql, [
+            'summary'   => $data['title'],
+            'ceid'      => !empty($data['ceid']) ? (int)$data['ceid'] : null,
+            'id'        => (int)$data['id']
+        ]);
+
+        if (!$dbResult->success){
+            throw new \Exception("Fehler beim Speichern des Termins");
+        }
+
+        return ["result" => $dbResult];
     }
 }

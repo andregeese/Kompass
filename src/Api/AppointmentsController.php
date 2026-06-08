@@ -10,29 +10,19 @@ class AppointmentsController extends \App\Core\BaseController
         parent::__construct($dashboard); // Das ist entscheidend!
     }
 
+    public function getAppointment()
+    {
+        $id = $this->request->get('id');
+        $appointment = $this->appointProcess->getAppointment($id);
+        
+        return ['appointment' => $appointment];
+    }
     public function getAppointments()
     {
-        try{
-
-            $appointments = $this->appointProcess->getAppointmentsFromDB();
-            error_log(print_r($appointments, true));
-            
-            return [
-                'success' => true,
-                'details' => [
-                    'appointment' => $appointments
-                ]
-            ];
-        } catch (\Throwable $e) {
-
-            $this->dashboard->sendResponse(false, "", $e->getMessage());
-            return [
-                'success' => false,
-                'error'   => 'Fehler beim Laden der E-Mails: ' . $e->getMessage()
-            ];
-            throw new \Exception($e->getMessage());
-
-        }
+        $appointments = $this->appointProcess->getAppointmentsFromDB();
+        error_log(print_r($appointments, true));
+        
+        return ['appointments' => $appointments];
         
     }
 
@@ -50,6 +40,21 @@ class AppointmentsController extends \App\Core\BaseController
     public function getPartition()  
     {
         return $this->appointProcess->getPartition();
+    }
+
+    public function saveAppointment()
+    {
+        $data = [
+            'id'        => $this->request->get('id'),
+            'title'   => $this->request->get('summary'),
+            'ceid'      => $this->request->get('ceid'),
+        ];
+        
+        if (empty($data['id'])) {
+            return ['success' => false, 'error' => 'Keine ID angegeben'];
+        }
+
+        return $this->appointProcess->saveAppointment($data);
     }
 
 }

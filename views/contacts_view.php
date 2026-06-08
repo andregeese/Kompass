@@ -187,13 +187,14 @@
 
                                 <div x-show="loadingMatch" class="text-xs text-blue-500 italic p-2">Suche läuft...</div>
 
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
                                     <template x-for="contact in sortedMatchResults" :key="contact.ceid">
                                         <button type="button" 
                                                 @click="toggleEmail(contact)"
                                                 :class="isEmailLinked(contact.ceid) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-700'"
-                                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80">
-                                            <span x-text="contact.email"></span>
+                                                class="flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80">
+                                            <span x-text="contact.email" class="whitespace-nowrap"></span>
+                                            
                                             <span class="ml-2 font-bold" x-text="isEmailLinked(contact.ceid) ? '✕' : '+'"></span>
                                         </button>
                                     </template>

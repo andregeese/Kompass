@@ -602,6 +602,61 @@ class MailProcessor extends \App\Core\Database
     }
 
     /**
+     * Synchronisiert Statusänderungen für bereits existierende Mails
+     * Konzentriert sich nur auf die letzten N Mails, um Performance zu sparen.
+     */
+    public function deltaSync(string $folder, int $limit = 100): int 
+    {
+        $imapStream = $this->connectIMAP($folder);
+        if (!$imapStream) return 0;
+
+        // 1. Hole die letzten $limit UIDs vom Server
+        $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
+        $checkUids = array_slice($allUids, -$limit);
+
+        $updatedCount = 0;
+
+        foreach ($checkUids as $uid) {
+            // Status vom Server abrufen
+            $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
+            if (empty($overview)) continue;
+            $ov = $overview[0];
+
+            // 2. Prüfen, ob die Mail in unserer DB existiert
+            $sqlCheck = "SELECT id, is_read, is_flagged, is_answered 
+                        FROM mails 
+                        WHERE uid = :uid AND imap_folder = :folder";
+            $current = $this->queryIt($sqlCheck, ['uid' => $uid, 'folder' => $folder], false, false, true);
+
+            if ($current) {
+                // 3. Status-Abgleich
+                $needsUpdate = ($current['is_read'] != $ov->seen || 
+                                $current['is_flagged'] != $ov->flagged || 
+                                $current['is_answered'] != $ov->answered);
+
+                if ($needsUpdate) {
+                    $sqlUpdate = "UPDATE mails 
+                                SET is_read = :seen, 
+                                    is_flagged = :flagged, 
+                                    is_answered = :answered 
+                                WHERE id = :id";
+                    
+                    $this->queryIt($sqlUpdate, [
+                        'seen'     => (int)$ov->seen,
+                        'flagged'  => (int)$ov->flagged,
+                        'answered' => (int)$ov->answered,
+                        'id'       => $current['id']
+                    ]);
+                    $updatedCount++;
+                }
+            }
+        }
+
+        @imap_close($imapStream);
+        return $updatedCount;
+    }
+
+    /**
      * Zerlegt einen E-Mail-Header-String in Name und E-Mail-Adresse.
      * Dekodiert dabei MIME-kodierte Teile korrekt, bevor geparst wird.
      *

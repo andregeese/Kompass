@@ -235,6 +235,32 @@ class ContactProcessor extends \App\Core\Database
         error_log("Orphaned Cleanup abgeschlossen (inaktive Kontakte markiert).");
     }
 
+    public function getAllEmails()
+    {
+        $sql = "SELECT 
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name,
+                    c.type,
+                    ce.id AS ceid,
+                    ce.email
+                FROM contacts c
+                LEFT JOIN contact_emails ce ON c.id = ce.contact_id
+                WHERE c.tenant_id = :tenant_id
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY ce.email";
+                            
+        $dbRequest = $this->queryIt($sql,
+            [], false, false, false
+        );
+        
+        if (!$dbRequest->success)
+        {
+            throw new \Exception("Keine Mails gefunden!");
+        }
+
+        return $dbRequest->data->fetched;
+    }
     /**
      * Bekommt eine Liste von Kontakten und dessen Verknüpfungen
      */
@@ -441,7 +467,7 @@ class ContactProcessor extends \App\Core\Database
 
         //Notizen
         $notes = $this->getNotesByMailHash($hash);
-        error_log(print_r($notes, true));
+        
         foreach ($notes as $rowNote) {
             error_log(print_r($rowNote, true));
             $timeline[] = $this->formatItemTL(
@@ -452,6 +478,23 @@ class ContactProcessor extends \App\Core\Database
                 $rowNote['content'],
                 '#note-' . $rowNote['id'],
                 $rowNote['id']
+            );
+        }
+
+        //Appointments
+        $appoints = $this->getAppointmentsByHash($hash);
+        error_log(print_r($appoints, true));
+
+        foreach ($appoints as $rowAppoint) {
+            error_log(print_r($rowAppoint, true));
+            $timeline[] = $this->formatItemTL(
+                'appointment',
+                $rowAppoint['id'],
+                $rowAppoint['start_time'] ?? null,
+                $rowAppoint['extracted_summary'],
+                $rowAppoint['extracted_summary'],
+                '#appointment-' . $rowAppoint['id'],
+                $rowAppoint['id']
             );
         }
 
@@ -551,10 +594,55 @@ class ContactProcessor extends \App\Core\Database
         );";
 
         $params =['hash' => $hash];
-        $dbResult = $this->queryIt($sql, $params,false, false, true);
+        $dbResult = $this->queryIt($sql, $params,false, false, false);
 
         if (!$dbResult->success){
             throw new \Exception("Fehler bei Notiz!");
+        }
+
+        return $dbResult->data->fetched;
+    }
+
+    private function getAppointmentsByHash($hash)
+    {
+        error_log("Lade alle Appointments");
+        // alle Notizen zu einer Mail
+        $sql = "SELECT DISTINCT 
+                a.*,
+                TRIM(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(
+                            REPLACE(REPLACE(a.ical_data, '\r', ''), '\n', '<BR>'), 
+                        'SUMMARY:', -1), 
+                    '<BR>', 1)
+                ) AS extracted_summary
+                FROM `appointments` a
+
+                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
+                JOIN `contact_emails` ce_all 
+                ON (a.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
+
+                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
+                JOIN `contact_emails` ce_current_mail 
+                ON ce_all.contact_id = ce_current_mail.contact_id
+
+                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
+                JOIN `mails` m 
+                ON (m.sender_ceid = ce_current_mail.id) -- OR m.recipient_ceid = ce_current_mail.id)
+
+                -- 4. Filter für die Sidebar
+                WHERE m.id_hash = UNHEX(:hash)
+                AND m.tenant_id = :tenant_id
+                AND a.tenant_id = :tenant_id
+
+                -- Neueste Notizen immer zuerst anzeigen
+                ORDER BY a.updated_at DESC;";
+
+        $params =['hash' => $hash];
+        $dbResult = $this->queryIt($sql, $params,false, false, true);
+
+        if (!$dbResult->success){
+            throw new \Exception("Fehler bei Appointment!");
         }
 
         return $dbResult->data->fetched;
@@ -777,6 +865,7 @@ class ContactProcessor extends \App\Core\Database
             'id'        => $id,
             // Mails bekommen Uhrzeit, Dokumente nur das Datum
             'date'      => $eventDate->format($type === 'mail' ? 'd.m.Y H:i' : 'd.m.Y'),
+            'date_raw' => $eventDate->format('Y-m-d H:i:s'),
             'title'     => $title ?? 'Kein Titel',
             'detail'    => $detail,
             'is_recent' => ($eventDate >= new \DateTime('-30 days')),

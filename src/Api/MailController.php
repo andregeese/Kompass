@@ -257,6 +257,7 @@ class MailController extends \App\Core\BaseController
         ob_start();
         
         $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
+        $updateCount = $this->mailProcess->deltaSync($folder, 100);
         
         ob_end_clean();
 
