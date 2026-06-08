@@ -416,7 +416,7 @@ class MailProcessor extends \App\Core\Database
         error_log("[$pid] Starte Sync für Ordner: $folder");
 
         $added = 0;
-        $result = ['success' => false, 'added' => 0, 'error' => null];
+        //$result = ['success' => false, 'added' => 0, 'error' => null];
 
         $imapFolder = $this->getFullFolderPath($folder);
         $imapStream = $this->connectIMAP($folder);
@@ -438,12 +438,13 @@ class MailProcessor extends \App\Core\Database
         $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
 
         if (empty($uidsToProcess)) {
+            error_log("keine neuen Mails");
             // FIX: Auch hier die Verbindung sauber schließen, bevor wir vorzeitig abbrechen!
             if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
                 @imap_close($imapStream);
             }
-            $result['success'] = true;
-            return $result;
+            
+            return [];
         }
 
         error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
@@ -605,10 +606,10 @@ class MailProcessor extends \App\Core\Database
      * Synchronisiert Statusänderungen für bereits existierende Mails
      * Konzentriert sich nur auf die letzten N Mails, um Performance zu sparen.
      */
-    public function deltaSync(string $folder, int $limit = 100): int 
+    public function deltaSync(string $folder, int $limit = 100): array 
     {
         $imapStream = $this->connectIMAP($folder);
-        if (!$imapStream) return 0;
+        if (!$imapStream) return [];
 
         // 1. Hole die letzten $limit UIDs vom Server
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
@@ -625,14 +626,14 @@ class MailProcessor extends \App\Core\Database
             // 2. Prüfen, ob die Mail in unserer DB existiert
             $sqlCheck = "SELECT id, is_read, is_flagged, is_answered 
                         FROM mails 
-                        WHERE uid = :uid AND imap_folder = :folder";
+                        WHERE uid = :uid AND tenant_id=:tenant_id AND imap_folder = :folder";
             $current = $this->queryIt($sqlCheck, ['uid' => $uid, 'folder' => $folder], false, false, true);
 
             if ($current) {
                 // 3. Status-Abgleich
-                $needsUpdate = ($current['is_read'] != $ov->seen || 
-                                $current['is_flagged'] != $ov->flagged || 
-                                $current['is_answered'] != $ov->answered);
+                $needsUpdate = ($current->is_read != $ov->seen || 
+                                $current->is_flagged != $ov->flagged || 
+                                $current->is_answered != $ov->answered);
 
                 if ($needsUpdate) {
                     $sqlUpdate = "UPDATE mails 
@@ -645,15 +646,38 @@ class MailProcessor extends \App\Core\Database
                         'seen'     => (int)$ov->seen,
                         'flagged'  => (int)$ov->flagged,
                         'answered' => (int)$ov->answered,
-                        'id'       => $current['id']
+                        'id'       => $current->id
                     ]);
                     $updatedCount++;
                 }
             }
         }
 
+
+        // 1. Hole alle UIDs, die aktuell in unserer DB für diesen Ordner stehen
+        $sqlStoredUids = "SELECT uid FROM mails WHERE imap_folder = :folder AND tenant_id=:tenant_id;";
+        $dbUids = $this->queryIt($sqlStoredUids, ['folder' => $folder], true); // Gibt Array von Objekten zurück
+        $dbUidList = array_map(fn($o) => (int)$o->uid, $dbUids);
+
+        // 2. Vergleiche: Was ist in DB, aber nicht mehr in $allUids vom IMAP?
+        $toDelete = array_diff($dbUidList, array_map('intval', $allUids));
+
+        if (!empty($toDelete)) {
+            // 3. Markiere in der DB als gelöscht (Soft-Delete)
+            $placeholders = implode(',', array_fill(0, count($toDelete), '?'));
+            $sqlDelete = "UPDATE mails SET status='moved' WHERE uid IN ($placeholders) AND imap_folder = ?";
+            
+            $params = array_merge($toDelete, [$folder]);
+            $dbResult = $this->queryIt($sqlDelete, $params);
+            If (!$dbResult->success){
+                throw new \Exception("Fehler beim erkennen von E-Mails die nicht mehr im Folder sind");
+            }
+            
+            error_log("DeltaSync: " . count($toDelete) . " Mails wurden aus Ordner $folder entfernt.");
+        }
+
         @imap_close($imapStream);
-        return $updatedCount;
+        return ['updated' => $updatedCount];
     }
 
     /**
