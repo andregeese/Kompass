@@ -1,16 +1,21 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Api;
-
 use Exception;
 #use App\Tenant;
 use App\Services\SettingProcessor; // 🚀 Das Modell aus setting.php importieren
-
 class SettingsController extends \App\Core\BaseController {
     
     public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!
     }
-
     public function get() 
     {
         try{
@@ -33,7 +38,6 @@ class SettingsController extends \App\Core\BaseController {
         }
         
     }
-
     public function save() 
     {
         try 
@@ -47,7 +51,6 @@ class SettingsController extends \App\Core\BaseController {
             if (empty($formData)) {
                 $formData = json_decode(file_get_contents('php://input'), true) ?? [];
             }
-
             
             $secretKey = $this->tenantConfig->secret_key ?? null;
             $success = $this->settingProcess->saveTenantSettings($_SESSION['tenant_id'], $formData, $secretKey);

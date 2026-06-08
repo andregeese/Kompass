@@ -1,11 +1,17 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Api;
 use App\Services\ContactProcessor; // Importiere den Prozessor
 use App\Services\PaperlessProcessor;
 use Exception;
-
 class ContactController extends \App\Core\BaseController {
-
     public function __construct($dashboard) {
         // Übergibt das Dashboard an den BaseController, 
         // damit $this->dashboard dort gesetzt wird.
@@ -16,9 +22,7 @@ class ContactController extends \App\Core\BaseController {
     {
         $query = $this->request['query'] ?? null;
         $id = $this->request['id'] ?? null;
-
         //tbd: hashed
-
         if (empty($query) && empty($id)) {
             throw new \Exception("Kontakt nicht auffindbar (id / query nicht gesetzt)");
         }
@@ -29,21 +33,17 @@ class ContactController extends \App\Core\BaseController {
         }else{
             $contacts = $this->contactProcess->getContactList($query);
         }
-
         return ['contacts' => $contacts];        
     }
-
     public function getAllEmails()
     {
         $contacts = $this->contactProcess->getAllEmails();
-
         return ["emails" => $contacts];
     }
     public function getContactByEmailHash()
     {
          
         $hash = $this->request['hash'] ?? null;
-
         if (empty($hash)) {
             return ['success' => false, 'error' => 'Kein Hash übergeben.'];
         }
@@ -53,14 +53,12 @@ class ContactController extends \App\Core\BaseController {
         return ['contact_emails' => $contacts];
         
     }
-
     /**
      * Suche anhand eines Strings
      */
     public function getEmailsBySearch()
     {
         $query = $this->request['query'];
-
         if (empty($query)) {
             throw new \Exception("Emailsuche ist leer");
         }
@@ -70,14 +68,12 @@ class ContactController extends \App\Core\BaseController {
         return ['contact_emails' => $contacts];
         
     }
-
     /**
      * Abfrage für Mails im Matching von Kontakten
      */
     public function getEmailsByContact()
     {
         $query = $this->request['query'] ?? null;
-
         if (empty($query)) {
             throw new \Exception('Keine Query übergeben.');
         }
@@ -92,7 +88,6 @@ class ContactController extends \App\Core\BaseController {
         return ['contacts' => $contacts];
     
     }
-
     
     public function getContactByHashMail() 
     {
@@ -103,11 +98,8 @@ class ContactController extends \App\Core\BaseController {
         }
         
         $email = $this->contactProcess->getContactByMail($hash); 
-
         return ['contact' => $email];
     }
-
-
     /**
      * Holt alle Mails und Paperless verknüpfungen
      */
@@ -118,13 +110,10 @@ class ContactController extends \App\Core\BaseController {
         if (empty($hash)) {
             throw new \Exception("Kein Hash übergeben");
         }
-
         $salt = $this->dashboard->getHashSalt();
         $TL = $this->contactProcess->getTimelineData($hash, $salt);
         return ["timeline" => $TL];
-
     }
-
     /**
      * Suche nach einer E-Mail-Adresse
      */
@@ -136,7 +125,6 @@ class ContactController extends \App\Core\BaseController {
         if (empty($query)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
         }
-
         // 3. Aufruf des Processors mit den nun existierenden Variablen
         $mailDetails = $this->contactProcess->searchMailAddress($query); 
         
@@ -153,12 +141,10 @@ class ContactController extends \App\Core\BaseController {
                 ];
             }
         }
-
         return [
             "mails" => $mailDetails
         ];
     }
-
     /**
      * @unused / @deprecated
      * Verknüpft Mail mit Konakt
@@ -166,11 +152,9 @@ class ContactController extends \App\Core\BaseController {
     public function autoLinkContact() 
     {
         return ["das darf nicht mehr gehen!"];
-
         try {
             $rawInput = file_get_contents('php://input');
             $data = json_decode($rawInput, true);
-
             if ($data === null) {
                 return [
                     'success' => false,
@@ -179,7 +163,6 @@ class ContactController extends \App\Core\BaseController {
             }
             // 2. JETZT mit $data aufrufen, nicht leer!
             $result = $this->contactProcess->autoLinkContact($data); 
-
             return [
                 'success' => true,
                 'details' => $result
@@ -188,9 +171,7 @@ class ContactController extends \App\Core\BaseController {
             $this->dashboard->sendResponse(false, "", "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
         }
     }
-
     
-
     /**
      * Hole alle Informationen zu dem Kontakt
      */
@@ -204,12 +185,10 @@ class ContactController extends \App\Core\BaseController {
         
         //tbd: $hash nicht korrekt
         $contacts = $this->dashboard->getContactContext($hash); 
-
         return [
             'details' => $contacts
         ];
     }
-
     /**
      * 
      */
@@ -220,26 +199,21 @@ class ContactController extends \App\Core\BaseController {
         $email        = trim($this->request['email'] ?? '');
         $type         = trim($this->request['type'] ?? 'company');
         $paperless_id = trim($this->request['paperless_id'] ?? '??');
-
         // 2. Validierung (Exception wirft Fehler für den Dispatcher)
         if (empty($name) || empty($email)) {
             throw new \Exception('Name und E-Mail dürfen nicht leer sein.');
         }
-
         // 3. Kontakt speichern
         $contactId = $this->contactProcess->insertContact($name, $email, $type, $paperless_id);
-
         // 4. Erfolg zurückgeben
         if (!$contactId) {
             throw new \Exception('Fehler beim Erstellen des Kontakts in der Datenbank.');
         }
-
         return [
             'message'    => 'Kontakt erfolgreich angelegt!',
             'contact_id' => $contactId
         ];
     }
-
     /**
      * Speichert aus der View (namen und Email)
      */
@@ -249,7 +223,6 @@ class ContactController extends \App\Core\BaseController {
         $name        = $this->request['displayname'] ?? null;
         $email       = $this->request['email'] ?? null;
         $type        = $this->request['type'] ?? 'person';
-
     
         if (!$id) {
             throw new \Exception("Kontakt-ID fehlt.");
@@ -265,7 +238,6 @@ class ContactController extends \App\Core\BaseController {
             ]
         ];
     }
-
     /**
      * Speichert den Kontakt aus dem Modal
      */
@@ -274,12 +246,10 @@ class ContactController extends \App\Core\BaseController {
         // Wir verlassen uns darauf, dass der BaseController das JSON bereits in $this->request gemappt hat.
         $contact_id = $this->request['id'] ?? null;
         $input_emails = $this->request['emails'] ?? [];
-
         // 2. Validierung
         if (!$contact_id) {
             throw new \Exception("Kontakt-ID fehlt.");
         }
-
         // 3. Logik-Vorbereitung (Daten transformieren)
         $emails_to_link = [];
         foreach ($input_emails as $email_entry) {
@@ -305,4 +275,3 @@ class ContactController extends \App\Core\BaseController {
         ];
     }
 }
-

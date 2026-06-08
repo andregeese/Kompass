@@ -1,8 +1,14 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Api;
-
 use App\Core\Auth; // Die reine Logik
-
 class AuthController extends \App\Core\BaseController 
 {
     /**
@@ -13,7 +19,6 @@ class AuthController extends \App\Core\BaseController
         try{
             $rawInput = file_get_contents('php://input');
             $data     = json_decode($rawInput, true);
-
             $email    = $data['email'] ?? '';
             $password = $data['password'] ?? '';
             
@@ -30,7 +35,6 @@ class AuthController extends \App\Core\BaseController
             }else{
                 $this->dashboard->sendResponse(false, null, "User not found: ". print_r($user, true), 'error');    
             }
-
         }catch(\Throwable $e) {
             
             $this->dashboard->sendResponse(false, null, "Login fehlgeschlagen! <br/>" . $e->getMessage(), 'error');
@@ -38,7 +42,6 @@ class AuthController extends \App\Core\BaseController
         }
         
     }
-
     /**
      * Benutzer anlegen
      */
@@ -48,9 +51,7 @@ class AuthController extends \App\Core\BaseController
             $email = $_POST['email'];
             $plainPassword = $_POST['password'];
             $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
-
             $ret = $this->dashboard->registerUser($email, $hashedPassword);
-
             // 1. Passwort sicher hashen
             // PASSWORD_DEFAULT nutzt aktuell den sichersten Algorithmus (aktuell bcrypt)
             

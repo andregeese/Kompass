@@ -1,3 +1,14 @@
+/<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
+
 <header class="bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 gap-2">
     <!-- Links: Logo & Titel (Auf Mobile kompakt) -->
     <div class="flex items-center space-x-2 md:space-x-3 shrink-0">
@@ -12,7 +23,6 @@
         <div class="absolute right-3 top-2" x-show="loading">
             <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
         </div>
-
         <div x-show="results && results.length > 0" 
             @click.away="results = []"
             class="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50 p-1 space-y-0.5" x-cloak>
@@ -26,17 +36,14 @@
             </template>
         </div>
     </div>
-
     <!-- Rechts: Actions & Logout -->
     <div class="flex items-center space-x-2 md:space-x-3 shrink-0">
         <!-- Online/Offline Punkt -->
         <div class="h-2 w-2 rounded-full transition-colors duration-300" :class="isOnline ? 'bg-green-500 shadow-green-500/50 shadow' : 'bg-amber-500 shadow-amber-500/50'"></div>
-
         <!-- Darkmode Toggle -->
         <button @click="toggleTheme()" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-500 dark:text-slate-400 transition-colors text-sm">
             <span x-text="isDarkMode ? '☀️' : '🌙'"></span>
         </button>
-
         <!-- 🚪 Logout Button -->
         <a href="./index.php?view=login&logout=1" 
            @click="if(typeof logout === 'function') { logout(); }" 

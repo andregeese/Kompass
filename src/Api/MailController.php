@@ -1,9 +1,15 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Api;
 use App\Services\MailProcessor; // Importiere den Prozessor
-
 use Exception;
-
 class MailController extends \App\Core\BaseController 
 {
     public function __construct($dashboard) {
@@ -17,7 +23,6 @@ class MailController extends \App\Core\BaseController
         $limit  = (int)($this->request['limit'] ?? 20);
         $folder = $this->request['folder'] ?? 'INBOX';
         $search = $this->request['search'] ?? '';
-
         if (!empty($search) && $page > 1) {
             $this->cleanBuffer();
             return ['mails' => []];
@@ -29,9 +34,7 @@ class MailController extends \App\Core\BaseController
         return [
             'mails' => $cleanMails
         ];
-
     }
-
     private function recursiveUtf8Encode(array $data) {
             array_walk_recursive($data, function (&$item, $key) {
             // Falls das Feld 'hash' (oder 'id_hash') heißt und binär ist:
@@ -45,7 +48,6 @@ class MailController extends \App\Core\BaseController
         });
         return $data;
     }
-
     /**
      * Suche nach einer Mail
      */
@@ -60,7 +62,6 @@ class MailController extends \App\Core\BaseController
         if (empty($search)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
         }
-
         // 3. Aufruf des Processors mit den nun existierenden Variablen
         $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit); 
         
@@ -77,12 +78,10 @@ class MailController extends \App\Core\BaseController
                 ];
             }
         }
-
         return [
             "mails" => $mailDetails
         ];
     }
-
      public function getMailsByAddress()
     {
         $query = $this->request['query'] ?? '';
@@ -91,7 +90,6 @@ class MailController extends \App\Core\BaseController
         if (empty($query)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
         }
-
         // 3. Aufruf des Processors mit den nun existierenden Variablen
         $mailDetails = $this->mailProcess->getMailsByAddress($query); 
         
@@ -108,50 +106,41 @@ class MailController extends \App\Core\BaseController
                 ];
             }
         }
-
         return [
             "mails" => $mailDetails
         ];
     }
-
     public function getMailByHash()
     {
         $hash = $this->request['hash'] ?? null;
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
-
         $mailDetails = $this->mailProcess->getMailByHash($hash); 
         
         if (!$mailDetails) {
             throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
         }
-
         return [
             'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
             'date'         => $mailDetails['date_received'],
             'sender'       => $mailDetails['sender'],
             'paperless_id' => $mailDetails['paperless_id']
         ];
-
     }
-
     /**
      * Zeige die E-Mail an
      */
     public function viewMail() {
         $hash = $this->request['id'] ?? '';
-
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
-
         $mailDetails = $this->mailProcess->getMailByHash($hash); 
         
         if (!$mailDetails) {
             throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
         }
-
         return [
             'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
             'date'         => $mailDetails['date_received'],
@@ -159,7 +148,6 @@ class MailController extends \App\Core\BaseController
             'paperless_id' => $mailDetails['paperless_id']
         ];
     }
-
     /**
      * lösche die E-Mail
      */
@@ -174,7 +162,6 @@ class MailController extends \App\Core\BaseController
         if (!$success) {
             throw new \Exception("Löschen fehlgeschlagen.");
         }
-
         return [
             "mail" => [],
             'ui' => [
@@ -185,7 +172,6 @@ class MailController extends \App\Core\BaseController
             ]
         ];
     }
-
     /**
      * Verschiebe die E-Mail nach DMS
      */
@@ -194,7 +180,6 @@ class MailController extends \App\Core\BaseController
         if (!$hash) {
             throw new \Exception("ID zum verschieben fehlt");
         }
-
     
         // 2. Logik delegieren (Kein method_exists mehr, wir vertrauen unserer IDE!)
         $success = $this->mailProcess->moveToDMS($hash);
@@ -202,7 +187,6 @@ class MailController extends \App\Core\BaseController
         if (!$success) {
             throw new \Exception("Verschieben fehlgeschlagen.");
         }
-
         // 2. Einheitliche Antwort
         // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
         return [
@@ -215,14 +199,12 @@ class MailController extends \App\Core\BaseController
             ]
         ];
     }
-
     /**
      * @deprecated
      */
     public function handlePdf() {
         $hash = $_POST['id'] ?? '';
         $mail = $this->mailProcess->getMailByHash($hash); 
-
         $success = false;
         if (method_exists($this->mailProcess, 'moveToDMS')) {
             $this->mailProcess->moveToDMS($hash);
@@ -238,7 +220,6 @@ class MailController extends \App\Core\BaseController
             ]
         ];
     }
-
     /**
      * Sychronisiere die Postfächer
      */
@@ -260,12 +241,10 @@ class MailController extends \App\Core\BaseController
         //$updateCount = $this->mailProcess->deltaSync($folder, 100);
         
         ob_end_clean();
-
         return [
             "sync"      => $syncResult //,"update"    => $updateCount
         ]; // Gibt das komplette Sync-Array direkt zurück
     }
-
     /**
      * 
      */
@@ -278,22 +257,18 @@ class MailController extends \App\Core\BaseController
             'logs'    => $syncResult['logs'] ?? []
         ];
     }
-
     /**
      * streamt die Mail
      */
     public function streamHtml() 
     {
         $hash = $this->request['hash'] ?? ''; // Nutze dein zentrales Request-Objekt!
-
         if (empty($hash)) {
             throw new \Exception("Kein gültiger Mail-Hash übergeben.");
         }
-
         // Die Logik bleibt im Processor
         $body = $this->mailProcess->getMailBody($hash);
         error_log("MAILBody GEFUNDEN: " . $body);
-
         // Jetzt die Ausnahme-Ausgabe
         header('Content-Type: text/html; charset=utf-8');
         header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
@@ -302,7 +277,6 @@ class MailController extends \App\Core\BaseController
         exit; // Wichtig: Hier hart beenden, damit der Dispatcher nicht mehr greift
         
     }
-
     public function getRecentMails()
     {
         $success = $this->mailProcess->getRecentMails();
@@ -310,9 +284,7 @@ class MailController extends \App\Core\BaseController
         if (!$success) {
             throw new \Exception("Letzte Mails fehlgeschlagen.");
         }
-
         error_log(print_r($success, true));
-
         // 2. Einheitliche Antwort
         // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
         return [
@@ -324,6 +296,5 @@ class MailController extends \App\Core\BaseController
                 'type'    => 'success'
             ]
         ];
-
     }
 }

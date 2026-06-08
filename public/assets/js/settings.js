@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 const settingsComponent = () => ({
     loadingFolders: false,
     loading: false,
@@ -8,7 +17,6 @@ const settingsComponent = () => ({
         paperless_url: '', paperless_name: '', paperless_token: '',
         sync_folders: [] // WICHTIG: Muss als Array vorliegen
     },
-
     async initSettings() {
         try {
             let res = await safeFetch('api.php?action=get_settings');
@@ -22,7 +30,6 @@ const settingsComponent = () => ({
                 } else if (!this.form.sync_folders) {
                     this.form.sync_folders = [];
                 }
-
                 // Passwörter leeren
                 this.form.imap_password = '';
                 this.form.paperless_token = '';
@@ -38,7 +45,6 @@ const settingsComponent = () => ({
             this.showMsg('Fehler beim Laden der Einstellungen.', 'error');
         }
     },
-
     async fetchImapFolders() {
         this.loadingFolders = true;
         try {
@@ -48,7 +54,6 @@ const settingsComponent = () => ({
             fd.append('imap_port', this.form.imap_port);
             fd.append('imap_user', this.form.imap_user);
             fd.append('imap_password', this.form.imap_password);
-
             let res = await safeFetch('api.php', { method: 'POST', body: fd }).then(r => r.json());
             
             if (res.success) {
@@ -65,7 +70,6 @@ const settingsComponent = () => ({
             this.loadingFolders = false;
         }
     },
-
     async saveSettings() {
         this.loading = true;
         try {
@@ -82,13 +86,11 @@ const settingsComponent = () => ({
             this.showMsg('Verbindungsfehler.', 'error');
         }
     },
-
     showMsg(text, type) {
         this.message = { text, type };
         if (type === 'success') setTimeout(() => { this.message.text = ''; }, 4000);
     }
 });
-
 // Registrierung
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('settingsComponent', settingsComponent);

@@ -1,3 +1,14 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
+
 <div class="flex-1 p-6 overflow-y-auto">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">🏠 System Dashboard</h1>

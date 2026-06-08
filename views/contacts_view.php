@@ -1,3 +1,14 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
+
 <div x-data="contactsView" x-init="initContacts()" class="flex-1 overflow-y-auto p-4 md:p-6 mx-auto w-full space-y-6">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-slate-800 dark:text-white flex items-center space-x-2">
@@ -8,23 +19,19 @@
         <span>+</span> <span>Neuer Kontakt</span>
     </button>
     </div>
-
     <input type="text" x-model="searchQueryContacts" placeholder="Kontakte suchen..." 
            class="w-full p-3 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
     </input>
    
-
     <div class="space-y-4">
         <svg id="network" style="width: 100%; height: 500px; border:1px solid #ccc;"></svg>    
     </div>
-
     <div class="space-y-4">
         <!--<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <template x-for="contact in filteredContacts" :key="contact.ceid || 'temp-' + contact.id">
                 <div x-data="{ isEditing: false }" 
                     class="bg-white p-5 rounded-2xl border transition-all duration-300 relative shadow-sm hover:shadow-md"
                     :class="contact && Number(contact.is_connected) === 1 ? 'border-emerald-400 bg-emerald-50/20' : 'border-slate-200'">
-
                     <div class="absolute top-4 right-4 flex gap-1 z-10">
                         <button type="button" 
                                 x-show="contact && contact.is_connected!==1"
@@ -41,7 +48,6 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                         </button>
-
                         <button type="button" 
                                 x-show="isEditing"
                                 @click.stop="saveInlineContact(contact); isEditing = false;"
@@ -51,7 +57,6 @@
                             </svg>
                         </button>
                     </div>
-
                     <div class="space-y-3" @keydown.enter="saveInlineContact(contact); isEditing = false;">
                         
                         <div x-show="!isEditing" class="space-y-1 pr-12">
@@ -64,7 +69,6 @@
                             </div>
                             <p class="text-[11px] text-slate-500 font-mono" x-text="contact.email"></p>
                         </div>
-
                         <div x-show="isEditing" x-cloak class="space-y-3 pr-12">
                             <input type="text" x-model="contact.displayname" 
                                 class="w-full text-sm font-bold bg-transparent border-b-2 border-blue-500 focus:outline-none focus:border-blue-600 px-0 py-1"
@@ -87,7 +91,6 @@
                     </div>
                 </div>
             </template>
-
              <template x-if="Number(contact.is_connected) === 1">
                 <div class="mt-3 pt-2 border-t border-slate-100">
                     <p class="text-[9px] font-bold text-slate-400 uppercase">Verknüpft mit:</p>
@@ -101,9 +104,7 @@
                 </div>
             </template>
         </div>-->
-
        
-
     <!--Modal -->
     <div x-show="isMatchPanelOpen" 
         x-cloak
@@ -116,7 +117,6 @@
         x-transition:leave-end="opacity-0">
         
         <div @click="closeMatchModal()" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
-
         <div class="relative w-full max-w-sm bg-white dark:bg-gray-800 h-full shadow-2xl flex flex-col transform transition-transform duration-300"
             x-show="isMatchPanelOpen"
             x-transition:enter="transition-transform duration-300"
@@ -148,7 +148,6 @@
                             </template>
                         </div>
                     </div>
-
                     <div class="space-y-4">
                         <div class="mb-4">
                             <button @click="openSection = (openSection === 'match' ? null : 'match')" 
@@ -170,7 +169,6 @@
                                 </template>
                             </div>
                         </div>
-
                         <div>
                             <button @click="openSection = (openSection === 'emails' ? null : 'emails')" 
                                     class="w-full flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider p-2 bg-slate-100 bg-whtie dark:bg-gray-700 rounded-lg dark:text-white">
@@ -184,9 +182,7 @@
                                     @input.debounce.500ms="performMatchSearch()"
                                     placeholder="E-Mails suchen..."
                                     class="w-full text-sm p-3 rounded-xl border border-slate-200 bg-white focus:border-blue-500 outline-none">
-
                                 <div x-show="loadingMatch" class="text-xs text-blue-500 italic p-2">Suche läuft...</div>
-
                                 <div class="flex flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
                                     <template x-for="contact in sortedMatchResults" :key="contact.ceid">
                                         <button type="button" 
@@ -202,7 +198,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="mt-8">
                         <button @click="saveContact(activeContact); closeMatchModal();" 
                                 class="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all shadow-md">

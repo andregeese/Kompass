@@ -1,9 +1,16 @@
 <?php
-namespace App\Core;
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 
+namespace App\Core;
 class Crypto {
     private static $cipher = 'aes-256-gcm';
-
     public static function encrypt($pureText, $key) {
         $keyHash = hash('sha256', $key, true);
         $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length(self::$cipher));
@@ -16,7 +23,6 @@ class Crypto {
             't' => base64_encode($tag)
         ]));
     }
-
     public static function decrypt($encryptedData, $key) {
         $keyHash = hash('sha256', $key, true);
         $decoded = json_decode(base64_decode($encryptedData), true);

@@ -1,8 +1,17 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
 <div x-data="rightSidebarComponent()" 
      x-init="initSidebar()"
      @toggle-sidebar-request.window="isOpen = true; activeTab = $event.detail.tab; if($event.detail.email) { loadContactByEmail($event.detail.email) }"
      class="shrink-0">
-
     <button @click="toggleSidebar('context')" 
             class="fixed right-4 bottom-20 md:bottom-6 z-40 bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-full shadow-xl transition-all duration-300 ease-in-out hover:scale-105 flex items-center justify-center"
             :class="isOpen ? 'translate-x-24 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'">
@@ -13,12 +22,10 @@
             </span>
         </template>
     </button>
-
     <aside :class="isOpen ? 'translate-y-0 shadow-2xl-top border-t md:border-t-0 md:border-l w-full md:w-96' : 'translate-y-full md:translate-y-0 md:w-0 md:border-0 md:opacity-0 overflow-hidden'" 
            class="fixed md:sticky bottom-0 left-0 right-0 top-24 md:top-0 h-[calc(100vh-6rem)] md:h-screen bg-slate-50 dark:bg-gray-900 border-slate-200 dark:border-gray-800 flex flex-col overflow-hidden transition-all duration-300 ease-in-out z-40 md:z-30 rounded-t-2xl md:rounded-t-none">
         
         <div class="md:hidden w-12 h-1 bg-slate-300 dark:bg-gray-750 rounded-full mx-auto mt-2 shrink-0"></div>
-
         <div class="p-3 border-b border-slate-200 dark:border-gray-700 flex flex-col space-y-2 shrink-0 bg-white dark:bg-gray-800">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-gray-500">Smart Control</span>
@@ -37,7 +44,6 @@
                 </button>
             </div>
         </div>
-
         <div class="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar pb-24">
             
             <div x-show="activeTab === 'context'" class="space-y-4">
@@ -54,14 +60,12 @@
                             <span class="text-[9px] transition-transform duration-200" :class="showManualForm ? 'rotate-180' : ''">▼</span>
                         </div>
                     </div>
-
                     <div x-show="showManualForm" x-transition class="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-4 space-y-3 shadow-sm">
                         <div class="space-y-2.5">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
                                     Kontakt
                                 </label>
-
                                 <!-- Eingabefeld mit Debounce bei der Suche -->
                                 <input 
                                     type="text" 
@@ -71,7 +75,6 @@
                                     @input.debounce.300ms="searchPaperlessContacts($el.value)"
                                     class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200"
                                 >
-
                                 <div class="relative mt-2">
                                     <ul class="absolute z-50 w-full bg-white dark:bg-gray-800 border border-slate-200 shadow-lg rounded-lg max-h-40 overflow-y-auto"
                                         x-show="paperlessContacts.length > 0">
@@ -104,13 +107,11 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Dokument -->
                 <div class="space-y-3">
                     <h3 class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider flex items-center space-x-1.5 px-1">
                         <span>📄</span> <span>DMS Archiv-Suche</span>
                     </h3>
-
                     <div class="bg-white dark:bg-gray-800 p-2 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm">
                         <input 
                             type="text" 
@@ -119,7 +120,6 @@
                             @input.debounce.300ms="searchDMS();"
                             class="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200 transition-colors"
                         >
-
                         <div class="mt-2 space-y-1 overflow-y-auto max-h-[180px] pr-1 custom-scrollbar" 
                             x-show="paperlessDMSMatches.length > 0">
                             <template x-for="item in paperlessDMSMatches" :key="item.id">
@@ -128,7 +128,6 @@
                                     
                                     <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
                                     <div class="absolute left-[-3px] top-3 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-emerald-500"></div>
-
                                     <div class="flex items-center gap-3 w-full text-[11px]">
                                         <span class="w-8 text-[9px] font-bold shrink-0 text-center"
                                             :class="{
@@ -138,12 +137,10 @@
                                             }" 
                                             x-text="(item.score * 100).toFixed(0) + '%'">
                                         </span>
-
                                         <span class="flex-1 font-medium text-slate-700 dark:text-gray-300 truncate"
                                             :title="item.title"
                                             x-text="item.title">
                                         </span>
-
                                         <span class="text-slate-400 font-mono text-[10px] shrink-0" 
                                             x-text="item.created">
                                         </span>
@@ -159,7 +156,6 @@
                     <h3 class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider flex items-center space-x-1.5">
                         <span>⏳</span> <span>Chronologischer Verlauf</span>
                     </h3>
-
                     <template x-for="archive in timelineData" :key="archive.year">
                         <div class="bg-white dark:bg-gray-800 border border-slate-200/60 dark:border-gray-700/60 rounded-xl overflow-hidden shadow-sm">
                             
@@ -168,7 +164,6 @@
                                 <span class="text-xs font-bold font-mono text-slate-700 dark:text-gray-300" x-text="'📅 Jahr ' + archive.year"></span>
                                 <span class="text-[10px] text-slate-400 transition-transform duration-200" :class="archive.is_open ? 'rotate-90' : ''">▶</span>
                             </button>
-
                             <div x-show="archive.is_open" class="p-2 space-y-1.5 bg-slate-50/30 dark:bg-gray-900/10">
                                 
                                 <template x-for="monthGroup in archive.months" :key="monthGroup.name">
@@ -179,7 +174,6 @@
                                             <span x-text="'🔹 ' + monthGroup.name"></span>
                                             <span class="text-[9px] text-slate-400 transition-transform duration-200" :class="(monthGroup.is_open ?? false) ? 'rotate-90' : ''">▶</span>
                                         </button>
-
                                         <div x-show="monthGroup.is_open ?? false" class="pl-2 ml-1 border-l border-slate-200 dark:border-gray-700 space-y-2 pt-1 pb-2">
                 
                                             <template x-for="(item, index) in monthGroup.items" :key="item.id || index">
@@ -188,7 +182,6 @@
                                                     
                                                     <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
                                                     <div class="absolute left-[-3px] top-2.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-slate-300 dark:bg-gray-600 group-hover:bg-emerald-500 transition-colors"></div>
-
                                                     <div class="flex items-center gap-3 w-full text-[11px]">
                                                         
                                                         <span class="text-[10px] w-6 shrink-0" 
@@ -205,7 +198,6 @@
                                                             <span x-show="item.type === 'note'">📋</span>
                                                             </span>
                                                         <span x-show="item.is_flagged" class="text-[10px] shrink-0 animate-pulse" title="Markiert">📌</span>
-
                                                         <span class="flex-1 font-medium truncate transition-colors"
                                                             :class="{
                                                                 'text-emerald-600 dark:text-emerald-400': item.critical === 'green',
@@ -236,16 +228,13 @@
                                                 </div>
                                                 
                                             </template>
-
                                         </div>
                                     </div>
                                 </template>
-
                             </div>
                         </div>
                     </template>
                 </div>
-
             </div>
             
             <div x-show="activeTab === 'notifications'" class="space-y-3">
@@ -272,9 +261,7 @@
                     <div x-show="!notifications || notifications.length === 0" class="text-center py-8 text-xs text-slate-400 italic">Keine neuen Mitteilungen.</div>
                 </div>
             </div> 
-
         </div>
-
         <div class="p-3 bg-white dark:bg-gray-800 border-t border-slate-200 dark:border-gray-700 flex gap-2 shrink-0 sticky bottom-0 z-10 shadow-lg-top">
             <button @click="triggerOllama()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold py-2 rounded-lg transition-colors flex items-center justify-center space-x-1 shadow-sm">
                 <span>🧠</span> <span>KI Kontext</span>
@@ -283,6 +270,5 @@
                 HA: <span class="ml-1 font-bold text-blue-500" x-text="typeof haStatus !== 'undefined' ? haStatus : 'Verbunden'"></span>
             </div>
         </div>
-
     </aside>
 </div>

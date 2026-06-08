@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 // Kern-Logik der Komponente
 const mailViewComponent = () => ({
     currentMailUrl: 'about:blank',
@@ -14,19 +23,15 @@ const mailViewComponent = () => ({
         // 1. Hash aus der URL extrahieren und säubern
         const rawHash = window.location.hash; // Gibt z.B. '#hash-ID' oder '#ID' zurück
         const hashValue = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;
-
         if (hashValue) {
             this.currentMailHash = hashValue;
         }
-
         // 2. Infinite Scroll initialisieren
         this.initInfiniteScroll();
-
         // 3. Mails initial laden (warten, bis die Liste da ist)
         if (this.$data.isOnline) {
             await this.loadMails(false);
         }
-
         // 4. Logik: Direkt auf Hash reagieren, falls vorhanden
         if (hashValue) {
             this.isSidebarOpen = false;
@@ -48,14 +53,12 @@ const mailViewComponent = () => ({
                     console.error("Fehler beim Abrufen der Mail via API:", error);
                 }
             }
-
             // Mail anzeigen, wenn sie entweder lokal oder per API gefunden wurde
             if (foundMail) {
                 this.viewMail(foundMail);
             } else {
                 console.warn("Mail mit Hash konnte nicht gefunden werden.");
             }
-
             // Kontakt-Suche für diese Mail ausführen
             try {
                 const contactData = await apiCall('get_emails_by_hash', { hash: hashValue }, 'GET');
@@ -64,7 +67,6 @@ const mailViewComponent = () => ({
             } catch (error) {
                 console.error("Fehler beim Laden der Kontakte zum Hash:", error);
             }
-
         } else {
             // --- Such-Watcher nur aktivieren, wenn KEIN Hash aufgerufen wurde ---
             this.$watch('mailSearchQuery', (val) => {
@@ -75,13 +77,11 @@ const mailViewComponent = () => ({
                 }, 300);
             });
         }
-
         // DOM-Tick abwarten für Refs
         this.$nextTick(() => {
             console.log("Mail-Liste Ref:", this.$refs.mailList); 
         });
     },
-
     get filteredMails() {
         if (!this.mailSearchQuery || !this.mailSearchQuery.trim()) {
             return this.mails;
@@ -95,7 +95,6 @@ const mailViewComponent = () => ({
             return subject.includes(query) || sender.includes(query) || date.includes(query);
         });
     },
-
     // --- Unter deinen CORE AKTIONEN hinzufügen ---
     switchFolder(newFolder) {
         // Wenn wir schon in dem Ordner sind, nichts tun
@@ -111,13 +110,10 @@ const mailViewComponent = () => ({
         this.hasMore = true;
         this.currentHash = null; 
         this.currentMail = null;
-
         const searchInput = document.getElementById('search-input');
         if (searchInput) { searchInput.value = ''; currentSearch = ''; }
-
         // Aktiviere visuellen Klick-Zustand in der Navigation (Optional)
         document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
-
         const activeEl = document.getElementById(`folder-${this.currentFolder}`);
         if (activeEl) activeEl.classList.add('active');
         
@@ -137,39 +133,30 @@ const mailViewComponent = () => ({
         console.log(append);
         // Abbruch, wenn bereits geladen wird oder wir am Ende sind (bei nicht-Suche)
         if (this.loading || (append && !this.hasMore)) return;
-
         this.loading = true;
-
         // Reset der Seite bei frischem Laden
         if (!append) {
             this.$data.page = 1;
             this.hasMore = true;
         }
-
         try {
             const isSearch = (typeof this.mailSearchQuery === 'string' && this.mailSearchQuery.trim().length > 0)
             const folder = this.currentFolder;
             const params = isSearch 
                 ? { folder: folder, query: this.mailSearchQuery } 
                 : { folder: folder, page: this.$data.page, limit: this.$data.limit };
-
             // 2. Aktion bestimmen
             const action = isSearch ? 'search_mail' : 'list_mails';
-
             // 3. Aufruf über die neue API-Brücke
             const jResponse = await apiCall(action, params, 'GET');
-
             // 4. Zugriff auf die Daten
             const fetchedMails = jResponse.details?.mails || [];
-
             const receivedCount = fetchedMails.length;
-
             if (jResponse?.success && jResponse.details?.mails) {
                 // Sicherstellen, dass mails immer ein Array ist
                 const fetchedMails = Array.isArray(jResponse.details.mails) 
                     ? jResponse.details.mails 
                     : Object.values(jResponse.details.mails);
-
                 if (append) {
                     this.mails.push(...fetchedMails);
                 } else {
@@ -177,7 +164,6 @@ const mailViewComponent = () => ({
                     this.mails = fetchedMails;
                     console.log("Liste wurde für neue Suche geleert und neu befüllt.");
                 }
-
                 // Paging Logik: Nur bei normaler Liste erhöhen, Suche hat kein Paging
                 if (!isSearch) {
                     this.page++;
@@ -185,7 +171,6 @@ const mailViewComponent = () => ({
                 } else {
                     this.hasMore = false; // Infinite Scroll bei Suche deaktivieren
                 }
-
                 localStorage.setItem('cached_mails', JSON.stringify(this.mails));
             } else {
                 // Wenn keine Ergebnisse: Liste leeren bei neuer Suche
@@ -199,7 +184,6 @@ const mailViewComponent = () => ({
             this.loading = false;
         }
     },
-
     // Mail in DB einspeichern
     async fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
@@ -208,10 +192,8 @@ const mailViewComponent = () => ({
         
         let parsedName = '';
         let parsedEmail = '';
-
         // Regex sucht nach dem Muster: Text <inhalt>
         const match = rawSender.match(/^([^<]*)\s*<([^>]+)>/);
-
         if (match) {
             // match[1] ist alles VOR der Klammer, match[2] ist der Inhalt der Klammer
             parsedName = match[1].trim();
@@ -221,11 +203,9 @@ const mailViewComponent = () => ({
             parsedEmail = rawSender.trim();
             parsedName = parsedEmail.split('@')[0]; // Nimmt den Teil vor dem @ als Namens-Vorschlag
         }
-
         //hast ist die ID gehasht
         //this.autoLinkContact(parsedName, parsedEmail, hash);
     },
-
     // wird von viewMails aufgerufen, um mail in db zu speichen
     async autoLinkContact(name, email, hash) 
     {
@@ -241,11 +221,8 @@ const mailViewComponent = () => ({
             console.error("Fehler beim AutoLink:", err);
         }
     },
-
     async viewMail(mail) {
-
         if (!mail?.hash) return;
-
         this.$data.currentMail = mail;
         this.mailLoading = true; 
         
@@ -266,7 +243,6 @@ const mailViewComponent = () => ({
             this.mailLoading = false;
         }
     },        
-
     async moveToDMS(mail) {
         if (!this.isOnline || !mail?.hash) return;
     
@@ -277,7 +253,6 @@ const mailViewComponent = () => ({
             console.error("Fehler beim Verschieben ins DMS:", err);
         }
     },
-
     async deleteMail(mail) 
     {
         confirmAction('Diese Mail wirklich löschen?', async() => {
@@ -303,7 +278,6 @@ const mailViewComponent = () => ({
         });
         
     },
-
     async trackFoldersSilent(showLoadingIndicator, folderName = 'INBOX') {
         if (showLoadingIndicator) this.loading = true;
         let syncSuccess = false;
@@ -318,13 +292,11 @@ const mailViewComponent = () => ({
         } finally {
             if (showLoadingIndicator) this.loading = false;
         }
-
         // Erst JETZT feuern, wenn der Loader (this.loading) garantiert wieder false ist!
         if (syncSuccess && this.currentFolder === folderName) {
             await this.loadMailsSilent();
         }
     },
-
     // Wartet, bis das Fenster komplett geladen ist, bevor die Loops starten
     startBackgroundSyncDelayed() {
         setTimeout(() => {
@@ -332,7 +304,6 @@ const mailViewComponent = () => ({
             this.startBackgroundSync();
         }, 500);
     },
-
     // Startet die Schleife für den Hintergrund-Sync sauber und sicher
     startBackgroundSync() {
         // Schleife 1: Reiner Mail-Refresh
@@ -347,21 +318,17 @@ const mailViewComponent = () => ({
             setTimeout(refreshMails, 30000); 
         };
         refreshMails();
-
         // Schleife 2: IMAP-Ordner-Sync (vom Mail-Refresh entkoppelt)
         const runFolderSyncLoop = async () => {
             if (this.$data.isOnline) {
                 const foldersToSync = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
                 const LIMIT = 20; // Muss exakt mit deinem PHP $maxNewMailsLimit übereinstimmen
-
                 // Der Loop läuft entkoppelt im Hintergrund
                 (async () => {
                     for (const folder of foldersToSync) {
                         let keepSyncing = true;
                         let safetyBuffer = 0; // Verhindert Endlosschleifen bei PHP-Fehlern
-
                         console.log(`⏱️ Starte Tiefen-Sync für Ordner: ${folder}`);
-
                         while (keepSyncing && safetyBuffer < 10) {
                             try {
                                 // Führe den Sync aus und warte auf das echte Ergebnis aus PHP
@@ -373,7 +340,6 @@ const mailViewComponent = () => ({
                                 
                                     const addedCount = parseInt(jResponse.added || 0);
                                     console.log(`📥 [${folder}] ${addedCount} Mails importiert.`);
-
                                     // Wenn das Limit erreicht wurde, gibt es vermutlich noch mehr Mails!
                                     if (addedCount === LIMIT) {
                                         console.log(`🔄 Limit von ${LIMIT} erreicht. Triggere sofort den nächsten Durchlauf für ${folder}...`);
@@ -396,30 +362,25 @@ const mailViewComponent = () => ({
                     }
                 })();
             }
-
             // Wenn alle Ordner glattgezogen sind, in 60 Sekunden von vorne prüfen
             setTimeout(runFolderSyncLoop, 60000);
         };
         // Erster Durchlauf nach 5 Sekunden, um dem initialen Laden Vorrang zu geben
         setTimeout(runFolderSyncLoop, 5000);
     },
-
     /** lädt E-Mails in der Übersicht, beim Scrollen nach */
     async loadMailsSilent() {
         if (this.$data.loading || this.silentLoading) return; // 🚀 FIX: $data genutzt
         this.silentLoading = true;
-
         if (this.mailSearchQuery && this.mailSearchQuery.length > 0) {
             console.log("Hintergrund-Sync pausiert: Suche ist aktiv.");
             return;
         }
-
         try {
             const params = { limit: 50 };
             if (this.currentFolder) {
                 params.folder = this.currentFolder;
             }
-
             // 2. Aufruf über die neue API-Brücke
             const jResponse = await apiCall('list_mails', params, 'GET');
             
@@ -435,7 +396,6 @@ const mailViewComponent = () => ({
             this.silentLoading = false;
         }
     },
-
     initInfiniteScroll() {
         this.$nextTick(() => {
             const container = document.getElementById('mail-list');
@@ -457,14 +417,12 @@ const mailViewComponent = () => ({
             };
         });
     },
-
     mailLoaded() {
         if (this.currentMailUrl === 'about:blank') return;
         console.log("Mail-Iframe fertig geladen!");
         this.mailLoading = false; 
     }
 });
-
 // Sicherheits-Registrierung am Ende von mail.js
 if (window.Alpine) {
     // Falls Alpine bereits voll geladen ist

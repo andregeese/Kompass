@@ -1,9 +1,15 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Api;
 use App\Services\PaperlessProcessor; // Importiere den Prozessor
 use Exception;
-
-
 class PaperlessController extends \App\Core\BaseController {
     
     /**
@@ -13,21 +19,17 @@ class PaperlessController extends \App\Core\BaseController {
     {
         $hash = $_GET['hash'] ?? $_POST['hash'] ?? null;
         $id   = $_GET['id'] ?? $_POST['id'] ?? null;
-
         if ($hash !== null) {
             $syncResult = $this->mailProcessProc->getSingleMail2Paperless($hash, $id);   
         } else {
             $syncResult = $this->mailProcessProc->getMails2Paperless(2000);
         }
-
         $isSuccess = $syncResult['success'] ?? false;
         $statusType = $isSuccess ? 'success' : 'info_error';
         $errorMessage = !$isSuccess ? ($syncResult['error'] ?? 'Unbekannter Fehler beim Abgleich.') : null;
-
         $this->cleanBuffer();
         return [];
     }
-
     /**
      * Sucht in Paperless nach Dokumenten anhand von 
      * @param string $query
@@ -42,10 +44,8 @@ class PaperlessController extends \App\Core\BaseController {
         }
     
         $documents = $this->paperlessProcess->search($query, $date);
-
         return ['documents' => $documents];
     }
-
     /**
      * Verknüpft die Mail mit Paperless
      */
@@ -53,15 +53,11 @@ class PaperlessController extends \App\Core\BaseController {
     {
         $hash        = $this->request['hash'] ?? null; // Achte auf den Key 'hash', nicht 'id'!
         $paperlessId = $this->request['paperless_id'] ?? null;
-
-
         if (empty($hash) || empty($paperlessId)) {
             throw new \Exception("Fehlende Parameter für das Verknüpfen der E-Mail.");
         }
-
     
         $ret = $this->paperlessProcess->linkMailToPaperless($hash, $paperlessId);
-
         return [
             "paperless"=> $ret,
             "ui" => [
@@ -71,22 +67,18 @@ class PaperlessController extends \App\Core\BaseController {
                 'type'    => 'info'
             ]
         ];
-
     }
-
     public function getCorrespondentById() 
     {
         $query        = $this->request['query'] ?? null;
         
         $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
         $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
-
         return [
             $finalDetails
         ];
         
     }
-
     /**
      * Verbindet Kontakt mit PaperlessKorrespondent
      */
@@ -96,9 +88,7 @@ class PaperlessController extends \App\Core\BaseController {
         $contactid        = $this->request['contactId'] ?? null;
         $correspondentId  = $this->request['correspondentId'] ?? null;
         
-
         $ret = $this->paperlessProcess->linkContact($contactid, $correspondentId);
-
         return [
             "paperless"=> $ret,
             "ui" => [
@@ -108,9 +98,7 @@ class PaperlessController extends \App\Core\BaseController {
                 'type'    => 'info'
             ]
         ];
-
     }
-
     /**
      * Hole alle Korrespondeten
      */
@@ -118,10 +106,8 @@ class PaperlessController extends \App\Core\BaseController {
     {
         $query = $this->request['query'];
         $forceQuery = $this->request['forceQuery'];
-
         error_log("getCorrespondents aufgerufen mit query: " . print_r($_REQUEST, true));
         
-
         if (!empty($forceQuery) && empty($query)) {
             error_log("Suche nach Korrespondenten mit force_query: $forceQuery");
             $searchQuery = $forceQuery;
@@ -133,17 +119,12 @@ class PaperlessController extends \App\Core\BaseController {
             $correspondents = $this->paperlessProcess->getAllCorrespondents($query);
             
             return ['correspondents' => $correspondents];
-
         }else{
-
             $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
             $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
-
             return ['correspondents' => $finalDetails];
-
         }
     }
-
     /**
      * @deprecated
      * Holt die Mails und Korrespondeten zu einer mail
@@ -152,22 +133,15 @@ class PaperlessController extends \App\Core\BaseController {
     {
         
         $hash = $this->request['hash'] ?? null;
-
         //Finde die Mail zu dem hash
         $mailDetails = $this->mailProcess->getMailByHash($hash); 
-
         //Kontakte ermitteln
         $contacts = $this->contactProcess->getEmailsAndContactsByHash($hash, $mailDetails["contact_id"]); 
-
         $paperlessCorres = $contacts[0]["paperless_id"];
-
         $ret = $this->paperlessProcess->getMailTree($hash, $paperlessCorres);
-
         return [$ret];
         
     }
-
-
     /**
      * Erstellt den Baum in ganz schön!
      */
@@ -178,33 +152,27 @@ class PaperlessController extends \App\Core\BaseController {
         if (empty($sender)) {
             throw new \Exception("Kein Absender übergeben");
         }
-
         $paperlessDocs = $this->paperlessProcess->fetchDocumentsFromPaperless($sender); 
-
         // Auch hier die URL dynamisch beziehen
         $settings = $this->dashboard->getTenantSettings($this->tenantId);
         $baseUrl  = rtrim($settings['paperless_url'] ?? (defined('PAPERLESS_API_URL') ? PAPERLESS_API_URL : ''), '/');
-
         $tree = [];
         $monate = [
             1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 
             5 => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August', 
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'
         ];
-
         foreach ($paperlessDocs as $doc) {
             $timestamp = strtotime($doc['created']);
             $year      = date('Y', $timestamp);
             $monthNum  = (int)date('n', $timestamp);
             $monthName = $monate[$monthNum];
-
             $tree[$year][$monthName][] = [
                 'id'    => $doc['id'],
                 'title' => $doc['title'],
                 'link'  => $baseUrl . "/documents/" . $doc['id']
             ];
         }
-
         krsort($tree);
         return ['tree' => $tree];
     }

@@ -1,3 +1,13 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
 <footer class="md:hidden bg-white dark:bg-gray-800 border-t border-slate-200 dark:border-gray-700 h-16 flex items-center justify-around px-2 shrink-0 z-30 shadow-lg">
     <a href="index.php?view=mails" :class="currentView === 'mails' ? 'text-blue-500 font-bold' : 'text-slate-400 dark:text-gray-400'" class="flex flex-col items-center space-y-0.5 transition-colors">
         <span class="text-lg">📬</span><span class="text-[10px]">Mails</span>

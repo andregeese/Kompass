@@ -1,12 +1,19 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 
 namespace App\Services;
 use App\Services\ContactProcessor;
 use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use PDO;
-
-
 /**
  * @property \App\Services\SystemProcessor $systemProcess
  */
@@ -14,11 +21,9 @@ class SystemProcessor extends \App\Core\Database
 {
     use \App\Core\ServiceTrait;
     protected $dashboard;
-
     public function __construct($dashboard =null) {
         $this->dashboard = $dashboard;
     }
-
     /**
      * Prüft, ob die PHP-Installation die benötigten Erweiterungen und Funktionen für das Dashboard unterstützt.
      * @return array Eine Liste von Fehlermeldungen, falls Anforderungen nicht erfüllt sind. Leeres Array bedeutet "alles gut".
@@ -26,12 +31,10 @@ class SystemProcessor extends \App\Core\Database
     public function checkRequirements(): array
     {
         $errors = [];
-
         // Überprüfen der PHP-Version
         if (version_compare(PHP_VERSION, '8.0.0', '<')) {
             $errors[] = "PHP 8.0 oder höher wird benötigt. Aktuelle Version: " . PHP_VERSION;
         }
-
         // Benötigte Erweiterungen
         $requiredExtensions = ['pdo_mysql', 'mbstring', 'openssl'];
         foreach ($requiredExtensions as $ext) {
@@ -39,17 +42,14 @@ class SystemProcessor extends \App\Core\Database
                 $errors[] = "Die PHP-Erweiterung '$ext' ist nicht installiert oder aktiviert.";
             }
         }
-
         return $errors;
     }
-
     public function getPhpInfo(): string
     {
         ob_start();
         phpinfo();
         return ob_get_clean();
     }
-
     public function getSystemInfo(): array
     {
         return [
@@ -59,7 +59,6 @@ class SystemProcessor extends \App\Core\Database
             'os' => PHP_OS,
         ];
     }
-
     public function isSystemReady($maxLoad = 2.5): bool
     {
         // sys_getloadavg() ist unter Linux/Ubuntu standardmäßig verfügbar
@@ -73,7 +72,6 @@ class SystemProcessor extends \App\Core\Database
         }
         return true; // Alles im grünen Bereich
     }
-
     /**
      * Repariert verwaiste E-Mail-Zuordnungen für den aktuellen Tenant.
      * Nutzt die universelle queryIt()-Methode der Elternklasse.
@@ -82,22 +80,18 @@ class SystemProcessor extends \App\Core\Database
     {
         header('Content-Type: application/json');
         $tenantId = $_SESSION['tenant_id'] ?? null; 
-
         if (!$tenantId) {
             echo json_encode(['success' => false, 'error' => 'Keine Session.']);
             exit;
         }
-
         try {
             // 1. Alle verwaisten Mails holen
             $sqlGetUnlinked = "SELECT id, sender FROM mails WHERE contact_id IS NULL AND tenant_id = :tenant_id";
             $unlinkedMails = $this->queryIt($sqlGetUnlinked, ['tenant_id' => $tenantId]);
-
             if (empty($unlinkedMails)) {
                 echo json_encode(['success' => true, 'message' => 'Alles bereits zugeordnet.']);
                 exit;
             }
-
             // 2. Suche exakt die ID aus contact_emails (nicht contacts!)
             $sqlFindEmailEntry = "
                 SELECT ce.id 
@@ -110,11 +104,9 @@ class SystemProcessor extends \App\Core\Database
             
             // 3. Update auf contact_emails.id (FOREIGN KEY Ziel)
             $sqlUpdateMail = "UPDATE mails SET contact_id = :ce_id WHERE id = :mail_id";
-
             $repairedCount = 0;
             $createdCount = 0;
             $contact = new ContactProcessor($this->dashboard);
-
             foreach ($unlinkedMails as $mail) {
                 // Regex: Extrahiere E-Mail aus "Name <mail@test.de>" oder nur "mail@test.de"
                 $senderRaw = $mail['sender'];
@@ -124,17 +116,13 @@ class SystemProcessor extends \App\Core\Database
                     $email = trim($senderRaw);
                 }
                 $email = strtolower($email);
-
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
-
                 // Suche nach der ID in contact_emails
                 $result = $this->queryIt($sqlFindEmailEntry, [
                     'email' => $email,
                     'tenant_id' => $tenantId
                 ]);
-
                 $ceId = !empty($result) ? $result[0]['id'] : null;
-
                 // Fall: E-Mail noch nicht im System -> Neu anlegen
                 if (!$ceId) {
                     $name = preg_replace('/<.*?>/', '', $senderRaw);
@@ -147,7 +135,6 @@ class SystemProcessor extends \App\Core\Database
                 } else {
                     $repairedCount++;
                 }
-
                 // Update mit der ID aus contact_emails
                 if ($ceId) {
                     $this->queryIt($sqlUpdateMail, [
@@ -156,15 +143,12 @@ class SystemProcessor extends \App\Core\Database
                     ]);
                 }
             }
-
             echo json_encode(['success' => true, 'repaired' => $repairedCount, 'created' => $createdCount]);
-
         } catch (\Exception $e) {
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
     }
-
     /**
      * Testet die Verbindung und gibt eine Liste der Ordner wieder
      */
@@ -179,14 +163,12 @@ class SystemProcessor extends \App\Core\Database
         if (!$mbox) {
             throw new \Exception("Konnte keine Verbindung aufbauen: " . imap_last_error());
         }
-
         $mailboxes = @imap_list($mbox, $connectionString, "*");
         
         if ($mailboxes === false) {
             imap_close($mbox);
             throw new \Exception("Konnte keine Ordner auflisten: " . imap_last_error());
         }
-
         $folders = [];
         foreach ($mailboxes as $mailbox) {
             // Pfad-Präfix entfernen, um nur den Namen zu behalten
@@ -196,7 +178,6 @@ class SystemProcessor extends \App\Core\Database
         imap_close($mbox);
         return $folders; // Rückg
     }
-
     // NEU: Eine statische Brücke
     public static function getStaticEnv(string $key) {
         // Hier greifen wir direkt auf die Umgebung zu, 
@@ -219,7 +200,6 @@ class SystemProcessor extends \App\Core\Database
         }
         return $value;
     }
-
     /**
      * tbd: $tenant_id = null
      */
@@ -236,7 +216,6 @@ class SystemProcessor extends \App\Core\Database
         
         // 1. Priorität: .env Datei
         $envPath = ROOT_PATH .'/.env';
-
         if (file_exists($envPath)) {
             #error_log("Suche in .env $key");
             $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -252,18 +231,15 @@ class SystemProcessor extends \App\Core\Database
         }else{
             throw new \Exception("### .env ($envPath) nicht gefunden!! ###");
         }
-
         // 2. Priorität: Datenbank (tenant_config)
         if ($tenantId) {
             error_log("search Key In DB: " . $key);
             #error_log("Suche in .env $key");
-
             $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tid LIMIT 1";
             $params=[
                 'key' => $key, 'tid' => $tenantId
             ];
             $dbResult = $this->queryit($sql, $params, false, false, false);
-
             if ($dbResult->success && !empty($dbResult->data->fetched)) {
                 $row = $dbResult->data->fetched;
             
@@ -289,16 +265,13 @@ class SystemProcessor extends \App\Core\Database
                         return $decrypted;
                     }
                 }
-
                 return $value;
             }
         }
-
         // 3. Wenn nirgendwo gefunden -> Exception
         error_log("KRITISCHER FEHLER: Konfigurations-Key {$key} weder in .env noch in DB gefunden.");
         throw new \Exception("System-Konfiguration unvollständig: {$key} konnte nicht geladen werden.");
     }
-
     private function getMasterKeyFromEnv(): string 
     {
         $envPath = __DIR__ . '/../../.env';
@@ -306,7 +279,6 @@ class SystemProcessor extends \App\Core\Database
         if (!file_exists($envPath)) {
             throw new \Exception("Kritischer Fehler: .env Datei nicht gefunden.");
         }
-
         $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
             // Ignoriere Kommentare
@@ -324,7 +296,6 @@ class SystemProcessor extends \App\Core\Database
                 }
             }
         }
-
         throw new \Exception("APP_KEY in .env Datei nicht definiert.");
     }
 }

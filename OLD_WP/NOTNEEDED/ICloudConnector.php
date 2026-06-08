@@ -1,38 +1,38 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 <?php
 namespace App;
-
 use Sabre\DAV\Client;
-
 class ICloudConnector extends Database{
     private $tenantId;
     private $settings;
-
     use ServiceTrait;
     protected $dashboard;
-
     public function __construct($tenantId, $dashboard) {
         $this->tenantId = $tenantId;
         parent::__construct($dashboard);
         $this->dashboard = $dashboard;
     }
-
     public function getAppointments() {
         // Daten aus der DB holen
         $user = $this->systemProcess->getRequiredEnv(['IMAP_USER'], $tenantId) ?? null;
         $pass = $this->systemProcess->getRequiredEnv(['IMAP_PASSWORD'], $tenantId) ?? null;
-
         if (!$user || !$pass) {
             throw new \Exception("iCloud Zugangsdaten fehlen.");
         }
-
         $settings = [
             'baseUri' => 'https://caldav.icloud.com/',
             'userName' => $user,
             'password' => $pass,
         ];
-
         $client = new Client($settings);
-
         // Hier müsstest du die URL deines speziellen Kalenders abrufen.
         // Vereinfacht: Anfrage an den Server zur Synchronisation
         try {

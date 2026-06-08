@@ -1,18 +1,24 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 const rightSidebarComponent = () => ({
     isOpen: false,
     ollamaActive: true,
     haStatus: 'Verbunden',
     notifications: [],
     activeTab: 'context',
-
     showManualForm: false,
-
     manualSearchQuery: '',
     paperlessLoading: false,
     paperlessMatches: [],
     paperlessDMSMatches: [],
     paperlessTree: {},
-
     //CRM
     contactState: null,
     crmLoading: false,
@@ -30,21 +36,16 @@ const rightSidebarComponent = () => ({
     currentSearchQuery: '',
     timelineData: [],
     paperlessContacts: [],
-
     async initSidebar() {
-
         console.log("Smart Context Hub erfolgreich initialisiert.");
-
         // ⚡ DIREKT-FILL BEIM START: Falls beim Öffnen der Sidebar schon eine Mail aktiv ist
         // Prüfe alle typischen Pfade, wo die mail.js die aktuelle Mail hält
         const initialMail = this.$data?.currentMail 
                          || window.mailComponent?.currentMail 
                          || (typeof currentMail !== 'undefined' ? currentMail : null);
-
         if (initialMail) {
             this.fillSidebarWithMailData(initialMail);
         }
-
         // Event-Listener für manuelle Sidebar-Requests (z.B. Button-Klicks)
         document.addEventListener('toggle-sidebar-request', (e) => {
             if (!this.isOpen) {
@@ -62,7 +63,6 @@ const rightSidebarComponent = () => ({
                 }
             }
         });
-
         // REAKTIVER WATCHER (Wenn die Mail gewechselt wird, während die Sidebar offen ist)
         this.$watch(() => this.$data.currentMail, (newMail) => {
             if (newMail) {
@@ -71,11 +71,9 @@ const rightSidebarComponent = () => ({
                 this.clearSidebarData();
             }
         });
-
         document.addEventListener('notifications-updated', (e) => {
             this.notifications = [...e.detail];
         });
-
         document.addEventListener('system:low_memory', () => {
             this.handleLowMemoryShutdown();
         });
@@ -86,21 +84,17 @@ const rightSidebarComponent = () => ({
             this.selectedPaperlessId = this.contactState.contact.paperless_id;
         }
     },
-
     // 🛠️ Hilfsfunktion: Füllt alle Sidebar-Felder radikal aus dem Mail-Objekt vor
     fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
         
-
         // Das kommt direkt vom Mail-Sender (z.B. "VR-Bank Freudenberg-Niederfischbach eG <info@vr-bank-fn.de>")
         const rawSender = mail.sender || mail.from || ''; 
         
         let parsedName = '';
         let parsedEmail = '';
-
         // Regex sucht nach dem Muster: Text <inhalt>
         const match = rawSender.match(/^([^<]*)\s*<([^>]+)>/);
-
         if (match) {
             // match[1] ist alles VOR der Klammer, match[2] ist der Inhalt der Klammer
             parsedName = match[1].trim();
@@ -110,12 +104,10 @@ const rightSidebarComponent = () => ({
             parsedEmail = rawSender.trim();
             parsedName = parsedEmail.split('@')[0]; // Nimmt den Teil vor dem @ als Namens-Vorschlag
         }
-
         // Jetzt die bereinigten Werte in deine Sidebar-Felder jagen
         this.formData.email = parsedEmail;
         this.formData.name = parsedName;
         this.formData.type = 'company';
-
         // Starte DMS & CRM Abfragen im Hintergrund
         //this.searchDMS();
         //this.loadPaperlessTree(mail);
@@ -124,7 +116,6 @@ const rightSidebarComponent = () => ({
             this.checkCRMStatus(mail.hash);
         }
     },
-
     // 🛠️ Hilfsfunktion: Leert die Daten sauber
     clearSidebarData() {
         this.paperlessMatches = [];
@@ -132,7 +123,6 @@ const rightSidebarComponent = () => ({
         this.formData = { name: '', email: '', type: 'company' };
         this.contactState = null;
     },
-
     // 🚀 NEW CHRONOLOGICAL TIMELINE TREE
     async getTimelineofContact() {
         // Zieht sich die Mail primär aus Alpine, nutzt initialMail als Fallback
@@ -145,7 +135,6 @@ const rightSidebarComponent = () => ({
         try {
             const params = { hash: mail.hash };
             const data = await apiCall('get_contact_timeline', params, 'GET');
-
             //wichtig, reagiert auf timelineData!!
             if (data && data.success && data.details) {
                 this.timelineData = data.details.timeline ? data.details.timeline : data.details;
@@ -157,15 +146,12 @@ const rightSidebarComponent = () => ({
             console.error("Fehler beim Laden der Timeline:", err);
         }
     },
-
     // 🚀 DMS VERLAUF (ACTION: paperless_mail_tree -> details.tree)
     async loadPaperlessTree(mail) {
         const searchQuery = mail ? (mail.subject || '') : '';
         const mailHash = mail ? (mail.hash || '') : '';
-
         try {
             const data = await apiCall('paperless_mail_tree', {query:searchQuery, hash:mailHash}, 'GET');
-
             if (data?.success && data.details?.tree) {
                 this.paperlessTree = data.details.tree;
             } else {
@@ -176,17 +162,14 @@ const rightSidebarComponent = () => ({
             this.paperlessTree = {};
         }
     },
-
     // 🚀 DMS SUCHE (ACTION: paperless_search -> details.documents)
     async searchDMS() {
         console.log("SEARCH DMS:" + this.manualSearchQuery);
-
         if (!this.manualSearchQuery.trim() || this.manualSearchQuery=="" ) {
             console.log("Reset manualSearch");
             this.paperlessDMSMatches = [];
             return;
         }
-
         //this.paperlessLoading = true;
         try {
             const data = await apiCall('paperless_search', {query:this.manualSearchQuery}, 'GET');
@@ -205,7 +188,6 @@ const rightSidebarComponent = () => ({
             //this.paperlessLoading = false;
         }
     },
-
     async linkToPaperless(documentId) {
         const mail = this.$data.currentMail;
         if (!mail || !mail.hash) return;
@@ -221,16 +203,13 @@ const rightSidebarComponent = () => ({
             console.error("Fehler beim Matchen:", err);
         }
     },
-
     async unlinkFromPaperless() {
         const mail = this.$data.currentMail;
         if (!mail || !mail.hash) return;
         if (!confirm('Möchtest du die Verknüpfung wirklich aufheben?')) return;
-
         try {
             const url = `api.php?action=unlink_mail_from_paperless`;
             const data = await apiCall('unlink_mail_from_paperless', { hash: mail.hash }, 'POST');
-
             if (data?.success) {
                 this.$data.currentMail.paperless_id = null;
                 this.manualSearchQuery = mail.subject || '';
@@ -242,7 +221,6 @@ const rightSidebarComponent = () => ({
             console.error("Fehler beim Lösen:", err);
         }
     },
-
     toggleSidebar(tab = 'context') {
         if (!this.isOpen) {
             this.isOpen = true;
@@ -253,24 +231,20 @@ const rightSidebarComponent = () => ({
             this.activeTab = tab;
         }
     },
-
     closeAndReset() {
         // 1. Sidebar schließen & Tabs zurücksetzen
         this.isOpen = false;
         this.activeTab = 'context';
         this.showManualForm = false;
-
         // 2. Bestehende Such- und DMS-Inhalte leeren
         this.manualSearchQuery = '';
         this.paperlessMatches = [];
         this.paperlessTree = {};
         this.paperlessLoading = false;
         this.selectedCorrespondents = [];
-
         // 🚀 3. NEU: CRM-Kontext & Timeline komplett zurücksetzen
         this.contactState = { success: false, contact: null };
         this.timelineData = [];
-
         // 4. Formular-Felder für manuelle Erfassung leeren
         this.formData = {
             email: '',
@@ -278,15 +252,12 @@ const rightSidebarComponent = () => ({
             type: 'company'
         };
     },
-
     clearNotification(id) {
         this.notifications = this.notifications.filter(n => n.id !== id);
     },
-
     clearAllNotifications() {
         this.notifications = [];
     },
-
     handleLowMemoryShutdown() {
         if (this.ollamaActive) {
             this.ollamaActive = false;
@@ -296,13 +267,11 @@ const rightSidebarComponent = () => ({
             this.haStatus = 'Offline (Gestoppt)';
         }
     },
-
     async searchPaperlessContacts(searchTerm) {
         // Wenn das Feld leer ist, müssen wir nicht suchen
         if (!searchTerm || searchTerm.trim().length < 2) {
             return; 
         }
-
         try {
             // Ersetze 'query' durch den Parameter, den deine api.php erwartet
             const data = await apiCall('get_correspondets', {force_query:searchTerm}, 'GET');
@@ -312,7 +281,6 @@ const rightSidebarComponent = () => ({
                 this.$nextTick(() => {       // Warten bis DOM verarbeitet wurde
                     this.paperlessContacts = data.details.contacts;
                 });
-
                 // ID-Zuordnung: Automatisches Finden beim Tippen
                 const match = this.paperlessContacts.find(c => 
                     c.name?.toLowerCase() === searchTerm.toLowerCase()
@@ -329,7 +297,6 @@ const rightSidebarComponent = () => ({
             console.error('Fehler bei der Live-Suche:', error);
         }
     },
-
     updateFormFromPaperless() {
         // Wenn im Dropdown ein Kontakt gewählt wird, befüllen wir das Formular automatisch
         const selected = this.paperlessContacts.find(c => c.id == this.selectedPaperlessId);
@@ -339,24 +306,20 @@ const rightSidebarComponent = () => ({
             if (selected.email) this.formData.email = selected.email;
         }
     },
-
     /* Prüft, ob der Absender bereits im CRM existiert oder ein DMS-Vorschlag vorliegt
     @param hash = mail.id gehasht
     */
     async checkCRMStatus(hash) 
     {
         console.log("checkCRMStatus");
-
         this.crmLoading = true;
         this.dmsLoading = true;
-
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
             const data = await apiCall('search_contact', {hash:hash}, 'GET');
             
             if (data?.success && data?.details?.contact) {
                 const c = data.details.contact[0];
-
                 this.$data.contactState = {
                     success: true,
                     contact: {
@@ -367,7 +330,6 @@ const rightSidebarComponent = () => ({
                         emails: c.additional_emails ? c.additional_emails.split(', ') : []
                     }
                 };  
-
                 // 2. Formular-Daten befüllen, aber Formular ZU lassen (da Kontext existiert)
                 this.formData.name = c.display_name;
                 this.formData.email = c.additional_emails ? c.additional_emails.split(', ')[0] : '';
@@ -400,7 +362,6 @@ const rightSidebarComponent = () => ({
             //console.log(this.data?.contactState);
         }
     },
-
     // Wird abgefeuert, wenn man im Suchschlitz Enter drückt oder auf die Lupe klickt
     async triggerManualDMSSearch() {
         // 1. Suche nach Dokumenten (braucht KEINEN Mail-Hash, läuft immer!)
@@ -408,12 +369,10 @@ const rightSidebarComponent = () => ({
             this.searchDMS(); 
         }
     },
-
     // Erstellt den neuen CRM-Kontakt über die Sidebar
     async saveContact() {
         if (!this.formData.name) return alert('Bitte einen Namen eingeben.');
         this.crmLoading = true;
-
         try {
             const data = await apiCall('insert_contact', this.formData, 'POST');
             
@@ -430,16 +389,13 @@ const rightSidebarComponent = () => ({
             this.crmLoading = false;
         }
     },
-
     // Hebt relevante Suchbegriffe (z. B. aus dem Betreff) im Notiz-Inhalt gelb hervor
     highlightText(text) {
         const subject = this.$data.currentMail?.subject;
         if (!subject || !text) return text;
-
         // Nutzt die ersten Wörter des Betreffs als Keyword-Matching
         const keywords = subject.split(' ').filter(word => word.length > 4);
         if (keywords.length === 0) return text;
-
         let highlighted = text;
         keywords.forEach(word => {
             const cleanWord = word.replace(/[^a-zA-Z0-9]/g, '');
@@ -447,10 +403,8 @@ const rightSidebarComponent = () => ({
             const regex = new RegExp(`(${cleanWord})`, 'gi');
             highlighted = highlighted.replace(regex, '<mark class="bg-amber-200 dark:bg-amber-500/40 text-slate-900 dark:text-white px-0.5 rounded">$1</mark>');
         });
-
         return highlighted;
     },
-
     // Formatiert Datumswerte für das UI
     formatDate(dateStr) {
         if (!dateStr) return '';

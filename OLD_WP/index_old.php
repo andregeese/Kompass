@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 <?php
 // index.php
 $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js') : time();
@@ -14,7 +23,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
     
     <script src="script/dashboard.js?v=<?php echo $jsVersion; ?>"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <style>
         body {
             -webkit-tap-highlight-color: transparent;
@@ -31,7 +39,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
             -webkit-overflow-scrolling: touch;
         }
         [x-cloak] { display: none !important; }
-
         #mail-preview-iframe {
             background-color: #ffffff;
         }
@@ -42,7 +49,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
     x-init="trackFoldersSilent(true); startBackgroundSync(); activeTab = 'paperless'; isOpen = false;"
     class="h-full bg-slate-50 text-slate-800 font-sans overflow-hidden antialiased flex flex-col justify-between"
 >
-
     <!-- NAVBAR -->
     <nav class="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm h-[56px]">
         <div class="flex items-center justify-between w-full">
@@ -60,7 +66,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                     <span x-html="serverInfoHtml" class="text-slate-700"></span>
                 </div>
             </div>
-
             <div class="flex items-center gap-2">
                 <button 
                     class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm" 
@@ -71,7 +76,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                     <span x-show="loading" class="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full" role="status"></span>
                     <span>Server Sync</span>
                 </button>
-
                 <button 
                     class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm" 
                     @click="syncPaperless()"
@@ -84,7 +88,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
             </div>
         </div>
     </nav>
-
     <!-- MAIN INTERFACE -->
     <main class="flex-1 flex overflow-hidden relative h-[calc(100vh-56px-50px)] lg:h-[calc(100vh-56px)] bg-slate-50">
         
@@ -111,7 +114,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                         Done
                     </button>
                 </div>
-
                 <div class="relative">
                     <div class="relative flex items-center">
                         <span class="absolute left-3 text-slate-400 text-xs"><i class="bi bi-search"></i></span>
@@ -139,7 +141,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                     </div>
                 </div>
             </div>
-
             <!-- E-Mail Liste -->
             <div class="scroll-column flex-1 p-3 space-y-2.5" id="mail-list">
                 <template x-for="mail in filteredMails" :key="mail.hash">
@@ -153,7 +154,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                         
                         <div class="absolute inset-0 z-10 cursor-pointer" 
                             @click="selectedHash = mail.hash; viewMail(mail); loadPaperlessTreeByMail(mail.hash); showMobilePreview = true; activeTab = 'paperless'; isOpen = false;"></div>
-
                         <div class="relative z-20 pointer-events-none flex flex-col gap-1.5 w-full">
                             <div class="flex w-full justify-between items-start gap-3">
                                 <strong class="text-xs font-semibold text-slate-900 truncate max-w-[75%]" x-text="mail.subject"></strong>
@@ -174,7 +174,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                                     title="Löschen" @click.stop="deleteMail(mail)">🗑️</button>
                                         </div>
                                     </template>
-
                                     <button class="h-8 border font-bold text-[10px] px-2.5 rounded-lg transition uppercase tracking-wider shadow-sm cursor-pointer" 
                                             x-show="currentFolder !== 'DMSDone'"
                                             :class="(currentFolder === 'DMS') && mail.paperless_id ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white hover:bg-slate-50 text-blue-600 border-slate-200'" 
@@ -183,7 +182,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                     </button>
                                 </div>
                             </div>
-
                             <div class="mt-2 space-y-1 pointer-events-auto" 
                                 x-show="mail.paperless_id && (currentFolder === 'DMS' || currentFolder === 'DMSDone')" 
                                 x-cloak>
@@ -201,14 +199,12 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                         </div>
                     </div>
                 </template>
-
                 <div class="text-center py-4 flex items-center justify-center gap-2" :class="loading ? '' : 'hidden'">
                     <div class="animate-spin inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
                     <span class="text-xs text-slate-400">Mails werden geladen...</span>
                 </div>
             </div>
         </section>
-
         <!-- RECHTER BEREICH: INHALT & DMS ZUORDNUNG -->
         <section class="fixed lg:static inset-0 w-full lg:w-auto lg:flex-1 bg-slate-50 z-[1050] lg:z-10 flex flex-col overflow-hidden transition-transform duration-300" 
                  :class="showMobilePreview ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'">
@@ -232,7 +228,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                     </button>
                 </div>
             </div>
-
             <div class="flex flex-col lg:flex-row h-full w-full overflow-hidden">
                 
                 <!-- SPALTE 2: IFRAME E-MAIL VIEW -->
@@ -255,7 +250,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                 </svg>
                                 <span class="text-xs font-medium text-slate-500 animate-pulse">Lade E-Mail via IMAP...</span>
                             </div>
-
                             <iframe 
                                 id="mail-preview-iframe"
                                 class="w-full h-full border-none hidden"
@@ -263,13 +257,11 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                             </iframe>
                         </div>
                     </div>
-
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12" x-show="!currentHash">
                         <div class="text-4xl mb-3">📥</div>
                         <h5 class="text-sm font-semibold text-slate-400">Keine E-Mail ausgewählt</h5>
                     </div>
                 </div>
-
                 <!-- SPALTE 3: PAPERLESS COUPLING & SYNC LOGS -->
                 <div class="scroll-column w-full lg:w-[500px] p-4 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-100/40 shrink-0 pb-24 lg:pb-4 flex flex-col justify-between overflow-y-auto gap-4"
                      :class="{'hidden lg:flex': activeTab !== 'paperless', 'flex': activeTab === 'paperless'}">
@@ -298,7 +290,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                 <span class="absolute left-3 top-2 text-slate-400 text-xs">🔍</span>
                                 <input type="text" id="manualSearchQuery" class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition" placeholder="Manuelle Suche..." x-model="manualSearchQuery">
                             </div>
-
                             <div class="space-y-3">
                                 <div class="text-center text-slate-400 py-3 text-xs flex items-center justify-center gap-2" x-show="paperlessLoading">
                                     <div class="animate-spin inline-block w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>Suche im DMS...
@@ -307,7 +298,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                 <template x-if="paperlessMatches.length > 0 && !paperlessLoading">
                                     <h6 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" x-text="'Smarte Treffer (' + paperlessMatches.length + '):'"></h6>
                                 </template>
-
                                 <div class="scroll-column space-y-2 max-h-[220px] pr-1">
                                     <template x-for="doc in paperlessMatches" :key="doc.id">
                                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs shadow-sm border-l-4"                             
@@ -328,7 +318,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                         </div>
                                     </template>
                                 </div>
-
                                 <template x-if="paperlessMatches.length === 0 && !paperlessLoading && currentMailSubject">
                                     <div class="text-center p-4 text-slate-400 border border-dashed border-slate-200 rounded-xl bg-slate-50 text-xs">
                                         Keine Bezüge gefunden.
@@ -336,7 +325,6 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                 </template>
                             </div>
                         </div>
-
                         <!-- ANZEIGE-LOGIK 2: HISTORISCHER BAUM (Tree) -->
                         <!-- Zeigt sich nur, wenn eine ID vorhanden ist UND der Toggle nicht auf Suche geschaltet wurde -->
                         <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-4" 
@@ -374,14 +362,12 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                                         </template>
                                     </div>
                                 </div>
-
                                 <div x-show="paperlessStatusText" class="text-center py-4 bg-slate-50 border border-slate-200 border-dashed rounded-xl">
                                     <p class="text-xs text-slate-500 font-medium" x-text="paperlessStatusText"></p>
                                 </div>
                             </div>
                         </div>
                     </div>
-
                     <!-- DMS SYNC PROTOKOLL -->
                     <div class="bg-slate-900 text-slate-100 font-mono text-[11px] p-4 rounded-xl max-h-[220px] overflow-y-auto space-y-1.5 shadow-inner shrink-0 mt-auto">
                         <h5 class="text-slate-400 border-b border-slate-700 pb-2 uppercase tracking-wider text-[10px] font-bold">DMS Sync Protokoll</h5>
@@ -389,17 +375,14 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
                         <template x-for="(logLine, index) in syncLogs" :key="index">
                             <div x-html="logLine" class="leading-relaxed break-words"></div>
                         </template>
-
                         <template x-if="syncLogs.length === 0 && !paperlessLoading">
                             <div class="text-slate-500 italic text-center py-2">Noch kein Sync-Protokoll verfügbar.</div>
                         </template>
                     </div>
-
                 </div>
             </div>
         </section>
     </main>
-
     <!-- MOBILE FOOTER STATUS BAR -->
     <footer class="mobile-footer fixed-bottom h-[50px] bg-white border-t border-slate-200 flex lg:hidden items-center justify-around px-4 text-slate-500 text-xs shadow-md shrink-0">
         <div class="truncate max-w-[45%] flex flex-col">
@@ -412,6 +395,5 @@ $jsVersion = file_exists('script/dashboard.js') ? filemtime('script/dashboard.js
             <span x-html="serverInfoHtml" class="text-slate-700 truncate"></span>
         </div>
     </footer>
-
 </body>
 </html>

@@ -1,3 +1,13 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
 <div x-data="settingsComponent()" x-init="initSettings()" class="p-6 max-w-4xl mx-auto space-y-6 overflow-y-auto h-full">
     
     <div class="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -7,12 +17,10 @@
         </div>
         <span class="text-3xl">⚙️</span>
     </div>
-
     <div x-show="message.text" 
          :class="message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'"
          class="p-4 rounded-xl border text-xs" x-cloak x-text="message.text">
     </div>
-
     <form @submit.prevent="saveSettings()" class="space-y-6">
         
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
@@ -32,7 +40,6 @@
                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all">
                 </div>
             </div>
-
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">E-Mail / Benutzername</label>
@@ -46,7 +53,6 @@
                     <p class="text-[10px] text-slate-500 mt-1">Wird verschlüsselt gespeichert. Leer lassen, um es nicht zu ändern.</p>
                 </div>
             </div>
-
             <div class="mt-4">
                 <button type="button" 
                         @click="fetchImapFolders()"
@@ -55,7 +61,6 @@
                     <span x-text="loadingFolders ? 'Verbinde...' : 'Verbindung testen & Ordner laden'"></span>
                 </button>
             </div>
-
             <div class="mt-4" x-show="folders.length > 0">
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Sync-Ordner auswählen</div>
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
@@ -71,7 +76,6 @@
                 </div>
             </div>
         </div>
-
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
             <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-2">
                 <span>📄</span> Paperless-ngx Server
@@ -82,7 +86,6 @@
                 <input type="url" x-model="form.paperless_url" placeholder="https://paperless.gfw5home.com" required
                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all">
             </div>
-
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Archiv Name</label>
@@ -97,7 +100,6 @@
                 </div>
             </div>
         </div>
-
         <div class="flex justify-end pt-2">
             <button type="submit" :disabled="loading" 
                     class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-2.5 px-6 rounded-xl transition shadow-lg shadow-blue-950/30 text-sm flex items-center gap-2">

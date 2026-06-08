@@ -1,7 +1,13 @@
 <?php
-
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 namespace App\Core;
-
 /**
  * Zentraler Authentifizierungs-Service
  * Verantwortlich für Session-Management und Fingerprinting.
@@ -21,7 +27,6 @@ class Auth {
             ]);
         }
     }
-
     /**
      * Prüft, ob der Benutzer authentifiziert ist und validiert den Fingerprint.
      */
@@ -30,7 +35,6 @@ class Auth {
                isset($_SESSION['fingerprint']) && 
                $_SESSION['fingerprint'] === self::getFingerprint();
     }
-
     /**
      * Erstellt einen Fingerprint basierend auf User-Agent und Session-ID.
      * Erschwert Session-Hijacking (Diebstahl der Session-ID).
@@ -43,23 +47,18 @@ class Auth {
         
         // Ein statischer "Pepper" schützt vor einfachem Brute-Force des Hashes
         $pepper = 'CRM_SECURE_2026_'; 
-
         return hash('sha256', $pepper . $ua . $lang . session_id());
     }
-
     public static function validateFingerprint(): bool {
         // 1. Prüfen, ob überhaupt ein Fingerprint in der Session hinterlegt ist
         if (empty($_SESSION['fingerprint'])) {
             return false;
         }
-
         // 2. Den aktuellen Fingerprint des Requests berechnen
         $currentFingerprint = self::getFingerprint();
-
         // 3. Vergleichen (hash_equals schützt auch hier vor Timing-Attacken)
         return hash_equals($_SESSION['fingerprint'], $currentFingerprint);
     }
-
     /**
      * Führt den Login durch und regeneriert die Session-ID.
      */
@@ -70,10 +69,8 @@ class Auth {
         $_SESSION['user_id']   = $userId;
         $_SESSION['tenant_id'] = $tenantId;
         $_SESSION['fingerprint'] = self::getFingerprint();
-
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
-
     /**
      * Zerstört die Session sicher.
      */
@@ -88,14 +85,12 @@ class Auth {
         }
         session_destroy();
     }
-
     /**
      * Erzeugt ein Token, falls keines existiert, und speichert es in der Session
      */
     public static function getCSRFToken(): string {
         return $_SESSION['csrf_token'] ?? '';
     }
-
     /**
      * Prüft, ob das gesendete Token mit dem in der Session übereinstimmt
      */

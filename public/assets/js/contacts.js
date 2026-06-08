@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 const contactsViewComponent = () => ({
     // State
     contacts: [],
@@ -10,7 +19,6 @@ const contactsViewComponent = () => ({
     paperlessQuery: '',
     paperlessResults: [], // Ergebnisse von Paperless
     loadingPaperless: false,
-
     matchResults: [],
     loading: false,
     loadingMatch: false,
@@ -18,16 +26,13 @@ const contactsViewComponent = () => ({
     isEditing: false,
     activeContact: { displayname: '', type: 'person', emails: [] },
     simulation: null,
-
     async initContacts() {
-
         const urlParams = new URLSearchParams(window.location.search);
         const hashValue = urlParams.get('hash'); //mail_hash
         
         //Wenn ein Hash mitkommt suche den Kontakt dirket!
         if (hashValue) {
             const data = await apiCall('get_emails_by_hash', {hash:hashValue},'GET');
-
             // 1. Wert setzen
             this.searchQueryContacts = data?.details?.contacts?.[0]?.displayname || '';
             
@@ -49,11 +54,9 @@ const contactsViewComponent = () => ({
     get filteredContacts() {
         return this.contacts; 
     },
-
     get sortedMatchResults() {
         if (!Array.isArray(this.matchResults)) return [];
         const results = (this.matchResults && Array.isArray(this.matchResults)) ? this.matchResults : [];
-
         return [...results].sort((a, b) => {
             // Sicherer Vergleich
             const aId = Number(a.id);
@@ -66,7 +69,6 @@ const contactsViewComponent = () => ({
             return 0;
         });
     },
-
      toggleEmail(contact) {
         if (!this.activeContact.emails) this.activeContact.emails = [];
         
@@ -79,7 +81,6 @@ const contactsViewComponent = () => ({
             this.activeContact.emails.splice(existingIndex, 1);
         }
     },
-
     // --- Kontakt-Logik ---
     async loadContacts() 
     {
@@ -97,7 +98,6 @@ const contactsViewComponent = () => ({
             this.loading = false;
         }
     },
-
     async saveContact(contact = this.activeContact) {
         try {
             const data = await apiCall('save_contact', contact, 'POST');
@@ -109,11 +109,9 @@ const contactsViewComponent = () => ({
             console.error("Speichern fehlgeschlagen", e);
         }
     },
-
     // --- Modal & Verknüpfungs-Logik ---
     openMatchModal(contact) {
         const targetContact = contact;
-
         this.activeContact = targetContact;
         this.isMatchPanelOpen = true;
         // Zuerst die Mails vom Server laden
@@ -125,12 +123,10 @@ const contactsViewComponent = () => ({
             }
         });
     },
-
     closeMatchModal() {
         this.isMatchPanelOpen = false;
         this.activeContact = null;
     },
-
     async fetchEmailsForContact(id) {
         this.loadingMatch = true;
         const data = await apiCall('get_emails_by_contact', {query:id},'GET');
@@ -140,13 +136,11 @@ const contactsViewComponent = () => ({
         }
         this.loadingMatch = false;
     },
-
     async saveContact() 
     {
        try {
             
             const data = await apiCall('save_contact', this.activeContact, 'POST');
-
             if (data.success) {
                 console.log('Kontakt gespeichert:', data.message);
                 // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
@@ -156,9 +150,7 @@ const contactsViewComponent = () => ({
         } catch (err) {
             console.error('Speicherfehler:', err);
         }
-
     },
-
     /**
      * Paperless-Verknüpfung
      */
@@ -173,7 +165,6 @@ const contactsViewComponent = () => ({
         // UI aktualisieren: Panel schließen
         //this.closeMatchModal();
     },
-
     /**
      * E-Mail Suche für das Matching
      * @returns 
@@ -183,17 +174,14 @@ const contactsViewComponent = () => ({
     {
         if (!contactId) return;
         this.loadingEmails = true;
-
         try {
             // 1. Entscheide nur noch über Action und Parameter
             const isSearch = this.emailQuery.length >= 2;
             const action = isSearch ? 'get_emails_by_search' : 'get_emails_by_contact';
             const params = isSearch ? { query: this.emailQuery } : { query: contactId };
             const method = isSearch ? 'POST' : 'GET';
-
             // 2. Ein sauberer Aufruf
             const data = await apiCall(action, params, method);
-
             // 3. Ergebnis verarbeiten
             if (data?.success) {
                 this.activeContact.emails = data.details?.contact_emails || [];
@@ -202,7 +190,6 @@ const contactsViewComponent = () => ({
             this.loadingEmails = false;
         }
     },
-
     //Paperless-Suche
     async performPaperlessSearch() 
     {
@@ -210,7 +197,6 @@ const contactsViewComponent = () => ({
             this.paperlessResults = [];
             return;
         }
-
         this.loadingPaperless = true;
         try {
             // Der Aufruf reduziert sich auf die fachliche Logik:
@@ -224,7 +210,6 @@ const contactsViewComponent = () => ({
             this.loadingPaperless = false;
         }
     },
-
      async performMatchSearch() {
         if (this.emailQuery.length < 2) {
             // Zeige nur die bereits verknüpften E-Mails an
@@ -235,12 +220,10 @@ const contactsViewComponent = () => ({
         try {
             // 1. ABSICHERUNG: Wenn kein Kontakt offen ist, darf nichts passieren!
             if (!this.activeContact) return;
-
             if (this.emailQuery.length < 2) {
                 this.matchResults = [...(this.activeContact.emails ?? [])];
                 return;
             }
-
             this.loadingMatch = true;
         
             const data = await apiCall('get_emails_by_search', {query: this.emailQuery}, 'GET');
@@ -250,7 +233,6 @@ const contactsViewComponent = () => ({
                 ceid: item.ceid,
                 email: item.email
             }));
-
             // 2. Hier nutzen wir die sichere Abfrage, die du schon in Zeile 173 hattest
             const existingEmails = Array.isArray(this.activeContact.emails) ? this.activeContact.emails : [];
             const combined = [...existingEmails, ...normalizedResults];
@@ -262,12 +244,10 @@ const contactsViewComponent = () => ({
             this.loadingMatch = false;
         }
     },
-
     // --- E-Mail UI Logik ---
     isEmailLinked(ceid) {
         return this.activeContact.emails.some(e => Number(e.ceid) === Number(ceid));
     },
-
     toggleEmail(emailObj) {
         if (this.isEmailLinked(emailObj.ceid)) {
             this.activeContact.emails = this.activeContact.emails.filter(e => Number(e.ceid) !== Number(emailObj.ceid));
@@ -275,13 +255,11 @@ const contactsViewComponent = () => ({
             this.activeContact.emails.push(emailObj);
         }
     },
-
     // --- D3 Netzwerk-Logik ---
     drawNetwork(contacts) {
         if (this.simulation) this.simulation.stop();
         const svg = d3.select("#network");
         svg.selectAll("*").remove();
-
         // Transformation
         const nodes = [], links = [];
         contacts.forEach(c => {
@@ -303,24 +281,20 @@ const contactsViewComponent = () => ({
                 });
             });
         });
-
         // Simulation
         const width = svg.node().parentElement.clientWidth;
         this.simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links).id(d => d.id).distance(80))
             .force("charge", d3.forceManyBody().strength(-250))
             .force("center", d3.forceCenter(width / 2, 200));
-
         // Zeichnen (G-Container)
         const g = svg.append("g");
         svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
-
         const link = g.selectAll("line").data(links).enter().append("line").attr("stroke", "#999");
         const node = g.selectAll("circle").data(nodes).enter().append("circle").attr("r", 8)
             .style("fill", d => d.is_active == 0 ? '#ef4444' : (d.type === 'contact' ? '#2563eb' : '#10b981'))
             .on("click", (event, d) => {
                 let foundContact = null;
-
                 if (d.type === 'contact') {
                     // Fall 1: Du hast auf den blauen Kontakt-Kreis geklickt
                     foundContact = contacts.find(c => ('c' + c.id) === d.id);
@@ -329,7 +303,6 @@ const contactsViewComponent = () => ({
                     // Wir müssen den Kontakt finden, zu dem diese E-Mail gehört
                     foundContact = contacts.find(c => c.emails?.some(e => ('e' + e.ceid) === d.id));
                 }
-
                 if (foundContact) {
                     this.openMatchModal(foundContact);
                 } else {
@@ -344,7 +317,6 @@ const contactsViewComponent = () => ({
             .attr("dx", 12)
             .attr("dy", 4)
             .attr("fill", "#334155");
-
         // 4. Tick-Update mit Labels
         this.simulation.on("tick", () => {
             link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
@@ -357,7 +329,6 @@ const contactsViewComponent = () => ({
         });
     }
 });
-
 // Sicherheits-Registrierung am Ende von mail.js
 if (window.Alpine) {
     // Falls Alpine bereits voll geladen ist

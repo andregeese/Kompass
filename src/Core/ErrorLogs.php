@@ -1,7 +1,14 @@
 <?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 
 namespace App\Core;
-
 /**
  * Zentraler Fehler-Log-Service
  * Fängt alle Arten von Fehlern ab und speichert sie in der Datenbank.
@@ -10,11 +17,9 @@ class ErrorLogs
 {
     private static bool $isLogging = false;
     private static $db = null;
-
     public static function setDatabase($db) {
         self::$db = $db;
     }
-
     /**
      * Initialisiert alle globalen Error-Handler.
      * Einmalig in index.php und api.php aufzurufen.
@@ -33,14 +38,11 @@ class ErrorLogs
             $levelName = $levels[$level] ?? 'Unknown';
             self::logToDb($levelName, $message, $file, $line);
         });
-
         // 2. Fängt nicht abgefangene Exceptions ab
         set_exception_handler([self::class, 'handleException']);
-
         // 3. Fängt Fatale System-Fehler ab
         register_shutdown_function([self::class, 'handleShutdown']);
     }
-
     /**
      * Speichert einen Fehler in der Datenbank.
      */
@@ -51,13 +53,10 @@ class ErrorLogs
             error_log("CRITICAL: ErrorLogs fallback: $message");
             return;
         }
-
         try {
             self::$isLogging = true;
-
             $url      = $_SERVER['REQUEST_URI'] ?? 'CLI';
             $tenantId = $_SESSION['tenant_id'] ?? null;
-
             $sql = "INSERT INTO system_errors (type, message, file, line, trace, url, tenant_id) 
                 VALUES (:type, :message, :file, :line, :trace, :url, :tenant_id)";
         
@@ -70,9 +69,7 @@ class ErrorLogs
                 'url'       => $_SERVER['REQUEST_URI'] ?? 'cli',
                 'tenant_id' => $_SESSION['tenant_id'] ?? 0
             ];
-
             self::$db->queryIt($sql, $params);
-
         } catch (\Throwable $e) {
             // Fallback: Wenn DB nicht erreichbar, schreibe in System-Logdatei
             error_log("CRITICAL: ErrorLogs failed: " . $e->getMessage() . " | Original: " . $message);
@@ -80,7 +77,6 @@ class ErrorLogs
             self::$isLogging = false;
         }
     }
-
     public static function handleException(\Throwable $e): void
     {
         self::logToDb('Exception', $e->getMessage(), $e->getFile(), $e->getLine(), $e->getTraceAsString());
@@ -89,7 +85,6 @@ class ErrorLogs
         echo json_encode(['success' => false, 'error' => 'Ein Systemfehler ist aufgetreten.']);
         exit;
     }
-
     public static function handleShutdown(): void
     {
         $error = error_get_last();
@@ -97,7 +92,6 @@ class ErrorLogs
             self::logToDb('Fatal', $error['message'], $error['file'], $error['line']);
         }
     }
-
     /**
      * Bequeme Methode für Debugging-Ausgaben während der Entwicklung.
      */

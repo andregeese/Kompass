@@ -1,5 +1,13 @@
-const CACHE_NAME = 'crm_1.86'; 
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 
+const CACHE_NAME = 'crm_1.86'; 
 // Nur lokale Assets cachen! CDNs gehören nicht in den Cache.
 const ASSETS = [
     './manifest.json',
@@ -14,7 +22,6 @@ const ASSETS = [
     './public/assets/js/detail.js',
     './public/assets/js/settings.js'
 ];
-
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
@@ -24,7 +31,6 @@ self.addEventListener('install', event => {
     );
     self.skipWaiting();
 });
-
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => Promise.all(
@@ -33,18 +39,14 @@ self.addEventListener('activate', event => {
     );
     self.clients.claim();
 });
-
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-
     // 1. API IMMER ignorieren (Sicherheit & CORS-Probleme vermeiden)
     if (url.pathname.includes('api.php') || url.searchParams.has('action')) {
         return; 
     }
-
     // 2. Nur GET Requests
     if (event.request.method !== 'GET') return;
-
     // 3. Wenn es ein Core-Asset ist -> Cache-First
     if (ASSETS.some(asset => url.pathname.endsWith(asset.replace('./', '')))) {
         event.respondWith(
@@ -52,7 +54,6 @@ self.addEventListener('fetch', event => {
         );
         return;
     }
-
     // 4. Navigation (Dynamic Content) -> Network-First, Fallback auf Index
     if (event.request.mode === 'navigate') {
         event.respondWith(

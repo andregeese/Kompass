@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 // public/assets/js/notes.js
 const notesViewComponent = () => ({
     notes: [],
@@ -6,7 +15,6 @@ const notesViewComponent = () => ({
     contactMails: [],
     loadingEmails: null,
     emailSearch: '',
-
     newNote: {
         content: '',
         uid: new URLSearchParams(window.location.search).get('uid') || '',
@@ -16,28 +24,23 @@ const notesViewComponent = () => ({
         contact_email: '',
         contact_name: ''
     },
-
     init() {
         this.loadNotes();
         //this.getRecentMails();
-
         // Fokus setzen bei "?action=create"
         const params = new URLSearchParams(window.location.search);
         if (params.get('action') === 'create') {
             this.$nextTick(() => this.$refs.quickNoteArea?.focus());
         }
-
         // LAUSCHER: Wenn das Gerät wieder online geht, sofort Sync triggern!
         window.addEventListener('online', () => {
             console.log('📶 Verbindung wieder da! Triggere Background-Sync...');
             this.syncOfflineNotes();
         });
     },
-
     editNote(note) {
         // 1. ID des Datensatzes setzen
         this.editingNoteId = note.id;
-
         // 2. Formular-Zustand befüllen
         // Wir nutzen hier die Felder, die aus deiner DB kommen
         this.newNote.content = note.content;
@@ -53,7 +56,6 @@ const notesViewComponent = () => ({
         
         console.log("Notiz zur Bearbeitung geladen:", this.editingNoteId);
     },
-
     async loadNotes() {
         const localQueue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
         const cachedNotes = JSON.parse(localStorage.getItem('cached_notes') || '[]');
@@ -63,26 +65,22 @@ const notesViewComponent = () => ({
             this.notes = cachedNotes;
             return;
         }
-
         // 1. SYNC-TRIGGER: Erst offene Memos wegarbeiten
         if (localQueue.length > 0) {
             await this.syncOfflineNotes();
         }
-
         // 2. SERVER-FETCH: Frische Daten holen
         try {
             const jResponse = await apiCall('get_notes', {}, 'GET');
             console.log("Rohdaten vom Server:", jResponse?.details?.notes);
             // 1. Erstmal komplett leeren
             this.notes = [];
-
             if (jResponse?.details?.notes) {
                 // Daten-Bereinigung: Filtert unvollständige Objekte heraus 
                 // und stellt sicher, dass jedes Objekt ein echtes Inhaltsfeld hat
                 const cleanServerNotes = jResponse.details.notes.filter(note => {
                     return note && typeof note === 'object' && (note.content !== undefined || note.created_at !== undefined);
                 });
-
                 const currentQueue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
                 
                 // Zuweisung an Alpine
@@ -96,14 +94,12 @@ const notesViewComponent = () => ({
             this.notes = cachedNotes;
         }
     },
-
     
     async searchEmail() {
         if (!this.emailSearch.trim()) {
             this.recentEmails = [];
             return;
         }
-
         try {
             const data = await apiCall('search_mail_address', { query: this.emailSearch }, 'GET');
             this.recentEmails = data?.success && data.details?.mails ? data.details.mails : [];
@@ -112,7 +108,6 @@ const notesViewComponent = () => ({
             this.recentEmails = [];
         }
     },
-
     async toggleEmailSelection(email) {
         console.log("Ausgewählter Kontakt:", email);
         
@@ -125,13 +120,11 @@ const notesViewComponent = () => ({
             this.contactMails = [];
             return;
         }
-
         // 2. Zustand setzen (Das triggert das Einfärben und die UI-Anzeige!)
         this.newNote.ceid = email.id;
         this.newNote.contact_email = email.email;
         this.newNote.contact_name = email.display_name;
         this.newNote.uid = ''; // Vorherige Mail-ID-Auswahl leeren
-
         // 3. Verlaufs-Mails im Hintergrund nachladen
         try {
             const data = await apiCall('get_mails_by_mailadress', { query: email.email_hash }, 'GET');
@@ -141,23 +134,18 @@ const notesViewComponent = () => ({
             this.contactMails = [];
         }
     },
-
     async toggleNoteStatus(noteId) {
         const note = this.notes.find(n => n.id === noteId);
         if (!note) return;
-
         note.status = note.status === 'completed' ? 'pending' : 'completed';
         localStorage.setItem('cached_notes', JSON.stringify(this.notes));
-
         if (navigator.onLine) { // FIX: Von isOnline auf navigator.onLine geändert
             await apiCall('toggle_note', { id: noteId, status: note.status }, 'GET');                
         }
     },
-
     async addNote() {
         console.log("Notiz-Speichervorgang gestartet..." + this.newNote.ceid );
         if (!this.newNote.content.trim()) return;
-
         // Basis-Datenobjekt aufbauen (mit temporärer ID für den Fall der Fälle)
         const memoData = {
             id: 'local_' + Date.now(),
@@ -170,14 +158,12 @@ const notesViewComponent = () => ({
             mail: this.newNote.contact_email || null,
             created_at: new Date().toISOString()
         };
-
         // FALL 1: Gerät ist komplett offline -> Direkt in den Offline-Speicher & UI sichern
         if (!navigator.onLine) {
             console.warn('Keine Netzwerkverbindung! Sende direkt in den Offline-Speicher.');
             this.processOfflineFallback(memoData);
             return;
         }
-
         // FALL 2: Gerät ist online -> Erst Server-Versuch (Kein voreiliges Caching!)
         try {
             const response = await apiCall('save_note', memoData, 'POST');
@@ -203,7 +189,6 @@ const notesViewComponent = () => ({
             this.processOfflineFallback(memoData);
         }
     },
-
     processOfflineFallback(memoData) {
         // In die UI-Liste schieben, damit die Notiz für den User sichtbar bleibt
         this.notes.unshift(memoData);
@@ -214,7 +199,6 @@ const notesViewComponent = () => ({
         
         this.resetForm();
     },
-
     async getRecentMails() {
         try {
             let response = await apiCall('get_recent_mails', {}, 'GET');
@@ -223,7 +207,6 @@ const notesViewComponent = () => ({
             console.error("Fehler beim Laden der letzten Memos:", e);
         }
     },
-
     saveToLocalStorage(memoData) {
         // FIX: Kein zweiter unshift mehr! Nur noch Queue-Handling.
         let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
@@ -232,7 +215,6 @@ const notesViewComponent = () => ({
             localStorage.setItem('queue_notes', JSON.stringify(queue));
         }
     },
-
     async sendNoteToServer(memo) {
         try {
             const response = await apiCall('save_note', memo, 'POST');
@@ -258,18 +240,15 @@ const notesViewComponent = () => ({
         }
         return false;
     },
-
     async syncOfflineNotes() {
         if (!navigator.onLine) return;
         let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
         if (queue.length === 0) return;
-
         console.log(`🔄 Verarbeite ${queue.length} Offline-Notizen...`);
         for (let memo of queue) {
             await this.sendNoteToServer(memo);
         }
     },
-
     resetForm() {
         this.newNote.content = '';
         this.newNote.uid = '';
@@ -281,7 +260,6 @@ const notesViewComponent = () => ({
         console.log('Formular zurückgesetzt.');
     }
 });
-
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('notesView', notesViewComponent);
 });

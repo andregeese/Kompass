@@ -1,5 +1,13 @@
-// script/dashboard.js
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
 
+// script/dashboard.js
 document.addEventListener('alpine:init', () => {
     Alpine.data('mailApp', () => ({
         // --- STATE (Datenmodell) ---
@@ -34,7 +42,6 @@ document.addEventListener('alpine:init', () => {
         showMobilePreview: false,
         silentLoading: false,
         currentFolder: 'INBOX', // Neu: Aktueller Ordner (z.B. 'INBOX', 'DMS')
-
         // 2. GETTER (Berechnete Eigenschaften - HIER MUSS ES STEHEN)
         get filteredMails() {
             if (!this.mailSearchQuery || !this.mailSearchQuery.trim()) {
@@ -49,22 +56,18 @@ document.addEventListener('alpine:init', () => {
                 return subject.includes(query) || sender.includes(query) || date.includes(query);
             });
         },
-
         // Berechnet den maximalen Score der aktuellen Suche
         get maxScore() {
             if (this.documents.length === 0) return 1;
             return Math.max(...this.documents.map(d => d.originscore || 0), 1);
         },
-
         // Gibt die relative Qualität (0 bis 1) zurück
         getQuality(score) {
             return (score || 0) / this.maxScore;
         },
-
         // --- INIT ---
         async init() {
             this.currentFolder = 'DMSDone';
-
             try {
                 await this.loadMails(false);
             } catch(e) {
@@ -76,15 +79,12 @@ document.addEventListener('alpine:init', () => {
             } catch(e) {
                 console.error("Initiales Laden des Systemstatus fehlgeschlagen:", e);
             }
-
             try{
                 await this.initInfiniteScroll();
             }catch(e) {
                 console.error("Initialisierung des Infinite Scroll fehlgeschlagen:", e);
             }
-
             this.initPullToRefresh();
-
             
             // Watcher für die manuelle Suche mit eingebautem Debounce (300ms)
             // Watcher für die manuelle Suche mit eingebautem Debounce (300ms)
@@ -104,7 +104,6 @@ document.addEventListener('alpine:init', () => {
                     this.paperlessTree = {}; // Baum leeren, wenn Suche gelöscht wird
                 }
             }, 300));
-
             // Überwache das Suchfeld auf Änderungen
             this.$watch('mailSearchQuery', (value) => {
                 // Bestehenden Timer löschen, während der User tippt
@@ -123,7 +122,6 @@ document.addEventListener('alpine:init', () => {
                 }, 300);
             });
         },
-
         // --- HILFSFUNKTIONEN ---
         debounce(func, delay = 300) {
             let timeoutId;
@@ -134,10 +132,8 @@ document.addEventListener('alpine:init', () => {
                 }, delay);
             };
         },
-
         initPullToRefresh() {
             let touchStart_Y = 0;
-
             // Event-Listener an das Fenster binden
             window.addEventListener('touchstart', (e) => {
                 // Nur triggern, wenn wir ganz oben am Rand der Seite/Spalte sind
@@ -145,11 +141,9 @@ document.addEventListener('alpine:init', () => {
                     touchStart_Y = e.touches[0].clientY;
                 }
             }, { passive: true });
-
             window.addEventListener('touchmove', (e) => {
                 const touchMove_Y = e.touches[0].clientY;
                 const touchMove_Difference = touchMove_Y - touchStart_Y;
-
                 // 150 Pixel nach unten ziehen = Reload auslösen
                 if (window.scrollY === 0 && touchMove_Difference > 150) {
                     // Kurzes haptisches Feedback am Smartphone (falls unterstützt)
@@ -162,7 +156,6 @@ document.addEventListener('alpine:init', () => {
                 }
             }, { passive: true });
         },
-
         /**
          * Öffnet ein Dokument direkt in Paperless-ngx in einem neuen Browser-Tab.
          * @param {number|string} paperlessId - Die ID des Dokuments in Paperless
@@ -172,27 +165,22 @@ document.addEventListener('alpine:init', () => {
                 console.warn("Keine Paperless-ID übergeben.");
                 return;
             }
-
             // Falls deine API-Url im Dashboard-State hinterlegt ist (z.B. http://192.168.0.72:8030)
             // Falls nicht, kannst du stattdessen die IP direkt als String einsetzen.
             const baseUrl = this.paperlessURL || 'http://192.168.0.72:8030';
             
             // Paperless-ngx nutzt das Format /documents/{id} für die Detailansicht
             const paperlessUrl = `${baseUrl}/documents/${paperlessId}`;
-
             // Öffnet den Link in einem neuen Tab, ohne das aktuelle Dashboard zu verlassen
             window.open(paperlessUrl, '_blank');
         },
-
         async syncPaperless() {
             this.paperlessLoading = true;
             this.syncLogs = []; // Hier speichern wir die Log-Zeilen für das HTML
-
             try {
                 // Aufruf deiner API
                 const response = await safeFetch(`api.php?action=syncPaperless`);
                 const data = await response.json();
-
                 if (data && data.success) {
                     // 💡 HIER LIEGT DER TRICK: 
                     // Wir holen die Logs aus data.details.logs (wie im neuen PHP definiert)
@@ -212,13 +200,11 @@ document.addEventListener('alpine:init', () => {
                 this.paperlessLoading = false;
             }
         },
-
         /*// --- CORE AKTIONEN ---
         async loadMailsSilent() {
             // Wenn der normale Loader ODER der Silent-Loader läuft, abbrechen
             if (this.loading || this.silentLoading) return;
             this.silentLoading = true;
-
             try {
                 // Hinweis: action=sync holt die Mails ab und arbeitet sie ab.
                 // Falls du nur den aktuellen Stand refreshen willst, ohne cURL-Verzögerung,
@@ -238,13 +224,11 @@ document.addEventListener('alpine:init', () => {
                 this.silentLoading = false;
             }
         },*/
-
         // Mails asynchron nachladen (Infinite Scroll & IMAP-Sync)
         async loadMails(append=false) 
         {
             if (this.loading || !this.hasMore) return;
             this.loading = true;
-
             if (!append) {
                 this.page = 1;
                 this.hasMore = true;
@@ -255,7 +239,6 @@ document.addEventListener('alpine:init', () => {
             if (!append && mailContainer) {
                 mailContainer.innerHTML = '<div class="spinner">Lädt...</div>';
             }
-
             try {
                 const searchParam = this.mailSearchQuery ? `&search=${encodeURIComponent(this.mailSearchQuery)}` : '';
                 const url = `api.php?action=list&page=${this.page}&limit=${this.limit}&folder=${folder}${searchParam}`;
@@ -263,7 +246,6 @@ document.addEventListener('alpine:init', () => {
                 // 1. 🚀 FIX: safeFetch liefert bereits das FERTIGE JSON-Objekt!
                 // Kein "response" und kein "response.json()" mehr nötig!
                 const data = await safeFetch(url);
-
                 if (!append && mailContainer) {
                     mailContainer.innerHTML = ''; // Spinner entfernen
                 }
@@ -317,7 +299,6 @@ document.addEventListener('alpine:init', () => {
                 this.loading = false; // Gibt den Loader erst ganz am Ende frei!
             }
         },
-
         // Einzelne Mail laden & anzeigen
         async viewMail(mail) 
         {
@@ -325,7 +306,6 @@ document.addEventListener('alpine:init', () => {
             if (!mail || !mail.hash) return;
             const hash = typeof mail === 'string' ? mail : mail.hash;
             if (!hash) return;
-
             this.currentHash = mail.hash;
             this.selectedHash = mail.hash;
             
@@ -334,16 +314,12 @@ document.addEventListener('alpine:init', () => {
             this.currentMailSubject = mail.subject || '';
             this.currentMailSender = mail.sender || '';
             this.currentMailDate = mail.date_received || '';
-
             this.manualSearchQuery = mail.subject;
-
             const iframe = document.getElementById('mail-preview-iframe');
             const spinnerContainer = document.getElementById('mail-preview-spinner');
-
             if (iframe) {
                 iframe.classList.add('hidden'); // Iframe verstecken, während es streamt
                 
-
                 // 🚀 ONLOAD-RETTUNG: Sobald das Iframe fertig vom Server gestreamt hat...
                 iframe.onload = () => {
                     if (spinnerContainer) spinnerContainer.classList.add('hidden'); // Spinner weg
@@ -354,7 +330,6 @@ document.addEventListener('alpine:init', () => {
                         this.findMatchSuggestions(this.currentMailSubject);
                     }
                 };
-
                 // Jetzt stoßen wir das Streaming über das src-Attribut an!
                 // (Wichtig: Verwende hier exakt den API-Action-Namen deiner api.php, z.B. stream_mail_html)
                 iframe.src = `api.php?action=stream_mail_html&hash=${hash}`;
@@ -365,16 +340,13 @@ document.addEventListener('alpine:init', () => {
                 spinnerContainer.classList.remove('hidden');
             }
         },
-
         // Paperless-Suche über das PHP-Backend absetzen
         async findMatchSuggestions(searchQuery) {
             let cleanSubject = searchQuery
                 .replace(/^(Re|Aw|Fwd|Forward|Antwort|Betreff):\s*/i, '')
                 .replace(/[[\]().,;:!?\-_]/g, ' ')
                 .trim();
-
             cleanSubject = cleanSubject.split(/\s+/).slice(0, 4).join(' ');
-
             try {
                 const url = `api.php?action=paperless_search&query=${encodeURIComponent(cleanSubject)}&date=${encodeURIComponent(this.currentMailDate)}`;
                 const data = await safeFetch(url);
@@ -385,16 +357,13 @@ document.addEventListener('alpine:init', () => {
                 console.error("Fehler bei Paperless Suche:", err);
             }
         },
-
         // Mail mit existierendem Paperless Dokument verknüpfen
         async linkToPaperless(docId) {
             if (!confirm(`Möchtest du diese Mail wirklich mit dem Paperless-Dokument #${docId} verknüpfen?`)) return;
-
             const fd = new FormData();
             fd.append('action', 'paperless_match');
             fd.append('id', this.currentHash);
             fd.append('paperless_id', docId);
-
             try {
                 const data = await safeFetch('api.php', { method: 'POST', body: fd });
                 if (data && data.success) {
@@ -404,7 +373,6 @@ document.addEventListener('alpine:init', () => {
                     this.currentMail.is_dms = true;
                     this.currentMail.paperless_id = docId;
                     this.paperlessMatches = [];
-
                     // Direkt den Verlaufs-Baum für den Absender nachladen
                     if (this.currentMailSender) {
                         this.loadPaperlessTreeByMail(this.currentMailSender);
@@ -414,7 +382,6 @@ document.addEventListener('alpine:init', () => {
                 console.error("Match-Fehler:", err);
             }
         },
-
         async loadPaperlessTreeByMail(mailHash) {
             this.paperlessTree = {}; 
             this.paperlessStatusText = ''; 
@@ -448,14 +415,12 @@ document.addEventListener('alpine:init', () => {
                 console.error("Fehler beim Laden des Paperless-Baums:", err);
             }
         },
-
         // DMS Export (Verschieben mit Tag 'Recht')
         async moveToDMS(mail, tag = 'Recht') {
             const fd = new FormData();
             fd.append('action', 'dms');
             fd.append('id', mail.hash);
             fd.append('tag', tag);
-
             try {
                 await safeFetch('api.php', { method: 'POST', body: fd });
                 showNotify('DMS Export', `Erfolgreich nach ${tag} übertragen.`, 'success');
@@ -466,7 +431,6 @@ document.addEventListener('alpine:init', () => {
                 console.error("DMS Export Fehler:", err);
             }
         },
-
         // PDF Erstellung triggern
         async exportPdf(hash) {
             const fd = new FormData();
@@ -478,7 +442,6 @@ document.addEventListener('alpine:init', () => {
                 showNotify('PDF Export', 'Datei erstellt: ' + data.details.file, 'success');
             } catch (err) {}
         },
-
         /** 
          * Gibt es in Paperless eine Mail mit dem Betreff?
          */
@@ -490,15 +453,12 @@ document.addEventListener('alpine:init', () => {
                 console.error("Fehler beim Abrufen der Mail für Paperless-Öffnung:", err);
             }
         },
-
         // Mail löschen
         async deleteMail(mail) {
             if (!confirm('Diese Mail wirklich löschen?')) return;
-
             const fd = new FormData();
             fd.append('action', 'delete');
             fd.append('id', mail.hash);
-
             try {
                 await safeFetch('api.php', { method: 'POST', body: fd });
                 
@@ -513,7 +473,6 @@ document.addEventListener('alpine:init', () => {
                 showNotify('Erfolg', 'Mail gelöscht.', 'success');
             } catch (err) {}
         },
-
         // Manueller IMAP-Sync über Navbar-Button
         async triggerNavbarSync(event) {
             // Absicherung: Falls kein Event übergeben wurde (z.B. durch Auto-Sync), 
@@ -522,14 +481,12 @@ document.addEventListener('alpine:init', () => {
             
             this.loading = true;
             if (btn) btn.disabled = true;
-
             try {
                 const response = await safeFetch(`api.php?action=sync&folder=${encodeURIComponent(this.currentFolder)}`);
                 
                 // WICHTIG: Sicherstellen, dass safeFetch die Daten geliefert hat
                 // Wenn dein safeFetch bereits das JSON liefert, reicht: const data = response;
                 const data = await response.json(); 
-
                 // 🚨 ABSICHERUNG: Prüfen, ob data überhaupt existiert, bevor wir auf .added zugreifen!
                 if (data && data.success) {
                     console.log(`Sync erfolgreich. ${data.added || 0} neue Mails hinzugefügt.`);
@@ -538,7 +495,6 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     console.error("Sync-Fehler laut API:", data ? data.error : "Keine Antwortdaten erhalten");
                 }
-
             } catch (err) {
                 console.error("Fehler beim Navbar-Sync:", err);
             } finally {
@@ -546,7 +502,6 @@ document.addEventListener('alpine:init', () => {
                 if (btn) btn.disabled = false;
             }
         },
-
         // System- & Home Assistant Status abrufen
         async loadSystemStatus() {
             try {
@@ -560,7 +515,6 @@ document.addEventListener('alpine:init', () => {
                 this.serverInfoHtml = '<span class="text-danger">Fehler</span>';
             }
         },
-
         async trackFoldersSilent(showLoadingIndicator, folderName = 'INBOX') {
             
             if (showLoadingIndicator) this.loading = true;
@@ -581,7 +535,6 @@ document.addEventListener('alpine:init', () => {
                 if (showLoadingIndicator) this.loading = false;
             }
         },
-
         // Startet die Schleife für den Hintergrund-Sync sauber und sicher
         startBackgroundSync() {
             // Sicherer Mail-Refresh (wartet, bis der alte fertig ist)
@@ -590,7 +543,6 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(refreshMails, 30000); // Erst nach 30 Sek neu starten
             };
             refreshMails();
-
             // Ordner-Sync-Schleife
             const runFolderSyncLoop = async () => {
                 const foldersToSync = ['INBOX', 'DMS', 'DMSDone'];
@@ -606,7 +558,6 @@ document.addEventListener('alpine:init', () => {
             };
             setTimeout(runFolderSyncLoop, 5000);
         },
-
         // --- Unter deinen CORE AKTIONEN hinzufügen ---
         switchFolder(newFolder) {
             // Wenn wir schon in dem Ordner sind, nichts tun
@@ -622,10 +573,8 @@ document.addEventListener('alpine:init', () => {
             this.hasMore = true;
             this.currentHash = null; 
             this.currentMail = null;
-
             const searchInput = document.getElementById('search-input');
             if (searchInput) { searchInput.value = ''; currentSearch = ''; }
-
             // Aktiviere visuellen Klick-Zustand in der Navigation (Optional)
             document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
             const activeEl = document.getElementById(`folder-${this.currentFolder}`);
@@ -640,24 +589,19 @@ document.addEventListener('alpine:init', () => {
                 }, 50);
             });
         },
-
-
         // Infinite Scroll Listener
         initInfiniteScroll() {
             const scrollContainer = document.getElementById('mail-list');
             if (!scrollContainer) return;
-
             if (!scrollContainer) {
                 console.error("❌ [Scroll-Setup] Element mit ID #mail-list wurde im DOM nicht gefunden!");
                 return;
             }
-
             scrollContainer.addEventListener('scroll', () => {
                 // 🚨 SCHUTZWALL: Wenn bereits geladen wird oder Schluss ist -> SOFORT ABBRECHEN!
                 if (this.loading || !this.hasMore) {
                     return;
                 }
-
                 // Mathematisch sichere Berechnung des unteren Rands
                 const totalScrollable = scrollContainer.scrollHeight;
                 const currentScrollPosition = scrollContainer.scrollTop + scrollContainer.clientHeight;
@@ -669,19 +613,16 @@ document.addEventListener('alpine:init', () => {
                 }
             });
         },
-
         // Gestensteuerung (Swipe)
         initSwipe(el, mail) {
             let touchStartX = 0;
             let touchStartY = 0; // Auch Y-Achse messen gegen vertikales Scrollen
             let touchEndX = 0;
             let touchEndY = 0;
-
             el.addEventListener('touchstart', (e) => {
                 touchStartX = e.changedTouches[0].screenX;
                 touchStartY = e.changedTouches[0].screenY;
             }, { passive: true });
-
             el.addEventListener('touchend', (e) => {
                 touchEndX = e.changedTouches[0].screenX;
                 touchEndY = e.changedTouches[0].screenY;
@@ -689,13 +630,11 @@ document.addEventListener('alpine:init', () => {
                 const diffX = touchStartX - touchEndX;
                 const diffY = touchStartY - touchEndY;
                 const threshold = 100; // Mindest-Pixel für einen Swipe
-
                 // WICHTIG: Wenn sich der Finger kaum bewegt hat, war es ein KLICK!
                 // In diesem Fall brechen wir ab und lassen Alpine das @click ausführen.
                 if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
                     return; 
                 }
-
                 // Nur wenn es ein echter horizontaler Swipe war:
                 if (Math.abs(diffX) > Math.abs(diffY)) {
                     // Swipe nach links -> DMS (Recht)
@@ -719,16 +658,12 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 });
-
-
 // =========================================================================
 // GLOBALE CORE-FUNKTIONEN (Sicheres HTTP-Handling & Push-Benachrichtigungen)
 // =========================================================================
-
 async function safeFetch(url, options = {}) {
     try {
         const response = await fetch(url, options);
-
         // 1. HTTP-Statusfehler abfangen (500, 504, etc.) mit unserem StatusText-Fallback
         if (!response.ok) {
             const httpStatusMessages = {
@@ -743,12 +678,9 @@ async function safeFetch(url, options = {}) {
             const errorText = response.statusText.trim() || httpStatusMessages[response.status] || 'Unbekannter Serverfehler';
             this.showNotify("Fehler", errorText, 'danger');
             throw new Error(`Server-Fehler ${response.status}: ${errorText}`);
-
             
         }
-
         const data = await response.json();
-
         // 2. Globale Prüfung der standardisierten PHP-Response
         if (data && typeof data === 'object') {
             
@@ -765,16 +697,13 @@ async function safeFetch(url, options = {}) {
                 data.uiMessage = data.error || data.message || data.details;
             }
         }
-
         return data; // Gibt die sauberen Daten an die aufrufende Funktion zurück
-
     } catch (error) {
         console.error(`🚨 safeFetch-Zentrale abgefangen für [${url}]:`, error);
         // Wir reichen den Fehler weiter, damit der lokale catch-Block reagieren kann
         throw error;
     }
 }
-
 function showNotify(title, message, type = 'danger') {
     let container = document.getElementById('notification-container');
     if (!container) {
@@ -784,7 +713,6 @@ function showNotify(title, message, type = 'danger') {
         container.style.zIndex = '1055';
         document.body.appendChild(container);
     }
-
     // 🚀 FIX: Farb-Mapping für Tailwind ODER Bootstrap Absicherung
     const colorMapping = {
         'danger': 'bg-red-600 bg-danger',       // Tailwind & Bootstrap Fallback
@@ -793,10 +721,8 @@ function showNotify(title, message, type = 'danger') {
         'secondary': 'bg-gray-600 bg-secondary',
         'warning': 'bg-yellow-500 text-dark bg-warning'
     };
-
     // Standard auf danger, falls ein ungültiger Typ übergeben wird
     const bgClass = colorMapping[type] || colorMapping['danger'];
-
     const toast = document.createElement('div');
     // 🚀 HIER nutzen wir jetzt die fertige bgClass Variable:
     toast.className = `toast show align-items-center text-white ${bgClass} border-0 mb-2 p-2 rounded shadow-lg`;

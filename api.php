@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 <?php
 //api.php
 date_default_timezone_set('Europe/Berlin');
@@ -5,12 +14,10 @@ define('ROOT_PATH', __DIR__);
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-
 // 2. Wohin schreibt PHP interne Fehler?
 $logFile = __DIR__ . "/php.log";
 ini_set('log_errors', 1);
 ini_set('error_log', $logFile); // Hier muss 'error_log' stehen, nicht deine Klasse
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
@@ -18,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("HTTP/1.1 200 OK");
     exit;
 }
-
 $all_headers = [];
 foreach ($_SERVER as $name => $value) {
     if (substr($name, 0, 5) == 'HTTP_') {
@@ -26,35 +32,28 @@ foreach ($_SERVER as $name => $value) {
     }
 }
 //error_log("ALLE HTTP-HEADER: " . print_r($all_headers, true));
-
 // 3. Sicherstellen, dass die Datei beschreibbar ist
 if (!file_exists($logFile)) {
     touch($logFile);
     chmod($logFile, 0666);
 }
 require_once __DIR__ . '/vendor/autoload.php';
-
 // 1. Initialisierung
 \App\Core\ErrorLogs::register();
 \App\Core\Auth::init();
-
 $receivedToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($headers['X-CSRF-TOKEN'] ?? 'KEIN_TOKEN');
 $action = $_REQUEST['action'] ?? '';
-
 // Liste der Aktionen, die KEIN CSRF-Token benötigen
 $publicActions = ['login', 'register'];
-
 if (!in_array($action, $publicActions)) 
 {
     // Hole das Token IMMER aus der korrekten $_SERVER Variable (da Nginx/PHP-FPM)
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-
     if (!\App\Core\Auth::verifyCsrfToken($csrfToken)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'CSRF Token ungültig']);
         exit;
     }
-
     if (!\App\Core\Auth::validateFingerprint()) {
         error_log("SICHERHEITSWARNUNG: Fingerprint-Mismatch für User ID " . ($_SESSION['user_id'] ?? 'Guest'));
         http_response_code(401);
@@ -63,20 +62,14 @@ if (!in_array($action, $publicActions))
     }
     
 }
-
 header('Content-Type: application/json; charset=utf-8');
-
 $action = $_REQUEST['action'] ?? '';
-
 // 1. Instanz erzeugen
 $db = new \App\Core\Database();
-
 // 2. Logger instruieren
 \App\Core\ErrorLogs::setDatabase($db);
-
 // 3. Dashboard mit DB-Instanz versorgen
 $dashboard = new \App\Dashboard($db);
-
 // --- ROUTER MAP ---
 $routes = [
     // Auth
@@ -100,7 +93,6 @@ $routes = [
     'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
-
     //Appointment
     'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
     'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
@@ -108,7 +100,6 @@ $routes = [
     'full_sync'                     => [App\Api\AppointmentsController::class, 'fullSync'],
     'get_parti'                     => [App\Api\AppointmentsController::class, 'getPartition'],
     'save_appointment'              => [App\Api\AppointmentsController::class, 'saveAppointment'],
-
     //Sidebar
     
     
@@ -145,25 +136,20 @@ $routes = [
     'imap_mails'                    => [App\Api\SystemController::class, 'syncFolder'],
     'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
     'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
-
     //NOTES
     'get_notes'                     => [App\Api\NotesController::class, 'getNotes'],
     'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],
     'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
     'toggle_note'                   => [App\Api\NotesController::class, 'toogleNote'],
-
 ];
-
 // 1. Spezieller Endpunkt für die Routen-Konfiguration
 if ($action === 'get_allowed_actions') {
     echo json_encode(['success' => true, 'data' => array_keys($routes)]);
     exit;
 }
-
 if (!array_key_exists($action, $routes)) {
     throw new \Exception("Aktion '$action' unbekannt.");
 }
-
 // 4. Controller ausführen
 $controllerClass = $routes[$action][0];
 $method = $routes[$action][1];
@@ -171,9 +157,7 @@ $method = $routes[$action][1];
     // Hier greift der BaseController Konstruktor (Sicherheits-Check passiert automatisch!)
     $controller = new $controllerClass($dashboard);
     $result = $controller->$method();
-
     \App\Dashboard::sendResponse(true, $result ?? new \stdClass());
-
 } catch (\Throwable $e) { 
     error_log("API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     

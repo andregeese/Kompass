@@ -1,28 +1,33 @@
 <?php
+
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 namespace App\Services;
 use Exception; // Falls du Exceptions nutzt
 use App\Services\PaperlessProcessor;
 use App\Services\ContactProcessor;
-
 /**
  * @property \App\Services\NotesProcessor $notesProcess
  */
 class NotesProcessor extends \App\Core\Database
 {
-
     use \App\Core\ServiceTrait;
     protected $dashboard;
     
     //private $imapStream = null;
-
     public function __construct($dashboard) {
         parent::__construct($dashboard);
         $this->dashboard = $dashboard;
     }
-
     public function getNotes()
     {
-
      $sqlNew = "SELECT 
                 n.id as id,
                 n.content as content,
@@ -45,20 +50,15 @@ class NotesProcessor extends \App\Core\Database
             false,
             true
         );
-
         $fetched = $dbResult->data->fetched;
-
         return ['notes' => $fetched];
         
     }
-
     public function saveNote(array $memoData)
     {
         error_log(print_r($memoData, true));
-
         $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, ceid) 
                 VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, :ceid)";
-
         $params = [
             'mailUid'     => !empty($memoData['uid']) ? $memoData['uid'] : null,
             'mailFolder'  => !empty($memoData['folder']) ? $memoData['folder'] : null,
@@ -68,16 +68,12 @@ class NotesProcessor extends \App\Core\Database
             'lokal_id'    => $memoData['id'],
             'ceid'       => !empty($memoData['ceid']) ? $memoData['ceid'] : null
         ];
-
         $dbResult = $this->queryIt($sql, $params, true, true, false);
-
         if (!$dbResult->success){
             throw new \Exception("Notiz nicht gespeichert");
         }
-
         return $dbResult->data;
     }
-
     /**
      * Setze Status auf completed oder active
      */
@@ -85,7 +81,6 @@ class NotesProcessor extends \App\Core\Database
     {
         $id = $this->request->id;
         $status = $this->request->status;
-
         $sql = "UPDATE notes 
                    SET status = :status  
                 WHERE tenant_id = :tenant_id AND id = :id;";
@@ -94,13 +89,9 @@ class NotesProcessor extends \App\Core\Database
             "status"   => $status
         ];
         $dbResult = $this->queryIt($sql,$params, true, false, true);
-
         if (!$dbResult->success){
             throw new \Exception ("Notiz nicht geändert");
         }
-
         return $dbResult->data;
-
     }
-
 };

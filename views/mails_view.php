@@ -1,3 +1,14 @@
+<?php
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+?>
+
 <div x-data="mailView" x-init="init_mails();startBackgroundSyncDelayed();" class="flex w-full h-screen overflow-hidden bg-slate-50 dark:bg-gray-900">
     
     <div class="flex shrink-0 h-full" :class="isSidebarOpen ? 'w-full md:w-auto' : 'w-auto'">
@@ -10,12 +21,10 @@
             x-transition:leave-start="ml-0 opacity-100" 
             x-transition:leave-end="-ml-full md:-ml-80 opacity-0"
             class="w-full md:w-80 h-full border-r border-slate-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-850 relative">
-
             <button @click="isSidebarOpen = false" 
                     class="hidden md:block absolute -right-3 top-4 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full p-1 shadow-md hover:bg-slate-100 transition-colors text-[10px] text-slate-500">
                 ◀
             </button>
-
             <div class="px-2 py-2">
                 <input type="text" 
                     x-model="mailSearchQuery"
@@ -29,18 +38,15 @@
                 <button @click="switchFolder('DMSDone')" :class="currentFolder === 'DMSDone' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">✅ Erledigt</button>
                 <button @click="switchFolder('Sent Messages')" :class="currentFolder === 'Sent Messages' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">Gesendet</button>
             </div>
-
             <div class="flex justify-between items-center px-3 mt-1.5 text-[11px]" x-show="mailSearchQuery.trim().length >= 0" x-cloak>
                 <span class="text-slate-400" x-text="`Gefunden: ${filteredMails.length} von ${mails.length}`"></span>
                 <a href="#" @click.prevent="mailSearchQuery = ''" class="text-blue-500 hover:underline">Leeren</a>
             </div>
-
             <div id="mail-list"
                  class="flex-1 overflow-y-auto p-2 space-y-1.5">
                 <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Gesamt: <span x-text="mails.length"></span> Mails
                 </div>
-
                 <template x-for="mail in mails" :key="mail.hash">
                     <div @click="viewMail(mail); currentMail=mail; isSidebarOpen = false; $dispatch('toggle-sidebar-request', { tab: 'context' });" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
@@ -51,7 +57,6 @@
                             }">
                         
                         <div x-show="mail.is_read===0" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
-
                         <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-gray-400 mb-1 min-w-0">
                             <div class="flex items-center space-x-1 truncate mr-2">
                                 <span x-show="mail.is_answered" class="text-blue-500 font-bold">↩️</span>
@@ -64,7 +69,6 @@
                         </div>
                         
                         <h4 class="text-xs line-clamp-2 text-slate-800 dark:text-gray-200 mb-2" :class="mail.is_read===0 ? 'font-bold' : 'font-normal text-slate-600 dark:text-gray-300'" x-text="mail.subject"></h4>
-
                         <div class="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-gray-700/50 mt-2">
                             <span class="text-[10px] text-slate-400" x-text="mail.is_read ? 'Gelesen' : 'Neu'"></span>
                             <div class="flex items-center space-x-1.5">
@@ -81,7 +85,6 @@
                 </div>
             </div>
         </div>
-
         <div x-show="!isSidebarOpen" 
             class="relative hidden md:block w-0 h-full z-50 shrink-0">
             <button @click="isSidebarOpen = true" 
@@ -90,7 +93,6 @@
             </button>
         </div>
     </div>
-
     <main class="flex-1 h-full overflow-hidden bg-slate-50 dark:bg-gray-900 relative"
           :class="isSidebarOpen ? 'hidden md:flex flex-col' : 'flex flex-col'">
           
@@ -111,14 +113,12 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="flex-1 flex flex-col overflow-hidden">
                     <div class="flex-1 bg-white rounded-xl shadow-inner m-3 border border-slate-200 overflow-hidden relative flex items-center justify-center">
                         <div x-show="mailLoading" x-cloak class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-800 z-10">
                             <div class="animate-spin rounded-full h-8 w-8 border-3 border-blue-500 border-t-transparent"></div>
                             <span class="text-xs font-medium text-slate-500 mt-2">Hole E-Mail...</span>
                         </div>
-
                         <div x-show="!mailLoading" x-html="currentMailHtml" class="w-full h-full p-4 overflow-auto bg-white"></div>
                     </div>
                 </div>

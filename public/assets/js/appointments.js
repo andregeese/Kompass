@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 document.addEventListener('alpine:init', () => {
     
     // KOMPONENTE: Modal Editor
@@ -7,7 +16,6 @@ document.addEventListener('alpine:init', () => {
         contacts: [],
         contactSearch:'',
         filteredContacts: [],
-
         async performContactSearch() {
             if (this.contactSearch.length < 2) return;
             
@@ -21,8 +29,6 @@ document.addEventListener('alpine:init', () => {
         async loadAppointment(id) {
             const response = await apiCall('get_appointment', { id: id }, 'GET');
             this.formData = response.details; 
-
-
             if (response.success && response.details.appointment.length > 0) {
                 // WICHTIG: Das erste Element aus dem Array nehmen!
                 const apt = response.details.appointment[0];
@@ -42,7 +48,6 @@ document.addEventListener('alpine:init', () => {
                 console.error("Kein Termin gefunden oder API Fehler");
             }
         },
-
         async save() {
             const response = await apiCall('save_appointment', this.formData, 'POST');
             if (response.success) {
@@ -51,12 +56,10 @@ document.addEventListener('alpine:init', () => {
             }
         }
     }));
-
     // KOMPONENTE: Kalender Ansicht
     Alpine.data('appointmentView', () => ({
         loading: true,
         calendar: null,
-
         async initCalendar() {
             const calendarEl = document.getElementById('calendar');
             this.calendar = new FullCalendar.Calendar(calendarEl, {
@@ -77,7 +80,6 @@ document.addEventListener('alpine:init', () => {
                 }
             });
             this.calendar.render();
-
             // Listener für Refresh
             window.addEventListener('refresh-calendar', () => {
                 this.calendar.refetchEvents();

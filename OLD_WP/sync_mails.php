@@ -1,14 +1,21 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 <?php
 require_once 'functions.php';
 header('Content-Type: application/json');
-
 $response = [
     'success' => false,
     'added' => 0,
     'details' => [],
     'errors' => []
 ];
-
 try {
     $pdo = getPDO();
     $mbox = imap_open(MAIL_HOST, MAIL_USER, MAIL_PASS);
@@ -16,11 +23,9 @@ try {
     if (!$mbox) {
         throw new \Exception("iCloud-Verbindung fehlgeschlagen: " . imap_last_error());
     }
-
     // Suche Mails der letzten 14 Tage (etwas Puffer für eBons)
     $since = date("d-M-Y", strtotime("-14 days"));
     $mail_ids = imap_search($mbox, 'SINCE "'.$since.'"');
-
     if ($mail_ids) {
         foreach ($mail_ids as $id) {
             $uid = imap_uid($mbox, $id);
@@ -40,7 +45,6 @@ try {
                 // 2. Body holen & dekodieren
                 $body = imap_fetchbody($mbox, $id, 1);
                 $body_decoded = quoted_printable_decode($body);
-
                 // 3. In DB speichern (Verschlüsselt)
                 $stmt = $pdo->prepare("INSERT INTO mails (uid, subject_hash, body_hash, sender, date_received) VALUES (?, ?, ?, ?, ?)");
                 $stmt->execute([
@@ -50,7 +54,6 @@ try {
                     $header->fromaddress,
                     date('Y-m-d H:i:s', $header->udate)
                 ]);
-
                 $response['added']++;
                 $response['details'][] = "Neu: " . $subject;
             }
@@ -59,9 +62,7 @@ try {
     
     imap_close($mbox);
     $response['success'] = true;
-
 } catch (Exception $e) {
     $response['errors'][] = $e->getMessage();
 }
-
 echo json_encode($response);

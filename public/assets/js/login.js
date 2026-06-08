@@ -1,3 +1,12 @@
+/**
+ * START_LICENSE
+ * Enterprise CRM Hub
+ * @license BSL 1.1 - Proprietary, non-commercial use only.
+ * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @note Modification, rebranding, and commercial distribution are strictly prohibited.
+ * END_LICENSE
+ */
+
 const loginComponent = () => ({
     isRegister: false,
         loading: false,
@@ -15,17 +24,14 @@ const loginComponent = () => ({
                 email: this.formData.email,
                 password: this.formData.password
             };
-
             // 2. Felder für Register hinzufügen, falls nötig
             if (this.isRegister) {
                 payload.paperless_url = this.formData.paperless_url;
                 payload.paperless_name = this.formData.paperless_name;
                 payload.paperless_token = this.formData.paperless_token;
             }
-
             try {
                 const data = await apiCall(action, payload, 'POST');
-
                 if (data?.success) {
                     // Greife auf data.csrf_token zu, nicht auf res
                     const newToken = data.csrf_token; 
@@ -70,7 +76,6 @@ const loginComponent = () => ({
             }
         }
 });
-
 // Saubere Registrierung für Alpine (ohne Dopplungen)
 if (window.Alpine) {
     Alpine.data('detailView', loginComponent);
