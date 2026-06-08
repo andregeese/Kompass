@@ -315,7 +315,6 @@ class ContactProcessor extends \App\Core\Database
 
         if (!$dbResult->success){
             return false;
-
         }
 
         $ret = $dbResult->data->fetched;
@@ -439,6 +438,24 @@ class ContactProcessor extends \App\Core\Database
             );
         }
 
+
+        //Notizen
+        $notes = $this->getNotesByMailHash($hash);
+        error_log(print_r($notes, true));
+        foreach ($notes as $rowNote) {
+            error_log(print_r($rowNote, true));
+            $timeline[] = $this->formatItemTL(
+                'note',
+                $rowNote['id'],
+                $rowNote['updated_date'] ?? null,
+                $rowNote['content'],
+                $rowNote['content'],
+                '#note-' . $rowNote['id'],
+                $rowNote['id']
+            );
+        }
+
+
         // Paperless IDs im Vorfeld holen
         $paperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
 
@@ -509,12 +526,46 @@ class ContactProcessor extends \App\Core\Database
     private function getNotesByMailHash($hash)
     {
         // alle Notizen zu einer Mail
-        $sql = "SELECT * FROM notes WHERE uid IN (
-            SELECT uid FROM mails WHERE id_hash = UNHEX(:hash)
+        $sql = "SELECT DISTINCT n.*
+                FROM `notes` n
+
+                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
+                JOIN `contact_emails` ce_all 
+                ON (n.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
+
+                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
+                JOIN `contact_emails` ce_current_mail 
+                ON ce_all.contact_id = ce_current_mail.contact_id
+
+                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
+                JOIN `mails` m 
+                ON (m.sender_ceid = ce_current_mail.id OR m.recipient_ceid = ce_current_mail.id)
+
+                -- 4. Filter für die Sidebar
+                WHERE m.id_hash = UNHEX(:hash)
+                AND m.tenant_id = :tenant_id
+                AND n.tenant_id = :tenant_id
+
+                -- Neueste Notizen immer zuerst anzeigen
+                ORDER BY n.created_at DESC;
         );";
+
+        $params =['hash' => $hash];
+        $dbResult = $this->queryIt($sql, $params,false, false, true);
+
+        if (!$dbResult->success){
+            throw new \Exception("Fehler bei Notiz!");
+        }
+
+        return $dbResult->data->fetched;
     }
 
-    public function searchMailAddress($query) 
+    /**
+     * Suche nach einer E-Mail-Adresse
+     * @param string $query: die E-Mail-Adresse
+     * @return array -> fetched
+     */
+    public function searchMailAddress(string $query):array
     {
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),

@@ -202,6 +202,7 @@
                                                             <span x-show="item.type === 'appointment'">📅</span>
                                                             <span x-show="item.type === 'document'">📝</span>
                                                             <span x-show="item.type === 'paperless'">📄</span>
+                                                            <span x-show="item.type === 'note'">📋</span>
                                                             </span>
                                                         <span x-show="item.is_flagged" class="text-[10px] shrink-0 animate-pulse" title="Markiert">📌</span>
 

@@ -433,27 +433,6 @@ window.crmEngine = function() {
                 localStorage.setItem('cached_notes', JSON.stringify(this.notes));
             }
         },
-
-        async addNote() {
-            const content = this.newNote?.content?.trim();
-            if (!content) return;
-
-            const payload = { id: 'local_' + Date.now(), content, status: 'pending' };
-            this.notes.unshift(payload);
-            localStorage.setItem('cached_notes', JSON.stringify(this.notes));
-
-            if (this.isOnline) {
-                const jResponse = await apiCall('crm_save_note', payload, 'POST');
-                
-                if (jResponse?.success && jResponse.details?.db_id) payload.id = jResponse.details.db_id;
-            } else {
-                let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
-                queue.push(payload);
-                localStorage.setItem('queue_notes', JSON.stringify(queue));
-            }
-            this.newNote.content = '';
-        },
-
        
         async syncOfflineNotes() {
             if (!navigator.onLine) return;

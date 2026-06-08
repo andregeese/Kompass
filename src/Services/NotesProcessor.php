@@ -22,9 +22,28 @@ class NotesProcessor extends \App\Core\Database
 
     public function getNotes()
     {
-        $sql = "SELECT * FROM notes WHERE tenant_id=:tenant_id ORDER BY updated_at DESC;";
+
+     $sqlNew = "SELECT 
+                n.id as id,
+                n.content as content,
+                n.mail_uid as uid,
+                n.mail_folder as folder,
+                n.created_at as created_at,
+                n.category as category,
+                n.status as status,
+                ce.email as email,
+                c.display_name as display_name
+                FROM notes as n 
+                LEFT JOIN contact_emails as ce ON ce.id = n.ceid
+                LEFT JOIN contacts as c on c.id = ce.contact_id
+                WHERE n.tenant_id=:tenant_id ORDER BY n.updated_at DESC";
+        
         $dbResult = $this->queryIt(
-            $sql
+            $sqlNew,
+            [],
+            false,
+            false,
+            true
         );
 
         $fetched = $dbResult->data->fetched;
@@ -35,9 +54,10 @@ class NotesProcessor extends \App\Core\Database
 
     public function saveNote(array $memoData)
     {
-        
-        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, email) 
-                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, :email)";
+        error_log(print_r($memoData, true));
+
+        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, ceid) 
+                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, :ceid)";
 
         $params = [
             'mailUid'     => !empty($memoData['uid']) ? $memoData['uid'] : null,
@@ -46,7 +66,7 @@ class NotesProcessor extends \App\Core\Database
             'content'     => $memoData['content'],
             'status'      => $memoData['status'] ?? 'active', // 💡 Mappt jetzt sauber auf :status
             'lokal_id'    => $memoData['id'],
-            'email'       => !empty($memoData['mail']) ? $memoData['mail'] : null
+            'ceid'       => !empty($memoData['ceid']) ? $memoData['ceid'] : null
         ];
 
         $dbResult = $this->queryIt($sql, $params, true, true, false);

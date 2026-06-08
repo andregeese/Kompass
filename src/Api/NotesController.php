@@ -30,7 +30,7 @@ class NotesController extends \App\Core\BaseController
                 'folder'   => $this->request->get('folder'),
                 'category' => $this->request->get('category'),
                 'status'   => $this->request->get('status'),
-                'mail'     => $this->request->get('mail') 
+                'ceid'     => $this->request->get('ceid')
             ];
         }
 
@@ -59,7 +59,9 @@ class NotesController extends \App\Core\BaseController
     }
 
     public function getNotes() {
-        return $this->notesProcess->getNotes();
+        $pResult = $this->notesProcess->getNotes();
+        error_log(print_r($pResult, true ));
+        return $pResult;
     }
 
     public function toogleNote()

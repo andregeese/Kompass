@@ -49,13 +49,11 @@
             </div>
 
             <div class="flex flex-nowrap gap-1 w-full overflow-x-auto pb-1.5 mask-inline-edge scrollbar-none">
-                <template x-for="email in recentEmails" :key="email.email_hash">
+                <template x-for="email in recentEmails" :key="email.id">
                     <button type="button" 
                             x-show="!emailSearch || email.display_name.toLowerCase().includes(emailSearch.toLowerCase()) || email.email.toLowerCase().includes(emailSearch.toLowerCase())"
-                            @click="newNote.ceid === email.email_hash 
-                                ? (newNote.ceid = '', newNote.contact_email = '', newNote.contact_name = '', newNote.uid = '', contactMails = []) 
-                                : (newNote.ceid = email.email_hash, newNote.contact_email = email.email, newNote.contact_name = email.display_name, newNote.uid = '', searchLastMails(email.email_hash))"
-                            :class="newNote.ceid === email.email_hash 
+                            @click="toggleEmailSelection(email)"
+                            :class="newNote.ceid === email.id 
                                 ? 'bg-emerald-50 border-emerald-300 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/10' 
                                 : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-gray-750 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'"
                             class="inline-flex items-center gap-1.5 p-1.5 px-2.5 rounded-lg text-[10px] font-medium border transition-all text-left max-w-[150px] shrink-0">
@@ -63,8 +61,8 @@
                         <span class="truncate" x-text="email.display_name.replace(/'/g, '')"></span>
                         
                         <span class="text-[9px] font-bold opacity-60 shrink-0" 
-                            :class="newNote.ceid === email.email_hash ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'"
-                            x-text="newNote.ceid === email.email_hash ? '✕' : '+'"></span>
+                            :class="newNote.ceid === email.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'"
+                            x-text="newNote.ceid === email.id ? '✕' : '+'"></span>
                     </button>
                 </template>
             </div>
@@ -133,7 +131,7 @@
         </h3>
 
         <div class="space-y-3">
-            <template x-for="note in notes" :key="note.id">
+            <template x-for="(note, index) in notes" :key="note.id ? note.id.toString() : 'fallback_' + index">
                 <div class="group relative p-4 bg-white dark:bg-gray-800 rounded-2xl border border-slate-200/80 dark:border-gray-700 shadow-sm flex items-start justify-between transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-gray-600 overflow-hidden" 
                     :class="{
                         'opacity-50 bg-slate-50/50 dark:bg-gray-850/40 line-through': note.status === 'completed',
@@ -175,7 +173,7 @@
                                     </div>
                                 </template>
 
-                                <span x-show="note.id.toString().startsWith('local_')" class="text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider border border-amber-200/40 animate-pulse">Lokal gesichert</span>
+                                <span x-show="note.id?.toString()?.startsWith('local_')" class="text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider border border-amber-200/40 animate-pulse">Lokal gesichert</span>
                             </div>
                         </div>
                     </div>
