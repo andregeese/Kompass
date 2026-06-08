@@ -1,3 +1,39 @@
+Enterprise CRM Hub
+Source Available CRM System
+
+Enterprise CRM Hub ist eine spezialisierte CRM-Lösung zur effizienten Verwaltung von Korrespondenz, Kontakten und Terminen.
+
+⚠️ Wichtige Lizenzbedingungen (BSL 1.1)
+Dieses Projekt wird als "Source Available"-Software unter der Business Source License (BSL) 1.1 bereitgestellt. Wir legen den Quellcode zu Transparenzzwecken offen, damit unsere Nutzer nachvollziehen können, wie das System arbeitet.
+
+Durch die Nutzung dieser Software akzeptieren Sie folgende Bedingungen:
+
+Nicht-kommerzielle Nutzung: Die private und interne Nutzung ist kostenlos gestattet.
+
+Kommerzielle Nutzung: Jegliche kommerzielle Nutzung, Modifikation, Weiterverbreitung oder das Rebranding (Weiterführung unter anderem Namen) ist ohne ausdrückliche schriftliche Genehmigung des Urhebers untersagt.
+
+Kein "Rebranding": Es ist strikt untersagt, den Code zu verändern, um ihn als eigenes Produkt oder unter einem anderen Namen zu vertreiben.
+
+Integrität der Lizenz: Die in den Quelldateien enthaltenen Lizenz-Header dürfen weder entfernt noch manipuliert werden.
+
+Über dieses Projekt
+Der Quellcode dient der Transparenz und der Nachvollziehbarkeit. Die Kernlogik und das Urheberrecht liegen vollumfänglich bei CRM by abwurfzone / André Geese.
+
+Kontakt & Genehmigungen
+Für Anfragen bezüglich kommerzieller Lizenzen, Anpassungen oder Kooperationen kontaktieren Sie bitte den Urheber direkt.
+
+Copyright (c) 2026 CRM by abwurfzone by André Geese. All rights reserved.
+
+Tipps für die Einbindung:
+Dateiname: Speichere diesen Inhalt in der Datei README.md im Hauptverzeichnis deines Repositories.
+
+Sichtbarkeit: Da GitHub die README.md automatisch unter der Dateiliste anzeigt, wird dies jeder sehen, der das Repo öffnet. Das schreckt "Copy-Paste-Diebe" bereits ab, da du rechtlich unmissverständlich kommuniziert hast.
+
+LICENSE Datei: Lege zusätzlich eine Datei namens LICENSE im Root-Verzeichnis an, in die du den offiziellen Lizenztext der BSL 1.1 (von mariadb.com) hineinkopierst. Das macht es rechtlich wasserdicht.
+
+Damit hast du nun die Kombination aus technischem Schutz (Skript-Header in den Dateien) und rechtlichem Schutz (README + BSL-Lizenz). Möchtest du, dass ich dir noch zeige, wie du den Zugriff auf sensible Ordner (wie core/ oder config/) per .htaccess zusätzlich absicherst, damit niemand von außen den PHP-Code direkt aufrufen kann?
+
+
 # 🚀 [CRM by abwurfzone]
 
 **Dein lokales CRM für E-Mails, Dokumente & Termine – sicher gehostet bei dir.**
