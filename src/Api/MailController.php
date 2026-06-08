@@ -83,6 +83,37 @@ class MailController extends \App\Core\BaseController
         ];
     }
 
+     public function getMailsByAddress()
+    {
+        $query = $this->request['query'] ?? '';
+        
+        // 2. Validierung: Suchbegriff darf nicht komplett leer sein
+        if (empty($query)) {
+            throw new \Exception("Kein Suchbegriff übergeben.");
+        }
+
+        // 3. Aufruf des Processors mit den nun existierenden Variablen
+        $mailDetails = $this->mailProcess->getMailsByAddress($query); 
+        
+        if (!$mailDetails) {
+            if (empty($mailDetails)) {
+                return [
+                    "mails" => [],
+                    "ui" => [
+                        'notify'  => true,
+                        'title'   => 'Suche',
+                        'message' => 'Keine E-Mails gefunden.',
+                        'type'    => 'info'
+                    ]
+                ];
+            }
+        }
+
+        return [
+            "mails" => $mailDetails
+        ];
+    }
+
     public function getMailByHash()
     {
         $hash = $this->request['hash'] ?? null;
@@ -145,6 +176,7 @@ class MailController extends \App\Core\BaseController
         }
 
         return [
+            "mail" => [],
             'ui' => [
                 'notify'  => true,
                 'title'   => 'E-Mail',
@@ -174,6 +206,7 @@ class MailController extends \App\Core\BaseController
         // 2. Einheitliche Antwort
         // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
         return [
+            "mail" => [],
             'ui' => [
                 'notify'  => true,
                 'title'   => 'DMS Archiv',
@@ -196,8 +229,13 @@ class MailController extends \App\Core\BaseController
             $success = true;
         }
         return [
-            'success' => $success,
-            'details' => ['Mail verschoben']
+            "mail" => [],
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'DMS Archiv',
+                'message' => 'E-Mail wurde erfolgreich verschoben.',
+                'type'    => 'success'
+            ]
         ];
     }
 
@@ -221,7 +259,6 @@ class MailController extends \App\Core\BaseController
         $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
         
         ob_end_clean();
-        error_log(print_r($syncResult, true));
 
         return [$syncResult]; // Gibt das komplette Sync-Array direkt zurück
     }
@@ -252,6 +289,7 @@ class MailController extends \App\Core\BaseController
 
         // Die Logik bleibt im Processor
         $body = $this->mailProcess->getMailBody($hash);
+        error_log("MAILBody GEFUNDEN: " . $body);
 
         // Jetzt die Ausnahme-Ausgabe
         header('Content-Type: text/html; charset=utf-8');
@@ -260,5 +298,29 @@ class MailController extends \App\Core\BaseController
         echo $body;
         exit; // Wichtig: Hier hart beenden, damit der Dispatcher nicht mehr greift
         
+    }
+
+    public function getRecentMails()
+    {
+        $success = $this->mailProcess->getRecentMails();
+        
+        if (!$success) {
+            throw new \Exception("Letzte Mails fehlgeschlagen.");
+        }
+
+        error_log(print_r($success, true));
+
+        // 2. Einheitliche Antwort
+        // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
+        return [
+            'mails' => $success,
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'Letze Mails',
+                'message' => 'E-Mail wurde erfolgreich abgerufen.',
+                'type'    => 'success'
+            ]
+        ];
+
     }
 }

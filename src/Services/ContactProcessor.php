@@ -506,12 +506,48 @@ class ContactProcessor extends \App\Core\Database
         return $TL;   
     }
 
+    private function getNotesByMailHash($hash)
+    {
+        // alle Notizen zu einer Mail
+        $sql = "SELECT * FROM notes WHERE uid IN (
+            SELECT uid FROM mails WHERE id_hash = UNHEX(:hash)
+        );";
+    }
+
+    public function searchMailAddress($query) 
+    {
+        // 2. Das SQL-Statement aufbauen
+        // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
+        // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
+        $sql = "SELECT * 
+                FROM contact_emails as ce 
+                LEFT JOIN contacts as c ON c.id = ce.contact_id
+                WHERE ce.email like :search; ";
+        
+    
+        // 3. Ausführung über deine native queryIt-Methode
+        $dbResult = $this->queryIt($sql, [
+            'search' => '%' . $query . '%',
+        ],
+        false,
+        false,
+        false);
+
+
+        if(!$dbResult->success){
+            return [];
+        }
+
+        return $dbResult->data->fetched;    
+    }
+
     /**
      * Email und Kontakt
      */
     private function getMailItems($hash, $salt, $tenantId)
     {
         error_log(__FUNCTION__);
+        
         $sql = "SELECT CASE 
                         WHEN m.recipient_ceid = ce.id THEN 'mail_send'
                         ELSE 'mail'

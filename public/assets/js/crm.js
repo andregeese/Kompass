@@ -78,6 +78,38 @@ function showNotify(title, message, type = 'danger') {
 
 let ALLOWED_ACTIONS = [];
 
+function triggerSecurityLockout() {
+    // 1. Erstelle das Fullscreen-Schutzschild
+    const overlay = document.createElement('div');
+    overlay.id = 'security-lockout-overlay';
+    
+    // Styling für den Unschärfe-Effekt (Frisst auch alle Klicks ab)
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.15); /* Eleganter, dunkler Schleier */
+        backdrop-filter: blur(12px);         /* Macht den Hintergrund unscharf */
+        -webkit-backdrop-filter: blur(12px); /* Safari Support */
+        z-index: 999990;                     /* Extrem hoch, fängt alles ab */
+        pointer-events: all;                 /* Blockiert Klicks auf die App */
+        cursor: not-allowed;
+    `;
+    
+    // In die Seite einfügen
+    document.body.appendChild(overlay);
+
+    // 2. Benachrichtigung anzeigen
+    showNotify("Sicherheit", "Sicherheitsfall: Token nicht gefunden!", "error");
+
+    // 3. Nach 2 Sekunden Bedenkzeit hart zum Login weiterleiten
+    setTimeout(() => {
+        window.location.replace('index.php?view=Login');
+    }, 2000);
+}
+
 async function initApiConfig() {
     const res = await apiCall('get_allowed_actions', {}, 'GET');
     if (res.success) ALLOWED_ACTIONS = res.data;
@@ -95,11 +127,13 @@ async function apiCall(action, params = {}, method = 'POST')
 
     if (!isPublic && (!currentToken || currentToken === '')) {
         console.error("[SECURITY] Abbruch: Kein CSRF-Token im DOM gefunden!");
+        triggerSecurityLockout();
         return { success: false, error: "Kein CSRF-Token gefunden. Bitte Seite neu laden." };
     }
 
     if (typeof ALLOWED_ACTIONS !== 'undefined' && ALLOWED_ACTIONS.length > 0 && !ALLOWED_ACTIONS.includes(action)) {
         console.error("Ungültige Aktion!");
+        showNotify("AKTION " + action, "Aktion unbekannt!", "error");
         return { success: false, error: "Ungültige Aktion" };
     }
 
@@ -128,15 +162,63 @@ async function apiCall(action, params = {}, method = 'POST')
     return await safeFetch(url, options);
 }
 
+function checkUrlOnLoad() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.substring(1); // Entfernt das '#'
+    
+    // Wenn view=mails aktiv ist und im Hash eine Action steckt
+    if (urlParams.get('view') === 'mails' && hash.includes('action=view')) {
+        // Extrahiere den reinen Hash vor dem '&'
+        const cleanHash = hash.split('&')[0];
+        
+        // Triggere die Ansicht verzögert, bis Alpine bereit ist
+        setTimeout(() => {
+            dispatchAction('mail_view', { hash: cleanHash });
+        }, 100);
+    }
+}
+
+// Ausführen beim Seitenstart
+document.addEventListener('DOMContentLoaded', checkUrlOnLoad);
+
+window.addEventListener('select-mail-hash', (event) => {
+    console.log("mail-hash");
+    const mailHash = event.detail.hash;
+    
+    // Prüfen, welche View aktuell in der URL aktiv ist
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentView = urlParams.get('view');
+
+    if (currentView === 'mails') {
+        // Fall A: Wir sind schon in der Mail-Ansicht -> Mail sofort live öffnen (ohne Reload!)
+        dispatchAction('mail_view', { hash: mailHash });
+    } else {
+        // Fall B: Wir sind woanders (z.B. Dashboard) -> Seite wechseln mit Hash im Gepäck
+        window.location.href = `index.php?view=mails#${mailHash}&action=view`;
+    }
+});
+
 /**
  * Der zentrale Verteiler für alle Website-weiten Aktionen
  */
 function dispatchAction(action, context, triggerElement) {
-    console.log(`Zentrale Action getriggert: [${action}]`, context);
+    onsole.log(`Zentrale Action getriggert: [${action}]`, context);
 
     switch (action) {
+        case 'mail_view':
+            // 💡 HIER REAGIERST DU AUF DEN HASH
+            console.log("Öffne Mail mit Hash:", context.hash);
+            
+            // Falls du eine Funktion hast, die die Mail im Hauptfenster rendert:
+            if (typeof window.loadMailByHash === 'function') {
+                window.loadMailByHash(context.hash);
+            }
+            
+            // Optional: Scrollt den Browser zum Mail-Inhalt, falls nötig
+            window.location.hash = context.hash;
+            break;
+
         case 'note_add':
-            // Kontext-Daten nutzen (z.B. context.uid)
             openNoteModal(context.uid, context.folder);
             break;
 
@@ -144,9 +226,7 @@ function dispatchAction(action, context, triggerElement) {
             archiveMail(context.uid, triggerElement);
             break;
 
-        case 'refresh_sync':
-            triggerImapSync();
-            break;
+        // ... deine anderen Cases ...
 
         default:
             console.warn(`Definition für Action "${action}" fehlt im Switch-Block!`);
@@ -374,26 +454,47 @@ window.crmEngine = function() {
             this.newNote.content = '';
         },
 
-        async toggleNoteStatus(noteId) {
-            const note = this.notes.find(n => n.id === noteId);
-            if (!note) return;
-            note.status = note.status === 'completed' ? 'pending' : 'completed';
-            localStorage.setItem('cached_notes', JSON.stringify(this.notes));
-
-            if (this.isOnline) {
-                
-                await apiCall('toggle_note', {id: noteId, status: note.status}, 'GET');                
-            }
-        },
-
+       
         async syncOfflineNotes() {
-            let queue = JSON.parse(localStorage.getItem('cached_notes') || '[]');
-            if (!queue.length || !this.isOnline) return;
-            for (const item of queue) {
-                await apiCall('save_note', item, 'POST');
+            if (!navigator.onLine) return;
+
+            // 1. Hol die offenen Memos aus der Queue
+            let queue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
+            if (queue.length === 0) return;
+
+            console.log(`🔄 ${queue.length} Offline-Notiz(en) gefunden. Starte Sync...`);
+            
+            let remainingQueue = [];
+
+            for (let memo of queue) {
+                try {
+                    // Wir senden das Memo an deinen PHP-Controller
+                    // (Passe 'save_note' an deinen tatsächlichen API-Endpoint an)
+                    const jResponse = await apiCall('save_note', memo, 'POST');
+                    
+                    if (jResponse && jResponse.note) {
+                        console.log(`✅ Notiz ${memo.id} erfolgreich mit DB synchronisiert.`);
+                        
+                        // Optionale Kosmetik: Ersetze die 'local_...' ID in deiner Live-Liste 
+                        // durch das echte Notiz-Objekt vom Server (inkl. echter DB-ID)
+                        this.notes = this.notes.map(n => n.id === memo.id ? jResponse.note : n);
+                    } else {
+                        // Server hat geantwortet, aber kein Erfolg (z.B. Validierungsfehler)
+                        // Wir behalten es in der Queue, um Datenverlust zu vermeiden
+                        remainingQueue.push(memo);
+                    }
+                } catch (err) {
+                    console.error(`❌ Sync-Fehler für Notiz ${memo.id}:`, err);
+                    // Netzwerk-Timeout oder Server down? Zurück in die Warteschlange für den nächsten Versuch!
+                    remainingQueue.push(memo);
+                }
             }
-            localStorage.removeItem('queue_notes');
-            this.loadNotesBackend();
+
+            // 2. Queue im LocalStorage aktualisieren (Erfolgreiche Memos sind jetzt gelöscht!)
+            localStorage.setItem('queue_notes', JSON.stringify(remainingQueue));
+            
+            // UI-Gesamtcache für den nächsten Reload sichern
+            localStorage.setItem('cached_notes', JSON.stringify(this.notes));
         },
 
         // =========================================================================

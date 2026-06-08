@@ -89,6 +89,7 @@ $routes = [
     
     // Mails
     'get_mail_by_hash'              => [App\Api\MailController::class, 'getMailByHash'],
+    'get_mails_by_mailadress'       => [App\Api\MailController::class, 'getMailsByAddress'],
     'list_mails'                    => [App\Api\MailController::class, 'listMails'],
     'view'                          => [App\Api\MailController::class, 'viewMail'],
     'delete'                        => [App\Api\MailController::class, 'deleteMail'],
@@ -98,6 +99,7 @@ $routes = [
     'track_folders'                 => [App\Api\MailController::class, 'trackFolders'],
     'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
+    'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
 
     //Appointment
     'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
@@ -121,6 +123,7 @@ $routes = [
     
     // Contacts
     'search_contact'                => [App\Api\ContactController::class, 'getContactByHashMail'],
+    'search_mail_address'           => [App\Api\ContactController::class, 'searchMailAddress'],
     'insert_contact'                => [App\Api\ContactController::class, 'insert'],
     'save_contact_manual'           => [App\Api\ContactController::class, 'saveSmallContact'],
     'save_contact'                  => [App\Api\ContactController::class, 'saveContact'],
@@ -140,9 +143,11 @@ $routes = [
     'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
     'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
 
+    //NOTES
     'get_notes'                     => [App\Api\NotesController::class, 'getNotes'],
     'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],
     'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
+    'toggle_note'                   => [App\Api\NotesController::class, 'toogleNote'],
 
 ];
 
@@ -174,8 +179,13 @@ $method = $routes[$action][1];
     
     // Versuch 1: Über dein Framework-Dashboard ausgeben
     try {
-        \App\Dashboard::sendResponse(false, new \stdClass(), $e->getMessage());
-        //exit;
+        // 💡 Wir übergeben die Fehlerdetails & den StackTrace als Array im zweiten Parameter!
+        \App\Dashboard::sendResponse(false, [
+            'file'  => $e->getFile(),
+            'line'  => $e->getLine(),
+            'trace' => explode("\n", $e->getTraceAsString()) // Macht ein schönes JSON-Array draus
+        ], $e->getMessage());
+        exit;
     } catch (\Throwable $internalError) {
         // 1. Immer sofort in den System-Log schreiben
         error_log("API Global Catch: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
@@ -184,13 +194,14 @@ $method = $routes[$action][1];
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
         
-        // 3. Pures, ungezähmtes JSON ausgeben. Kein Framework-Aufruf hier!
+        // 3. Pures, ungezähmtes JSON ausgeben inklusive StackTrace im Fallback
         echo json_encode([
             'success' => false,
             'status'  => 'error',
             'error'   => $e->getMessage(),
             'file'    => $e->getFile(),
-            'line'    => $e->getLine()
+            'line'    => $e->getLine(),
+            'trace'   => explode("\n", $e->getTraceAsString())
         ]);
         exit;
     }

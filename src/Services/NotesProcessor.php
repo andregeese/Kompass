@@ -12,6 +12,7 @@ class NotesProcessor extends \App\Core\Database
 
     use \App\Core\ServiceTrait;
     protected $dashboard;
+    
     //private $imapStream = null;
 
     public function __construct($dashboard) {
@@ -21,7 +22,7 @@ class NotesProcessor extends \App\Core\Database
 
     public function getNotes()
     {
-        $sql = "SELECT * FROM notes WHERE tenant_id=:tenant_id";
+        $sql = "SELECT * FROM notes WHERE tenant_id=:tenant_id ORDER BY updated_at DESC;";
         $dbResult = $this->queryIt(
             $sql
         );
@@ -32,36 +33,54 @@ class NotesProcessor extends \App\Core\Database
         
     }
 
-    public function saveNote() 
+    public function saveNote(array $memoData)
     {
-        $rawInput = file_get_contents('php://input');
-        $data = json_decode($rawInput, true);
-
-        $memo = $data['memo'] ?? $data;
-
-        error_log("NOTE: " . print_r($memo, true));
         
-        $mailUid    = (empty($memo['uid']) || $memo['uid'] == '') ? null : $memo['uid'] ;
-        $mailFolder = $memo['folder'] ??  null;
-        $category   = $memo['category'] ??  'general';
-        $content   = $memo['content'] ??  null;
+        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, email) 
+                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, :email)";
 
-        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status) 
-                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, 'active')";
         $params = [
-            "mailUid"       => $mailUid,
-            "mailFolder"    => $mailFolder,
-            "category"      => $category,
-            "content"       => $content
+            'mailUid'     => !empty($memoData['uid']) ? $memoData['uid'] : null,
+            'mailFolder'  => !empty($memoData['folder']) ? $memoData['folder'] : null,
+            'category'    => $memoData['category'] ?? 'general',
+            'content'     => $memoData['content'],
+            'status'      => $memoData['status'] ?? 'active', // 💡 Mappt jetzt sauber auf :status
+            'lokal_id'    => $memoData['id'],
+            'email'       => !empty($memoData['mail']) ? $memoData['mail'] : null
         ];
-        $dbResult = $this->queryIt($sql,$params,true, true, true);
+
+        $dbResult = $this->queryIt($sql, $params, true, true, false);
 
         if (!$dbResult->success){
-            throw new \Exception ("Notiz nicht gespeichert");
+            throw new \Exception("Notiz nicht gespeichert");
         }
 
-        return $dbResult->data->lastId;
+        return $dbResult->data;
+    }
 
+    /**
+     * Setze Status auf completed oder active
+     */
+    public function toogleNote()
+    {
+        $id = $this->request->id;
+        $status = $this->request->status;
+
+        $sql = "UPDATE notes 
+                   SET status = :status  
+                WHERE tenant_id = :tenant_id AND id = :id;";
+        $params = [
+            "id"       => $id,
+            "status"   => $status
+        ];
+        $dbResult = $this->queryIt($sql,$params, true, false, true);
+
+        if (!$dbResult->success){
+            throw new \Exception ("Notiz nicht geändert");
+        }
+
+        return $dbResult->data;
 
     }
+
 };

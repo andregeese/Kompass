@@ -151,15 +151,13 @@ class MailProcessor extends \App\Core\Database
             throw new \Exception(  "Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
         }
         
-        
         $uid = (int)$mail['uid'];
 
-        $mailboxPath = $this->getIMAPFolderByHash($hash);
 
-        $imapStream = $this->connectIMAP($mailboxPath);
+        $imapStream = $this->connectIMAP($mail['imap_folder']);
         
         if ($folder!=='INBOX') {
-            if (!imap_reopen($imapStream, $mailboxPath)) {
+            if (!imap_reopen($imapStream, $mail['imap_folder'])) {
                 throw new \Exception("Konnte Ordner $folder nicht öffnen: " . imap_last_error());
             }
         }
@@ -352,6 +350,65 @@ class MailProcessor extends \App\Core\Database
         return $cache;
     }
 
+    /**
+     * lehnt sich an die Suche Mail an, wir in Notizen genutzt.
+     * @param $last int
+     * @return array 
+     */
+    public function getRecentMails(int $last=10):array
+    {
+        $sql = "SELECT 
+                        m.id,
+                        m.id_hash as hash,
+                        ce.contact_id, 
+                        m.imap_folder as folder,
+                        ce.email as sender,
+                        c.display_name as contact_name, 
+                        m.uid as uid,
+                        m.subject_hash as sHash,
+                        ce.id as ce_id,
+                        m.date_received as date_received
+                FROM mails as m 
+                INNER JOIN contact_emails as ce ON ce.id = m.sender_ceid
+                INNER JOIN contacts as c on c.id = ce.contact_id
+                WHERE 
+                    m.tenant_id = :tenant_id
+                    AND (m.status NOT IN('deleted') OR m.status IS NULL) 
+                ORDER BY m.date_received DESC
+                LIMIT :limit;";
+
+        $dbResult = $this->queryIt(
+            $sql, 
+            ['limit'=> (int)$last],
+            false,
+            false,
+            false
+        );
+
+        $results = $dbResult->data->fetched;
+
+        if (!$dbResult->success)
+        {
+            throw new \Exception("Fehler beim Abruf");
+        }
+
+        $filtered =[];
+        foreach ($results as $row) 
+        {
+            if (isset($row['hash'])) {
+                $row['hash'] = bin2hex($row['hash']);
+            }
+            $subject = strtolower($this->dashboard->decrypt($row['sHash']));
+            $sender = strtolower($row['sender']);
+            $contactName = strtolower($row['contact_name'] ?? '');
+
+            $row['subject'] = $subject; // Zurückgeben als Klartext
+            $filtered[] = $row;
+        }
+
+        return $filtered;
+    }
+
     public function syncWithICloud(int $maxNewMailsLimit, string $folder): array 
     {
         //@set_time_limit(120);
@@ -402,9 +459,7 @@ class MailProcessor extends \App\Core\Database
                 {
                     $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
                     $ov = $overview[0];
-                    
-                    //error_log("DEBUG ov". print_r($ov, true));
-
+                
                     if (!empty($overview)) ;
 
                     $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
@@ -462,6 +517,7 @@ class MailProcessor extends \App\Core\Database
 
                     # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
                     $sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
+                    
                     $this->queryIt(
                         $sqlMaillog,
                         [
@@ -832,6 +888,63 @@ class MailProcessor extends \App\Core\Database
             $ret = array_slice($filtered, $offset, $limit);
 
             return $ret;
+    }
+
+    public function getMailsByAddress($query)
+    {
+        $sql = "SELECT m.uid, 
+                    LOWER(HEX(m.id_hash)) as hash, 
+                    m.subject_hash as sHash, 
+                    m.sender, 
+                    m.date_received, 
+                    m.paperless_id, 
+                    c.display_name as contact_name,
+                    ce.email as contact_email
+                FROM mails m
+                LEFT JOIN contact_emails as ce ON ce.id = m.sender_ceid
+                LEFT JOIN contacts as c ON c.id = ce.contact_id
+                WHERE m.tenant_id = :tenant_id 
+                AND ce.email_hash = :search
+                ORDER BY m.date_received DESC;";
+    
+    
+        // 3. Ausführung über deine native queryIt-Methode
+        $dbResult = $this->queryIt($sql, [
+            'search' => $query,
+        ],
+        false,
+        false,
+        true);
+
+
+        if(!$dbResult->success){
+            return [];
+        }
+
+        $results = $dbResult->data->fetched;
+
+        foreach ($results as &$row) 
+        {
+            if (isset($row['hash'])) {
+                $row['hash'] = bin2hex($row['hash']);
+            }
+            $subject = strtolower($this->dashboard->decrypt($row['sHash']));
+            $sender = strtolower($row['sender']);
+            $contactName = strtolower($row['contact_name'] ?? '');
+
+            $row['subject'] = $subject; // Zurückgeben als Klartext
+            $row['sender'] = strtolower($row['sender']);
+            $row['contact_name'] = strtolower($row['contact_name'] ?? '');
+            $row['date'] = !empty($row['date_received']) 
+                ? (new \DateTime($row['date_received']))->format('d.m.Y H:i') 
+                : '';
+        }
+
+        unset($row);
+
+        error_log(print_r($results, true));
+
+        return $results;
     }
 
     /**
