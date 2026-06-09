@@ -127,7 +127,7 @@ const notesViewComponent = () => ({
         this.newNote.uid = ''; // Vorherige Mail-ID-Auswahl leeren
         // 3. Verlaufs-Mails im Hintergrund nachladen
         try {
-            const data = await apiCall('get_mails_by_mailadress', { query: email.email_hash }, 'GET');
+            const data = await apiCall('get_mails_by_mailadress', { hash: email.email_hash }, 'GET');
             this.contactMails = data?.success && data.details?.mails ? data.details.mails : [];
         } catch (err) {
             console.error("Mailsuche nach Kontakt fehlgeschlagen:", err);

@@ -47,11 +47,8 @@ class AppointmentsProcessor extends BaseProcessor
             false,
             true
         );
-        if (!$dbResult->success){
-            throw new \Exception ("Kalender konnte nicht geladen werden");
-        }
-        error_log(print_r($dbResult, true));
-        return $dbResult->data->fetched;
+
+        return $dbResult;
     }
     public function getAppointment($id)
     {
@@ -60,10 +57,8 @@ class AppointmentsProcessor extends BaseProcessor
             $sql, 
             ['id' => $id]
         );
-        if(!$dbResult->success){
-            throw new \Exception("Kein Termin gefunden.");
-        }
-        return $dbResult->data->fetched;
+        
+        return $dbResult;
     }
     private function getPrincipalPath()
     {
@@ -364,14 +359,13 @@ class AppointmentsProcessor extends BaseProcessor
             SET summary = :summary, 
                 ceid = :ceid 
             WHERE id = :id AND tenant_id = :tenant_id";
+            
         $dbResult = $this->queryIt($sql, [
             'summary'   => $data['title'],
             'ceid'      => !empty($data['ceid']) ? (int)$data['ceid'] : null,
             'id'        => (int)$data['id']
         ]);
-        if (!$dbResult->success){
-            throw new \Exception("Fehler beim Speichern des Termins");
-        }
-        return ["result" => $dbResult];
+
+        return $dbResult;
     }
 }

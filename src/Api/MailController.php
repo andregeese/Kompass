@@ -1,4 +1,5 @@
 <?php
+
 /**
  * START_LICENSE
  * Enterprise CRM Hub
@@ -7,40 +8,64 @@
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
+
 namespace App\Api;
+
 use App\Services\MailProcessor; // Importiere den Prozessor
 use Exception;
-class MailController extends \App\Core\BaseController 
+
+class MailController extends \App\Core\BaseController
 {
-    public function __construct($dashboard) {
+    public function __construct($dashboard)
+    {
         parent::__construct($dashboard); // Das ist entscheidend!
     }
-    
-    public function listMails() 
+
+    public function listMails()
     {
-        // 1. Parameter aus dem zentralen Request-Objekt holen
-        $page   = (int)($this->request['page'] ?? 1);
-        $limit  = (int)($this->request['limit'] ?? 20);
-        $folder = $this->request['folder'] ?? 'INBOX';
-        $search = $this->request['search'] ?? '';
-        if (!empty($search) && $page > 1) {
+        error_log("###" . __FUNCTION__ . "###");
+
+        $search = trim($this->request['search'] ?? '');
+        if (empty($search)) {
+            unset($this->request['search']);
+        } else {
+            $this->request['search'] = $search;
+        }
+
+        // Default-Werte sicherstellen, falls Parameter komplett fehlen
+        // Damit die Reflection-Pipeline nicht meckert
+        $this->request['page']   = (int)($this->request['page'] ?? 1);
+        $this->request['limit']  = (int)($this->request['limit'] ?? 20);
+        $this->request['folder'] = $this->request['folder'] ?? 'INBOX';
+
+        // 2. Spezial-Logik abfangen (cleanBuffer)
+        // Wenn 'search' gesetzt ist und page > 1, greift deine Logik:
+        if (isset($this->request['search']) && $this->request['page'] > 1) {
             $this->cleanBuffer();
             return ['mails' => []];
         }
-        
-        $mails = $this->mailProcess->getMailsPaginated($page, $limit, $folder, $search);
-        $cleanMails = $this->recursiveUtf8Encode($mails);
-        
-        return [
-            'mails' => $cleanMails
-        ];
+
+        // 3. Pipeline ausführen
+        $processResult = $this->process($this->mailProcess, 'getMailsPaginated', 'mails');
+        error_log("RESULT >>" . print_r($processResult, true));
+
+        // 4. Kodieren
+        if (isset($processResult['details']['mails'])) {
+            error_log("now utf8");
+            $processResult['details']['mails'] = $this->recursiveUtf8Encode($processResult['details']['mails']);
+        }
+
+        // 4. Jetzt erst das fertige Array zurückgeben
+        return $processResult;
     }
-    private function recursiveUtf8Encode(array $data) {
-            array_walk_recursive($data, function (&$item, $key) {
+
+    private function recursiveUtf8Encode(array $data)
+    {
+        array_walk_recursive($data, function (&$item, $key) {
             // Falls das Feld 'hash' (oder 'id_hash') heißt und binär ist:
             if (($key === 'hash' || $key === 'id_hash') && !mb_check_encoding($item, 'UTF-8')) {
                 $item = bin2hex($item); // Binär -> Hex (jetzt ist es ein druckbarer String)
-            } 
+            }
             // Standard UTF-8 Sanitisierung
             elseif (is_string($item)) {
                 $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
@@ -53,18 +78,25 @@ class MailController extends \App\Core\BaseController
      */
     public function searchMail()
     {
+        return $this->process(
+            $this->mailProcess,
+            'searchMail',
+            'mails',
+            "" // Nachricht leer, da wir bei einer Suche kein "Erfolg"-Popup wollen
+        );
+
         $search = $this->request['query'] ?? '';
-        $folder = $this->request['folder'] ?? 'INBOX'; 
+        $folder = $this->request['folder'] ?? 'INBOX';
         $page   = (int)$this->request['page'] ?? 1;
         $limit  = (int)$this->request['limit'] ?? 50;
-        
+
         // 2. Validierung: Suchbegriff darf nicht komplett leer sein
         if (empty($search)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
         }
         // 3. Aufruf des Processors mit den nun existierenden Variablen
-        $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit); 
-        
+        $mailDetails = $this->mailProcess->searchMail($folder, $search, $page, $limit);
+
         if (!$mailDetails) {
             if (empty($mailDetails)) {
                 return [
@@ -82,18 +114,24 @@ class MailController extends \App\Core\BaseController
             "mails" => $mailDetails
         ];
     }
-     public function getMailsByAddress()
+
+    public function getMailsByAddress()
     {
-        $query = $this->request['query'] ?? '';
-        
+        return $this->process(
+            $this->mailProcess,
+            'getMailsByAddress',
+            'mails'
+        );
+
+
         // 2. Validierung: Suchbegriff darf nicht komplett leer sein
         if (empty($query)) {
             throw new \Exception("Kein Suchbegriff übergeben.");
         }
         // 3. Aufruf des Processors mit den nun existierenden Variablen
-        $mailDetails = $this->mailProcess->getMailsByAddress($query); 
-        
-        if (!$mailDetails) {
+        $dbResult = $this->mailProcess->getMailsByAddress($query);
+
+        if (!$dbResult) {
             if (empty($mailDetails)) {
                 return [
                     "mails" => [],
@@ -106,9 +144,8 @@ class MailController extends \App\Core\BaseController
                 ];
             }
         }
-        return [
-            "mails" => $mailDetails
-        ];
+
+        $this->handleResult($dbResult, "Kontakt wurde aktualisiert.");
     }
     public function getMailByHash()
     {
@@ -116,8 +153,8 @@ class MailController extends \App\Core\BaseController
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
-        $mailDetails = $this->mailProcess->getMailByHash($hash); 
-        
+        $mailDetails = $this->mailProcess->getMailByHash($hash);
+
         if (!$mailDetails) {
             throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
         }
@@ -131,13 +168,14 @@ class MailController extends \App\Core\BaseController
     /**
      * Zeige die E-Mail an
      */
-    public function viewMail() {
+    public function viewMail()
+    {
         $hash = $this->request['id'] ?? '';
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
-        $mailDetails = $this->mailProcess->getMailByHash($hash); 
-        
+        $mailDetails = $this->mailProcess->getMailByHash($hash);
+
         if (!$mailDetails) {
             throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
         }
@@ -151,14 +189,14 @@ class MailController extends \App\Core\BaseController
     /**
      * lösche die E-Mail
      */
-    public function deleteMail() 
+    public function deleteMail()
     {
         $hash = $this->request['id'] ?? '';
         if (!$hash) {
             throw new \Exception("die ID zum löschen fehlt");
         }
-    
-        $success= $this->mailProcess->deleteMailByHash($hash);
+
+        $success = $this->mailProcess->deleteMailByHash($hash);
         if (!$success) {
             throw new \Exception("Löschen fehlgeschlagen.");
         }
@@ -175,15 +213,16 @@ class MailController extends \App\Core\BaseController
     /**
      * Verschiebe die E-Mail nach DMS
      */
-    public function moveToDms() {
+    public function moveToDms()
+    {
         $hash = $this->request['id'] ?? null;
         if (!$hash) {
             throw new \Exception("ID zum verschieben fehlt");
         }
-    
+
         // 2. Logik delegieren (Kein method_exists mehr, wir vertrauen unserer IDE!)
         $success = $this->mailProcess->moveToDMS($hash);
-        
+
         if (!$success) {
             throw new \Exception("Verschieben fehlgeschlagen.");
         }
@@ -202,9 +241,10 @@ class MailController extends \App\Core\BaseController
     /**
      * @deprecated
      */
-    public function handlePdf() {
+    public function handlePdf()
+    {
         $hash = $_POST['id'] ?? '';
-        $mail = $this->mailProcess->getMailByHash($hash); 
+        $mail = $this->mailProcess->getMailByHash($hash);
         $success = false;
         if (method_exists($this->mailProcess, 'moveToDMS')) {
             $this->mailProcess->moveToDMS($hash);
@@ -223,32 +263,33 @@ class MailController extends \App\Core\BaseController
     /**
      * Sychronisiere die Postfächer
      */
-    public function syncICloud() 
+    public function syncICloud()
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
-        
+
         $folder = $this->request['folder'] ?? null;
-        $allowedFolders = ['INBOX', 'DMS', 'DMSDone','Sent Messages'];
-        
+        $allowedFolders = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
+
         if (!in_array($folder, $allowedFolders)) {
             throw new \Exception("Ungültiger Ordner-Name übergeben.");
         }
         ob_start();
-        
+
         $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
         $updateCount = $this->mailProcess->deltaSync($folder, 100);
-        
+
         ob_end_clean();
         return [
-            "sync"      => $syncResult, "update"    => $updateCount
+            "sync"      => $syncResult,
+            "update"    => $updateCount
         ]; // Gibt das komplette Sync-Array direkt zurück
     }
     /**
      * 
      */
-    public function trackFolders() 
+    public function trackFolders()
     {
         ignore_user_abort(false);
         //$syncResult = $this->mailProcess->trackAndSyncFolderStatus();
@@ -260,7 +301,7 @@ class MailController extends \App\Core\BaseController
     /**
      * streamt die Mail
      */
-    public function streamHtml() 
+    public function streamHtml()
     {
         $hash = $this->request['hash'] ?? ''; // Nutze dein zentrales Request-Objekt!
         if (empty($hash)) {
@@ -272,16 +313,16 @@ class MailController extends \App\Core\BaseController
         // Jetzt die Ausnahme-Ausgabe
         header('Content-Type: text/html; charset=utf-8');
         header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");
-        
+
         echo $body;
         exit; // Wichtig: Hier hart beenden, damit der Dispatcher nicht mehr greift
-        
+
     }
-    
+
     public function getRecentMails()
     {
         $success = $this->mailProcess->getRecentMails();
-        
+
         if (!$success) {
             throw new \Exception("Letzte Mails fehlgeschlagen.");
         }

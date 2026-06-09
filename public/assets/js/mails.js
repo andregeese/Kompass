@@ -127,58 +127,45 @@ const mailViewComponent = () => ({
         });
     },
     
-    async loadMails(append = false) {
-        console.log(this.loading);
-        console.log(this.hasMore);
-        console.log(append);
-        // Abbruch, wenn bereits geladen wird oder wir am Ende sind (bei nicht-Suche)
-        if (this.loading || (append && !this.hasMore)) return;
+    async loadMails(append = false) 
+    {
+       if (this.loading || (append && !this.hasMore)) return;
         this.loading = true;
-        // Reset der Seite bei frischem Laden
+
         if (!append) {
             this.$data.page = 1;
             this.hasMore = true;
         }
+
         try {
-            const isSearch = (typeof this.mailSearchQuery === 'string' && this.mailSearchQuery.trim().length > 0)
-            const folder = this.currentFolder;
-            const params = isSearch 
-                ? { folder: folder, query: this.mailSearchQuery } 
-                : { folder: folder, page: this.$data.page, limit: this.$data.limit };
-            // 2. Aktion bestimmen
-            const action = isSearch ? 'search_mail' : 'list_mails';
-            // 3. Aufruf über die neue API-Brücke
+            // Einheitliches Parameter-Objekt!
+            const params = {
+                folder: this.currentFolder,
+                page: this.$data.page,
+                limit: this.$data.limit,
+                search: this.mailSearchQuery || '' // Einfach mitgeben, der Processor ignoriert es bei 'list' oder nutzt es bei 'search'
+            };
+
+            const action = (params.query) ? 'search_mail' : 'list_mails';
             const jResponse = await apiCall(action, params, 'GET');
-            // 4. Zugriff auf die Daten
-            const fetchedMails = jResponse.details?.mails || [];
-            const receivedCount = fetchedMails.length;
+
             if (jResponse?.success && jResponse.details?.mails) {
-                // Sicherstellen, dass mails immer ein Array ist
                 const fetchedMails = Array.isArray(jResponse.details.mails) 
                     ? jResponse.details.mails 
                     : Object.values(jResponse.details.mails);
-                if (append) {
-                    this.mails.push(...fetchedMails);
-                } else {
-                    this.mails = [];
-                    this.mails = fetchedMails;
-                    console.log("Liste wurde für neue Suche geleert und neu befüllt.");
-                }
-                // Paging Logik: Nur bei normaler Liste erhöhen, Suche hat kein Paging
-                if (!isSearch) {
-                    this.page++;
-                    this.hasMore = this.hasMore = (receivedCount >= 50);;
-                } else {
-                    this.hasMore = false; // Infinite Scroll bei Suche deaktivieren
-                }
+
+                this.mails = append ? [...this.mails, ...fetchedMails] : fetchedMails;
+                
+                // Paging-Logik ist jetzt überall identisch
+                this.hasMore = (fetchedMails.length >= this.$data.limit);
+                if (this.hasMore) this.page++;
+                
                 localStorage.setItem('cached_mails', JSON.stringify(this.mails));
             } else {
-                // Wenn keine Ergebnisse: Liste leeren bei neuer Suche
                 if (!append) this.mails = [];
                 this.hasMore = false;
             }
         } catch (err) {
-            console.error(jResponse);
             console.error("Fehler beim Laden:", err);
         } finally {
             this.loading = false;
@@ -335,7 +322,7 @@ const mailViewComponent = () => ({
                                 
                                 // Wenn PHP erfolgreich war und neue Mails hinzugefügt hat
                                 if (jResponse && jResponse.success) {
-                                    console.log(jResponse);
+                                    //console.log(jResponse);
                                 
                                     const addedCount = parseInt(jResponse.added || 0);
                                     console.log(`📥 [${folder}] ${addedCount} Mails importiert.`);

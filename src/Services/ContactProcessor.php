@@ -1,4 +1,5 @@
 <?php
+
 /**
  * START_LICENSE
  * Enterprise CRM Hub
@@ -10,10 +11,12 @@
 
 
 namespace App\Services;
+
 use Exception; // Falls du Exceptions nutzt
 use Throwable;
 use DateTime;
 use PDO;
+
 /**
  * @method void contactProcess() 
  */
@@ -21,20 +24,21 @@ class ContactProcessor extends \App\Core\Database
 {
     use \App\Core\ServiceTrait;
     protected $dashboard;
-    public function __construct($dashboard) {
+    public function __construct($dashboard)
+    {
         parent::__construct($dashboard);
         $this->dashboard = $dashboard;
     }
-    
+
     /**
-    * Legt einen neuen Hauptkontakt und die zugehörige E-Mail-Adresse an.
-    * * @param string $name Der Anzeigename des Kontakts
-    * @param string $email Die E-Mail-Adresse
-    * @param string $type Typ des Kontakts ('company' oder 'person')
-    * @param int $paperless_id Paperless-Verknüpfung
-    * @return int|bool Die neue Contact-ID bei Erfolg, sonst false
-    */
-    public function insertContact(string $name, string $email, string $type) : int|bool
+     * Legt einen neuen Hauptkontakt und die zugehörige E-Mail-Adresse an.
+     * * @param string $name Der Anzeigename des Kontakts
+     * @param string $email Die E-Mail-Adresse
+     * @param string $type Typ des Kontakts ('company' oder 'person')
+     * @param int $paperless_id Paperless-Verknüpfung
+     * @return int|bool Die neue Contact-ID bei Erfolg, sonst false
+     */
+    public function insertContact(string $name, string $email, string $type): int|bool
     {
         $name = trim($name);
         $email = strtolower(trim($email));
@@ -51,22 +55,23 @@ class ContactProcessor extends \App\Core\Database
         }
         // 2. Wenn nein: Kontakt suchen oder anlegen
         $contactId = $this->getContactId($name, $email, $type);
-        
+
         if (!$contactId) {
             // Kontakt neu anlegen
             $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, is_active) VALUES (:name, :type, :tenant_id, 1);";
             $dbResult = $this->queryIt($sqlContact, ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId], true, true, false);
-            
+
             if (!$dbResult->success) return false;
             $contactId = $dbResult->data->lastId;
         }
         // 3. E-Mail Eintrag erzwingen (da wir hier gelandet sind, existiert sie noch nicht für diesen Tenant)
         return $this->insertContactEmail($contactId, $email, $salt);
     }
+
     /**
      * Sucht in der DB nach einem Kontakt mit genau diesem Namen, E-Mail und Typ.
      */
-    private function getContactId($name, $email, $type):int|bool
+    private function getContactId($name, $email, $type): int|bool
     {
         #error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
         $sql = "SELECT id FROM contacts WHERE tenant_id = :tenant_id AND display_name = :name AND type = :type LIMIT 1;";
@@ -82,8 +87,8 @@ class ContactProcessor extends \App\Core\Database
             false,
             false
         );
-        return ($dbResult->success && !empty($dbResult->data->fetched)) ? $dbResult->data->fetched[0]["id"] : false;
-        
+
+        return $dbResult;
     }
 
     /**
@@ -96,35 +101,35 @@ class ContactProcessor extends \App\Core\Database
     {
         $sql = "UPDATE contact_emails SET contact_id=:cid WHERE tenant_id=:tenant_id AND id=:ceid";
         $params = [
-            'cid' => ($action === 'link') ? $cid : null, 
-            'ceid'=>$ceid
+            'cid' => ($action === 'link') ? $cid : null,
+            'ceid' => $ceid
         ];
 
         $dbResult = $this->queryIt($sql, $params, true, false, true);
-        if (!$dbResult->success){
-            throw new \Exception("Verknüpfung fehlgeschlagen!");
-        }
 
         return $dbResult;
     }
-    
+
     private function getContactEmailId($email, $tenantId): int|bool
     {
         // Sicherheitscheck: Ohne TenantId ist die Suche in einer Multi-Tenant Umgebung ungültig
         if (empty($tenantId)) return false;
         $sql = "SELECT id FROM contact_emails WHERE tenant_id = :tenant_id AND email = :email LIMIT 1;";
         $dbResult = $this->queryIt($sql, ["tenant_id" => $tenantId, "email" => $email], false, false, false);
-        return ($dbResult->success && !empty($dbResult->data->fetched)) ? (int)$dbResult->data->fetched[0]["id"] : false;
+
+        return $dbResult;
     }
+
+
     private function insertContactEmail($contactId, $email, $salt)
     {
         #error_log("insertContactEmail aufgerufen mit: ContactID='$contactId', Email='$email'");
         $tenantId = $_SESSION['tenant_id'] ?? null;
-        if ($tenantId === null
-            || empty($email) 
+        if (
+            $tenantId === null
+            || empty($email)
             //|| !filter_var($email, FILTER_VALIDATE_EMAIL)
-            ) 
-            {
+        ) {
             error_log("Ungültige Daten für insertContactEmail: ContactID='$contactId', Email='$email', TenantID='$tenantId'");
             return false;
         }
@@ -132,7 +137,7 @@ class ContactProcessor extends \App\Core\Database
         if (!$ceId) {
             $sqlEmail = "INSERT INTO contact_emails (contact_id, email, email_hash, tenant_id) 
                     VALUES (:cid, :email, :hash, :tenant_id);";
-            
+
             $dbResult = $this->queryIt(
                 $sqlEmail,
                 [
@@ -147,7 +152,7 @@ class ContactProcessor extends \App\Core\Database
             );
             $ceId = $dbResult->success ? $dbResult->data->lastId : error_log("Kontakt-E-Mail konnte nicht angelegt werden: " . $email);
         }
-        
+
         return $ceId;
     }
 
@@ -159,13 +164,7 @@ class ContactProcessor extends \App\Core\Database
         $sql = "UPDATE contacts SET paperless_id= :pid WHERE tenant_id=:tenant_id AND id=:cid";
         $params = ["cid" => $contact_id, "pid" => $paperless_id];
 
-        $dbResult = $this->queryIt($sql, $params, true, false, true);
-
-        if (!$dbResult->success) {
-            throw new \Exception("Update Paperless-ID fehlgeschlagen");
-        }
-
-        return $dbResult->data;
+        return $this->queryIt($sql, $params, true, false, false);
     }
 
     /**
@@ -180,7 +179,7 @@ class ContactProcessor extends \App\Core\Database
             'type'  => $data['type'],
             'cid'   => $data['id']
         ];
-        
+
         return $this->queryIt($sql, $params, true, false, false);
     }
 
@@ -190,7 +189,7 @@ class ContactProcessor extends \App\Core\Database
      */
     public function getEmailsAndContactsByHash($hash)
     {
-        $sql ="SELECT 
+        $sql = "SELECT 
                 c.id AS contact_id,
                 c.is_active,
                 c.display_name,
@@ -202,8 +201,9 @@ class ContactProcessor extends \App\Core\Database
             WHERE id_hash = UNHEX(:hash)
             AND m.tenant_id = :tenant_id
             GROUP BY c.id, c.display_name, c.type";
-        $ret = $this->queryIt($sql,
-            ["hash" =>"%" . $hash . "%"]
+        $ret = $this->queryIt(
+            $sql,
+            ["hash" => "%" . $hash . "%"]
         );
         return $ret;
     }
@@ -218,7 +218,7 @@ class ContactProcessor extends \App\Core\Database
         $tenant_id = is_int($_SESSION['tenant_id']) ? $_SESSION['tenant_id'] : "";
         error_log("--- START: " . __FUNCTION__ . " für Kontakt: $target_contact_id ---");
         error_log(print_r($emails, true));
-        if ($tenant_id==="") {
+        if ($tenant_id === "") {
             error_log("--- TENANT ID ist leer ---");
             return ['success' => false, 'message' => 'Keine E-Mails'];
         }
@@ -226,31 +226,31 @@ class ContactProcessor extends \App\Core\Database
             error_log("Keine E-Mails übergeben.");
             return ['success' => false, 'message' => 'Keine E-Mails'];
         }
-    
+
         $email_list = array_column($emails, 'email');
-        
+
         // Nutze $email_list statt $emails
-        $quotedEmails = array_map(function($email) {
+        $quotedEmails = array_map(function ($email) {
             return "'" . addslashes($email) . "'";
         }, $email_list); // Hier auf email_list zeigen!
         $mails_string = implode(',', $quotedEmails);
-        
+
         $sql = "UPDATE contact_emails 
                 SET contact_id = :contact_id 
                 WHERE tenant_id = :tenant_id AND email IN ($mails_string)";
-        
+
         $params = [
             'contact_id' => $target_contact_id,
             'tenant_id'  => $tenant_id
         ];
         $this->queryIt($sql, $params, true, false, true);
-        
+
         error_log("Erfolgreich umgehängt: " . implode(', ', $email_list) . " auf Kontakt $target_contact_id");
         // 3. Status der alten Kontakte prüfen & inaktiv setzen
         // Wir identifizieren Kontakte, die nun keine E-Mails mehr besitzen
         $this->cleanupOrphanedContacts($tenant_id);
         error_log("--- END: saveContactEmails erfolgreich abgeschlossen ---");
-        
+
         return ['success' => true];
     }
     /**
@@ -264,7 +264,7 @@ class ContactProcessor extends \App\Core\Database
                 WHERE c.tenant_id = :tenant_id 
                 AND NOT EXISTS (SELECT 1 FROM contact_emails ce WHERE ce.contact_id = c.id)
                 AND c.is_active != 0";
-                
+
         $this->queryIt($sql, [], true, false, true);
         error_log("Orphaned Cleanup abgeschlossen (inaktive Kontakte markiert).");
     }
@@ -282,13 +282,16 @@ class ContactProcessor extends \App\Core\Database
                 WHERE c.tenant_id = :tenant_id
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY ce.email";
-                            
-        $dbRequest = $this->queryIt($sql,
-            [], false, false, false
+
+        $dbRequest = $this->queryIt(
+            $sql,
+            [],
+            false,
+            false,
+            false
         );
-        
-        if (!$dbRequest->success)
-        {
+
+        if (!$dbRequest->success) {
             throw new \Exception("Keine Mails gefunden!");
         }
         return $dbRequest->data->fetched;
@@ -313,17 +316,20 @@ class ContactProcessor extends \App\Core\Database
                   AND ce.contact_id=:contact_id
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
-                            
-        $dbRequest = $this->queryIt($sql,
-            ["contact_id" => $contact_id], false, false, false
+
+        $dbRequest = $this->queryIt(
+            $sql,
+            ["contact_id" => $contact_id],
+            false,
+            false,
+            false
         );
-        
-        if (!$dbRequest->success)
-        {
+
+        if (!$dbRequest->success) {
             return [];
         }
         $ret = $dbRequest->data->fetched;
-        $contacts=[];
+        $contacts = [];
         foreach ($ret as $row) {
             $cid = $row['contact_id'];
             if (!isset($contacts[$cid])) {
@@ -347,7 +353,7 @@ class ContactProcessor extends \App\Core\Database
         return $finalContacts;
     }
 
-    public function getContactList(string $query="", int $contact_id=null)
+    public function getContactList(string $query = "", int $contact_id = null)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
@@ -366,15 +372,20 @@ class ContactProcessor extends \App\Core\Database
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
 
-        $dbResult = $this->queryIt($sql,
-            ["search" =>"%" . $query . "%"], false, false, false
+        $dbResult = $this->queryIt(
+            $sql,
+            ["search" => "%" . $query . "%"],
+            false,
+            false,
+            false
         );
-        if (!$dbResult->success){
-            return false;
+
+        if (!$dbResult->success) {
+            throw new \Exception("Datenbank-Fehler beim Abrufen der Kontaktliste: " . $dbResult->error);
         }
 
         $ret = $dbResult->data->fetched;
-        $contacts=[];
+        $contacts = [];
         foreach ($ret as $row) {
             $cid = $row['contact_id'];
             if (!isset($contacts[$cid])) {
@@ -417,18 +428,20 @@ class ContactProcessor extends \App\Core\Database
                   AND ce.email_hash=:hash
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
-        $dbResult = $this->queryIt($sql,
-            ["hash" => $hash ], false, false, true
+        $dbResult = $this->queryIt(
+            $sql,
+            ["hash" => $hash],
+            false,
+            false,
+            true
         );
-        
-        if (!$dbResult->success)
-        {
-            $this->dashboard->sendResponse(false,null, print_r($dbResult->error, true),'error');
-        }
-        $finalContacts = $dbResult->data->fetched;
-        $this->dashboard->sendResponse(true, ["contacts" => $finalContacts], false, 'success');
-        
+
+        return $dbResult;
     }
+
+    /**
+     * 
+     */
     public function getEmailsBySearch($query)
     {
         $sql = "SELECT 
@@ -444,17 +457,18 @@ class ContactProcessor extends \App\Core\Database
                   AND ce.email like :search
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
-        $dbResult = $this->queryIt($sql,
-            ["search" =>"%" . $query . "%"], false, false, false
+        $dbResult = $this->queryIt(
+            $sql,
+            ["search" => "%" . $query . "%"],
+            false,
+            false,
+            false
         );
-        
-        if (!$dbResult->success)
-        {
-            $this->dashboard->sendResponse(false,null, print_r($dbResult->error, true),'error');
-        }
-        $finalContacts = $dbResult->data->fetched;
-        return $finalContacts;
+
+
+        return $dbResult;
     }
+
     /**
      * Erzeugt die TimeLine von Kontakten
      */
@@ -462,7 +476,7 @@ class ContactProcessor extends \App\Core\Database
     {
         error_log(__FUNCTION__);
         $salt ??= $this->dashboard->getHashSalt();
-        
+
         $tenantId = $_SESSION['tenant_id'];
         $timeline = [];
         error_log("## " . __FUNCTION__ . " ## START");
@@ -484,7 +498,7 @@ class ContactProcessor extends \App\Core\Database
         }
         //Notizen
         $notes = $this->getNotesByMailHash($hash);
-        
+
         foreach ($notes as $rowNote) {
             error_log(print_r($rowNote, true));
             $timeline[] = $this->formatItemTL(
@@ -499,7 +513,7 @@ class ContactProcessor extends \App\Core\Database
         }
         //Appointments
         $appoints = $this->getAppointmentsByHash($hash);
-        error_log(print_r($appoints, true));
+
         foreach ($appoints as $rowAppoint) {
             error_log(print_r($rowAppoint, true));
             $timeline[] = $this->formatItemTL(
@@ -554,13 +568,13 @@ class ContactProcessor extends \App\Core\Database
         } else {
             error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Dokumente gefunden");
         }
-        
-       // ==========================================
+
+        // ==========================================
         // 4. SORTIERUNG & FINISH
         // ==========================================
         // Fix: Wir sortieren jetzt bombenfest nach dem echten Unix-Timestamp!
-        
-        usort($timeline, function($a, $b) {
+
+        usort($timeline, function ($a, $b) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
         //error_log(print_r($timeline,true));
@@ -568,8 +582,12 @@ class ContactProcessor extends \App\Core\Database
         $TL = $this->buildTimeline($timeline);
         //error_log(print_r($TL, true));
         error_log("buildedTL");
-        return $TL;   
+        return $TL;
     }
+
+    /**
+     * Finde Notizen zu der Mail
+     */
     private function getNotesByMailHash($hash)
     {
         // alle Notizen zu einer Mail
@@ -591,9 +609,9 @@ class ContactProcessor extends \App\Core\Database
                 -- Neueste Notizen immer zuerst anzeigen
                 ORDER BY n.created_at DESC;
         );";
-        $params =['hash' => $hash];
-        $dbResult = $this->queryIt($sql, $params,false, false, false);
-        if (!$dbResult->success){
+        $params = ['hash' => $hash];
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+        if (!$dbResult->success) {
             throw new \Exception("Fehler bei Notiz!");
         }
         return $dbResult->data->fetched;
@@ -627,9 +645,11 @@ class ContactProcessor extends \App\Core\Database
                 AND a.tenant_id = :tenant_id
                 -- Neueste Notizen immer zuerst anzeigen
                 ORDER BY a.updated_at DESC;";
-        $params =['hash' => $hash];
-        $dbResult = $this->queryIt($sql, $params,false, false, true);
-        if (!$dbResult->success){
+        $params = ['hash' => $hash];
+
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+        if (!$dbResult->success) {
             throw new \Exception("Fehler bei Appointment!");
         }
         return $dbResult->data->fetched;
@@ -639,7 +659,7 @@ class ContactProcessor extends \App\Core\Database
      * @param string $query: die E-Mail-Adresse
      * @return array -> fetched
      */
-    public function searchMailAddress(string $query):array
+    public function searchMailAddress(string $query): array
     {
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
@@ -648,19 +668,22 @@ class ContactProcessor extends \App\Core\Database
                 FROM contact_emails as ce 
                 LEFT JOIN contacts as c ON c.id = ce.contact_id
                 WHERE ce.email like :search; ";
-        
-    
+
+
         // 3. Ausführung über deine native queryIt-Methode
-        $dbResult = $this->queryIt($sql, [
-            'search' => '%' . $query . '%',
-        ],
-        false,
-        false,
-        false);
-        if(!$dbResult->success){
+        $dbResult = $this->queryIt(
+            $sql,
+            [
+                'search' => '%' . $query . '%',
+            ],
+            false,
+            false,
+            false
+        );
+        if (!$dbResult->success) {
             return [];
         }
-        return $dbResult->data->fetched;    
+        return $dbResult->data->fetched;
     }
     /**
      * Email und Kontakt
@@ -668,7 +691,7 @@ class ContactProcessor extends \App\Core\Database
     private function getMailItems($hash, $salt, $tenantId)
     {
         error_log(__FUNCTION__);
-        
+
         $sql = "SELECT CASE 
                         WHEN m.recipient_ceid = ce.id THEN 'mail_send'
                         ELSE 'mail'
@@ -698,7 +721,7 @@ class ContactProcessor extends \App\Core\Database
                     ORDER BY m.date_received DESC
                     LIMIT 1000;"; // Dein SQL von oben
         $dbResult = $this->queryIt(
-            $sql, 
+            $sql,
             [
                 "hash" => $hash
             ],
@@ -707,9 +730,8 @@ class ContactProcessor extends \App\Core\Database
             false
         );
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
-                $dbResult->data->fetched :
-                [];
-        
+            $dbResult->data->fetched :
+            [];
     }
     private function getPaperlessIdsByMailHash(string $hash, string $salt, int $tenantId): array
     {
@@ -749,7 +771,7 @@ class ContactProcessor extends \App\Core\Database
     public function getContactByMail(string $hash)
     {
         error_log(__FUNCTION__);
-        $sql="SELECT 
+        $sql = "SELECT 
                     c.id AS contact_id,
                     c.display_name,
                     c.type,
@@ -763,21 +785,21 @@ class ContactProcessor extends \App\Core\Database
                 WHERE m.id_hash = UNHEX(:hash)
                 AND m.tenant_id = 6
                 GROUP BY c.id, c.display_name, c.type, c.paperless_id;";
-        $dbResult = $this->queryIt($sql,
+        $dbResult = $this->queryIt(
+            $sql,
             ["hash" => $hash],
             false,
             false,
             false
         );
-        
-        if ($dbResult->success && !empty($dbResult->data->fetched)){
+
+        if ($dbResult->success && !empty($dbResult->data->fetched)) {
             return $dbResult->data->fetched;
-        }else{
+        } else {
             return ["return" => $dbResult->error];
         }
-        
     }
-    
+
     /**
      * Dokumente aus Paperless (TimeLineData)
      * @param int $docIDs (holt alle Dokumente zu einem Korrespondenten)
@@ -804,9 +826,9 @@ class ContactProcessor extends \App\Core\Database
             error_log(__FUNCTION__ . "keine docIds");
             return [];
         }
-        
-        $docs= array();
-         // Hier logik für Paperless API
+
+        $docs = array();
+        // Hier logik für Paperless API
         $paperless = new PaperlessProcessor($this->dashboard);
         $docs = $paperless->getDocumentById($docIds);
         return $docs;
@@ -816,9 +838,9 @@ class ContactProcessor extends \App\Core\Database
      */
     private function formatItemTL(string $type, $id, ?string $dateString, ?string $title, ?string $detail, ?string $link, ?string $hash = null): array
     {
-        
+
         $eventDate = new \DateTime($dateString ?: 'now');
-        
+
         // Dynamischer Farb-Index basierend auf der ID
         $colors = ['green', 'red', 'yellow', 'none'];
         $colorIndex = $id ? (int)$id % count($colors) : 0;
@@ -845,8 +867,8 @@ class ContactProcessor extends \App\Core\Database
         $timeline = [];
         $monthsDe = [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
         foreach ($items as $item) {
-            $dateRaw = $item['date'] ?? ''; 
-    
+            $dateRaw = $item['date'] ?? '';
+
             // 2. Erstelle Objekt (Achtung: Format muss exakt zum String passen!)
             $date = DateTime::createFromFormat('d.m.Y H:i', $item['date']);
             if (!$date) {
@@ -881,4 +903,3 @@ class ContactProcessor extends \App\Core\Database
         return array_values($timeline);
     }
 }
-?>
