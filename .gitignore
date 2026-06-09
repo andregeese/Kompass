@@ -2,4 +2,5 @@ php_debug.log
 php.log
 conifg.php
 .env
+.sh
 caldav_debug.xml
