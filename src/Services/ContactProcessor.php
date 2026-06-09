@@ -181,14 +181,7 @@ class ContactProcessor extends \App\Core\Database
             'cid'   => $data['id']
         ];
         
-        $dbResult = $this->queryIt($sql, $params, true, false, false);
-
-        if (!$dbResult->success) {
-            return $dbResult;
-            throw new \Exception("Kontakt aktualisieren ist fehlgeschlagen");
-        }else {
-            return $dbResult;
-        }
+        return $this->queryIt($sql, $params, true, false, false);
     }
 
     /**

@@ -161,6 +161,7 @@ $method = $routes[$action][1];
     $controller = new $controllerClass($dashboard);
     $result = $controller->$method();
     \App\Dashboard::sendResponse(true, $result ?? new \stdClass());
+    
 } catch (\Throwable $e) { 
     error_log("API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     
@@ -176,6 +177,7 @@ $method = $routes[$action][1];
             'trace' => explode("\n", $e->getTraceAsString()) // Macht ein schönes JSON-Array draus
         ], $e->getMessage());
         exit;
+
     } catch (\Throwable $internalError) {
         // 1. Immer sofort in den System-Log schreiben
         error_log("API Global Catch: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());

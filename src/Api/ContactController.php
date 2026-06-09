@@ -290,12 +290,15 @@ class ContactController extends \App\Core\BaseController {
             'type' => $type,
             'name'  => $displayname];
 
-        $ret = $this->contactProcess->saveContact($data);
+        $dbResult = $this->contactProcess->saveContact($data);
         
+        if (!$dbResult->success) {
+            throw new \Exception($dbResult->error ?? "Fehler beim Aktualisieren des Kontakts.");
+        }
 
-        // 5. Antwort mit "UI-Anweisung" (nach unserem neuen Standard)
+        // Wenn wir hier ankommen, war es wirklich ein ERFOLG
         return [
-            'contact' => $ret,
+            'contact' => $dbResult->data, // Reines Datenobjekt ans Frontend geben
             'ui' => [
                 'notify'  => true,
                 'title'   => 'Erfolg',

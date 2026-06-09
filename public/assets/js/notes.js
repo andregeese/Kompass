@@ -108,8 +108,8 @@ const notesViewComponent = () => ({
             this.recentEmails = [];
         }
     },
-    async toggleEmailSelection(email) {
-        console.log("Ausgewählter Kontakt:", email);
+    async toggleEmailSelection(email) 
+    {
         
         // 1. Wenn bereits ausgewählt -> Abwählen (Toggle-Off)
         if (this.newNote.ceid === email.id) {

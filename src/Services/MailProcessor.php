@@ -841,34 +841,41 @@ class MailProcessor extends \App\Core\Database
             $ret = array_slice($filtered, $offset, $limit);
             return $ret;
     }
-    public function getMailsByAddress($query)
+    public function getMailsByAddress($hash)
     {
-        $sql = "SELECT m.uid, 
-                    LOWER(HEX(m.id_hash)) as hash, 
-                    m.subject_hash as sHash, 
-                    m.sender, 
-                    m.date_received, 
-                    m.paperless_id, 
+        $sql = "SELECT m.uid,
+                    LOWER(HEX(m.id_hash)) as hash,
+                    m.subject_hash as sHash,
+                    m.sender,
+                    m.date_received,
+                    m.paperless_id,
                     c.display_name as contact_name,
-                    ce.email as contact_email
+                    ce_all.email as contact_email
                 FROM mails m
-                LEFT JOIN contact_emails as ce ON ce.id = m.sender_ceid
-                LEFT JOIN contacts as c ON c.id = ce.contact_id
-                WHERE m.tenant_id = :tenant_id 
-                AND ce.email_hash = :search
-                ORDER BY m.date_received DESC;";
+                -- 1. Finde den Kontakt, der zu diesem spezifischen Hash gehört
+                JOIN contact_emails ce_target ON ce_target.email_hash = :hash
+                -- 2. Finde alle E-Mail-Adressen, die zu DIESEM Kontakt gehören
+                JOIN contact_emails ce_all ON ce_all.contact_id = ce_target.contact_id
+                -- 3. Verknüpfe den Kontakt
+                JOIN contacts c ON c.id = ce_target.contact_id
+                -- 4. Hole alle Mails, bei denen der Sender eine der E-Mail-Adressen des Kontakts ist
+                WHERE m.sender_ceid = ce_all.id
+                AND m.tenant_id = :tenant_id
+                ORDER BY m.date_received DESC";
     
     
         // 3. Ausführung über deine native queryIt-Methode
         $dbResult = $this->queryIt($sql, [
-            'search' => $query,
+            'hash' => $hash,
         ],
         false,
         false,
         true);
+
         if(!$dbResult->success){
             return [];
         }
+
         $results = $dbResult->data->fetched;
         foreach ($results as &$row) 
         {

@@ -11,6 +11,7 @@
 namespace App\Api;
 use App\Services\NotesProcessor; // Importiere den Prozessor
 use Exception;
+
 class NotesController extends \App\Core\BaseController 
 {
     public function __construct($dashboard) {
@@ -38,8 +39,7 @@ class NotesController extends \App\Core\BaseController
                 'ceid'     => $this->request->get('ceid')
             ];
         }
-        error_log("MEMODATA:" . print_r($memoData, true));
-        // Validierung: Haben wir jetzt (egal auf welchem Weg) gültige Daten?
+       
         // Wir prüfen explizit auf 'content', da das die Mindestanforderung für eine Notiz ist.
         if (empty($memoData) || empty($memoData['content'])) {
             throw new \Exception("Keine gültigen Notiz-Daten im Request gefunden.");
@@ -59,13 +59,25 @@ class NotesController extends \App\Core\BaseController
         ];
         
     }
+    
     public function getNotes() {
         $pResult = $this->notesProcess->getNotes();
-        error_log(print_r($pResult, true ));
-        return $pResult;
+        
+        return ["notes" => $pResult];
     }
+    
     public function toogleNote()
     {
-        return $this->notesProcess->toogleNote();
+        $toggle = $this->notesProcess->toogleNote();
+
+        return [
+            "note" => $toggle/*,
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'Notiz',
+                'message' => 'Notiz erfolgreich ',
+                'type'    => 'success'
+            ]*/
+        ];
     }
 };

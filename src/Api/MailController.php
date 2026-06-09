@@ -277,6 +277,7 @@ class MailController extends \App\Core\BaseController
         exit; // Wichtig: Hier hart beenden, damit der Dispatcher nicht mehr greift
         
     }
+    
     public function getRecentMails()
     {
         $success = $this->mailProcess->getRecentMails();
