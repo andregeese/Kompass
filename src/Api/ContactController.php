@@ -22,7 +22,7 @@ class ContactController extends \App\Core\BaseController {
     {
         $query = $this->request['query'] ?? null;
         $id = $this->request['id'] ?? null;
-        //tbd: hashed
+        
         if (empty($query) && empty($id)) {
             throw new \Exception("Kontakt nicht auffindbar (id / query nicht gesetzt)");
         }
@@ -35,6 +35,8 @@ class ContactController extends \App\Core\BaseController {
         }
         return ['contacts' => $contacts];        
     }
+
+
     public function getAllEmails()
     {
         $contacts = $this->contactProcess->getAllEmails();
@@ -238,34 +240,62 @@ class ContactController extends \App\Core\BaseController {
             ]
         ];
     }
+
     /**
-     * Speichert den Kontakt aus dem Modal
+     * 
+     */
+
+    public function updateContactEmailToContact()
+    {
+        $cid        = $this->request['cid'];
+        $ceid       = $this->request['ceid'];
+        $action     = $this->request['action'];
+        
+        if (empty($cid))
+        {
+            throw new \Exception("keine ContactID vorhanden");
+        }
+
+        $ret = $this->contactProcess->updateContactEmailToContact($cid, $ceid, $action);
+
+        return [
+            "paperless"=> $ret,
+            "ui" => [
+                'notify'  => true,
+                'title'   => 'Suche',
+                'message' => 'Keine E-Mails gefunden.',
+                'type'    => 'info'
+            ]
+        ];
+    }
+
+    /**
+     * Speichert den Kontakt aus dem Modal, nur den Namen und Art (keine Paperless, keine Mails, das geschieht on demand)
      */
     public function saveContact()
     {
-        // Wir verlassen uns darauf, dass der BaseController das JSON bereits in $this->request gemappt hat.
-        $contact_id = $this->request['id'] ?? null;
-        $input_emails = $this->request['emails'] ?? [];
-        // 2. Validierung
-        if (!$contact_id) {
-            throw new \Exception("Kontakt-ID fehlt.");
-        }
-        // 3. Logik-Vorbereitung (Daten transformieren)
-        $emails_to_link = [];
-        foreach ($input_emails as $email_entry) {
-            if (is_array($email_entry)) {
-                $emails_to_link[] = $email_entry;
-            } else {
-                $emails_to_link[] = ['ceid' => null, 'email' => $email_entry];
-            }
-        }
         
-        // 4. Geschäftslogik ausführen
-        // Wir gehen davon aus, dass saveContactEmails eine Exception wirft, wenn was schiefgeht
-        $this->contactProcess->saveContactEmails($contact_id, $emails_to_link);
+        // 1. Daten aus dem Request holen (inklusive der paperless_id aus dem Modal)
+        $contact_id     = $this->request['id'] ?? null;
+        $displayname    = $this->request['displayname'] ?? null;
+        $type           = $this->request['type'] ?? null;
+
+        if (empty($contact_id) || empty($displayname) )
+        {
+            throw new \Exception("Name oder ID fehlen");
+        }
+
+        $data =  [
+            'id' => $contact_id,
+            'type' => $type,
+            'name'  => $displayname];
+
+        $ret = $this->contactProcess->saveContact($data);
         
+
         // 5. Antwort mit "UI-Anweisung" (nach unserem neuen Standard)
         return [
+            'contact' => $ret,
             'ui' => [
                 'notify'  => true,
                 'title'   => 'Erfolg',

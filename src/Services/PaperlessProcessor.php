@@ -70,6 +70,8 @@ class PaperlessProcessor extends \App\Core\Database
     
         return $result;
     }
+
+
     public function getAllCorrespondentsBy()
     {
         $params = [
@@ -93,6 +95,8 @@ class PaperlessProcessor extends \App\Core\Database
         $this->dashboard->sendResponse(true, $correspondents);
         //return $correspondents;
     }
+
+    
     public function getAllCorrespondents()
     {
         $params = [
@@ -116,6 +120,27 @@ class PaperlessProcessor extends \App\Core\Database
         $this->dashboard->sendResponse(true, $correspondents);
         //return $correspondents;
     }
+
+    /**
+     * Holt den Kontakt direkt
+     */
+    public function searchForCorrespondentById(int $id):array {
+        
+        $url = '/api/correspondents/' . $id . '/';
+        
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        }
+        error_log($url . ": " . print_r($jsonResponse, true));
+        
+        $results = $paperlessData['results'] ?? [];
+
+        return $results;
+    }
+
     /**
      * Durchsucht Paperless über die native Such-API nach passenden Korrespondenten inkl. Score Rating.
      * * @param string $query Der Suchbegriff (z.B. die Domain 'mueller.de')

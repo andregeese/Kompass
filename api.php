@@ -111,6 +111,7 @@ $routes = [
     'paperless_tree'                => [App\Api\PaperlessController::class, 'getTree'],
     'link_mail_to_paperless'        => [App\Api\PaperlessController::class, 'linkMail'],
     'get_correspondet'              => [App\Api\PaperlessController::class, 'getCorrespondentById'],
+    'search_correspondents'         => [App\Api\PaperlessController::class, 'searchCorrespondents'],
     'get_correspondets'             => [App\Api\PaperlessController::class, 'getCorrespondents'],
     'link_contact_item'             => [App\Api\PaperlessController::class, 'linkContact'],
     
@@ -126,9 +127,10 @@ $routes = [
     'get_all_emails'                => [App\Api\ContactController::class, 'getAllEmails'],
     'get_emails_by_hash'            => [App\Api\ContactController::class, 'getContactByEmailHash'],  
     'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],  
-    'get_emails_by_search'           => [App\Api\ContactController::class, 'getEmailsBySearch'],  
+    'get_emails_by_search'          => [App\Api\ContactController::class, 'getEmailsBySearch'],  
     'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],
-    'get_graph'                     => [App\Api\ContactController::class, 'getContacts'],    
+    'get_graph'                     => [App\Api\ContactController::class, 'getContacts'],   
+    'update_mail_to_contact'        => [App\Api\ContactController::class, 'updateContactEmailToContact'],   
     
     // System
     'system_status'                 => [App\Api\SystemController::class, 'status'],
@@ -142,6 +144,7 @@ $routes = [
     'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
     'toggle_note'                   => [App\Api\NotesController::class, 'toogleNote'],
 ];
+
 // 1. Spezieller Endpunkt für die Routen-Konfiguration
 if ($action === 'get_allowed_actions') {
     echo json_encode(['success' => true, 'data' => array_keys($routes)]);

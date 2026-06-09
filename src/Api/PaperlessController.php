@@ -68,17 +68,31 @@ class PaperlessController extends \App\Core\BaseController {
             ]
         ];
     }
+
     public function getCorrespondentById() 
     {
-        $query        = $this->request['query'] ?? null;
-        
-        $correspondents = $this->paperlessProcess->searchForCorrespondent($query);
-        $finalDetails = is_array($correspondents) ? array_values($correspondents) : [];
-        return [
-            $finalDetails
-        ];
-        
+        $id = $this->request['id'] ?? null;
+
+        if (empty($id) || !is_numeric($id)) {
+            // Ein API-Controller sollte im Fehlerfall sauber antworten (z.B. HTTP 400)
+            return ['success' => false, 'error' => 'Ungültige ID übergeben'];
+        }
+
+        // Hier wird jetzt korrekterweise die ID (als Int casten!) übergeben
+        return $this->paperlessProcess->getCorrespondentById((int)$id);
     }
+
+    public function searchCorrespondents() 
+    {
+        $query = $this->request['query'] ?? null;
+        
+        // Die Logik, wie Daten formatiert werden, kann im Service oder hier liegen
+        $results = $this->paperlessProcess->searchForCorrespondent($query);
+        
+        return ['correspondents' => $results];
+    }
+
+
     /**
      * Verbindet Kontakt mit PaperlessKorrespondent
      */
@@ -99,6 +113,8 @@ class PaperlessController extends \App\Core\BaseController {
             ]
         ];
     }
+
+
     /**
      * Hole alle Korrespondeten
      */

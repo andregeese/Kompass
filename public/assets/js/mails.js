@@ -257,8 +257,7 @@ const mailViewComponent = () => ({
     {
         confirmAction('Diese Mail wirklich löschen?', async() => {
             try {
-                const fd = new FormData();
-                fd.append('id', mail.hash);
+                
                 const jResponse = await apiCall('delete', { id: mail.hash }, 'POST');
                 
                 if (jResponse?.success) {

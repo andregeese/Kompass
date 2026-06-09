@@ -86,11 +86,7 @@ const contactsViewComponent = () => ({
     {
         this.loading = true;
         try {
-            const data = await apiCall(
-                'list_contacts',
-                {query: this.searchQueryContacts},
-                'GET'
-            );
+            const data = await apiCall('list_contacts', {query: this.searchQueryContacts}, 'GET');
             //const data = await apiCall('list_contacts', {query:this.searchQueryContacts}, 'POST');
             this.contacts = data.details?.contacts || [];
             this.drawNetwork(this.contacts);
@@ -100,33 +96,81 @@ const contactsViewComponent = () => ({
     },
     async saveContact(contact = this.activeContact) {
         try {
-            const data = await apiCall('save_contact', contact, 'POST');
+            const data = await apiCall('save_contact', this.activeContact, 'POST');
+
             if (data.success) {
                 Object.assign(contact, res.data || contact);
                 this.closeMatchModal();
+                this.loadContacts();
             }
         } catch (e) {
             console.error("Speichern fehlgeschlagen", e);
         }
     },
+    // NEU: Methode für den Button "Neuer Kontakt"
+    openNewContactModal() {
+        this.activeContact = { 
+            id: null, 
+            displayname: '', 
+            type: 'person', 
+            emails: [],
+            paperless_id: null,
+            paperless_name: null 
+        };
+        this.paperlessQuery = '';
+        this.paperlessResults = [];
+        this.emailQuery = '';
+        this.matchResults = [];
+        this.isMatchPanelOpen = true;
+    },
+
     // --- Modal & Verknüpfungs-Logik ---
     openMatchModal(contact) {
-        const targetContact = contact;
-        this.activeContact = targetContact;
+        // Tiefe Kopie, damit Änderungen nicht sofort im Grid landen, bevor man speichert
+        this.activeContact = JSON.parse(JSON.stringify(contact));
+        
+        // Initialisiere leere Arrays, falls vom Server nichts kam
+        if (!this.activeContact.emails) this.activeContact.emails = [];
+        
         this.isMatchPanelOpen = true;
-        // Zuerst die Mails vom Server laden
-        this.fetchEmailsForContact(targetContact.id).then(() => {
-            console.log(this.activeContact.emails);
-            // Erst wenn geladen, matchResults mit den aktiven befüllen
-            if (this.activeContact && this.activeContact.id === targetContact.id) {
-                this.matchResults = [...(this.activeContact.emails ?? [])];
-            }
-        });
+
+        // Wenn es ein bestehender Kontakt ist, lade seine E-Mails vom Server
+        if (this.activeContact.id) {
+            this.fetchEmailsForContact(this.activeContact.id);
+            
+        }
+        //Hole die PaperlessID und zugehörigen Namen
+        if (this.activeContact.paperless_id && !this.activeContact.paperless_name) {
+            this.fetchPaperlessNameById(this.activeContact.paperless_id);
+        }
     },
+
+
+    async setPaperlessMatch(paperlessId, paperlessName) {
+        this.activeContact.paperless_id = paperlessId;
+        this.activeContact.paperless_name = paperlessName; // Wichtig für die Anzeige
+        this.paperlessQuery = '';
+        this.paperlessResults = [];
+
+        const data = await apiCall('link_contact_item', { contactId: this.activeContact?.id, correspondentId: paperlessId }, 'POST');
+        
+        if (data?.success) {
+            console.log("YEAH, Kontakt verknüpft!");
+        }
+        console.log(data);
+    },
+
     closeMatchModal() {
         this.isMatchPanelOpen = false;
         this.activeContact = null;
+
     },
+
+    async fetchPaperlessNameById() {
+        const data = await apiCall('get_correspondet', {c:this.activeContact.id}, 'GET');
+        console.log(data);
+    },
+
     async fetchEmailsForContact(id) {
         this.loadingMatch = true;
         const data = await apiCall('get_emails_by_contact', {query:id},'GET');
@@ -136,22 +180,22 @@ const contactsViewComponent = () => ({
         }
         this.loadingMatch = false;
     },
+
     async saveContact() 
     {
-       try {
+       
             
-            const data = await apiCall('save_contact', this.activeContact, 'POST');
-            if (data.success) {
-                console.log('Kontakt gespeichert:', data.message);
-                // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
-            } else {
-                alert('Fehler: ' + (data.error || 'Unbekannt'));
-            }
-        } catch (err) {
-            console.error('Speicherfehler:', err);
+        const data = await apiCall('save_contact', this.activeContact, 'POST');
+        if (data.success) {
+            console.log('Kontakt gespeichert:', data.message);
+            this.closeMatchModal();
+            // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
+        } else {
+            showNotify(data);
         }
     },
     /**
+     * @deprecated
      * Paperless-Verknüpfung
      */
     async linkToMatch(contactId, itemId) 
@@ -165,6 +209,7 @@ const contactsViewComponent = () => ({
         // UI aktualisieren: Panel schließen
         //this.closeMatchModal();
     },
+
     /**
      * E-Mail Suche für das Matching
      * @returns 
@@ -177,19 +222,30 @@ const contactsViewComponent = () => ({
         try {
             // 1. Entscheide nur noch über Action und Parameter
             const isSearch = this.emailQuery.length >= 2;
+
             const action = isSearch ? 'get_emails_by_search' : 'get_emails_by_contact';
             const params = isSearch ? { query: this.emailQuery } : { query: contactId };
             const method = isSearch ? 'POST' : 'GET';
             // 2. Ein sauberer Aufruf
             const data = await apiCall(action, params, method);
+
             // 3. Ergebnis verarbeiten
             if (data?.success) {
-                this.activeContact.emails = data.details?.contact_emails || [];
+                if (!isSearch) {
+                    // KORREKTUR: Greift auf das verschachtelte Array aus deinem Screenshot zu
+                    this.activeContact.emails = data.details?.contacts?.[0]?.emails || [];
+                    // Synchronisiere auch die Match-Suchergebnisse für die Anzeige
+                    this.matchResults = [...this.activeContact.emails];
+                } else {
+                    // Für die Suche (falls dein Such-Endpoint ein flaches Array liefert)
+                    this.matchResults = data.details?.contact_emails || data.details?.emails || [];
+                }
             }
         } finally {
             this.loadingEmails = false;
         }
     },
+
     //Paperless-Suche
     async performPaperlessSearch() 
     {
@@ -201,7 +257,7 @@ const contactsViewComponent = () => ({
         try {
             // Der Aufruf reduziert sich auf die fachliche Logik:
             // Action, Daten-Objekt und Methode
-            const data = await apiCall('get_correspondets', { query: this.paperlessQuery }, 'POST');
+            const data = await apiCall('search_correspondents', { query: this.paperlessQuery }, 'GET');
             
             this.paperlessResults = data.details?.correspondents || [];
         } catch (e) {
@@ -210,6 +266,7 @@ const contactsViewComponent = () => ({
             this.loadingPaperless = false;
         }
     },
+
      async performMatchSearch() {
         if (this.emailQuery.length < 2) {
             // Zeige nur die bereits verknüpften E-Mails an
@@ -244,35 +301,55 @@ const contactsViewComponent = () => ({
             this.loadingMatch = false;
         }
     },
+
     // --- E-Mail UI Logik ---
     isEmailLinked(ceid) {
         return this.activeContact.emails.some(e => Number(e.ceid) === Number(ceid));
     },
+    
     toggleEmail(emailObj) {
-        if (this.isEmailLinked(emailObj.ceid)) {
+        const isLinked = this.isEmailLinked(emailObj.ceid);
+
+        if (isLinked) {
             this.activeContact.emails = this.activeContact.emails.filter(e => Number(e.ceid) !== Number(emailObj.ceid));
         } else {
             this.activeContact.emails.push(emailObj);
         }
+        
+        apiCall('update_mail_to_contact', {
+            ceid: emailObj.ceid, 
+            cid: this.activeContact.id, 
+            action: isLinked ? 'unlink' : 'link'
+        }, 'POST' );
     },
+    
     // --- D3 Netzwerk-Logik ---
     drawNetwork(contacts) {
         if (this.simulation) this.simulation.stop();
         const svg = d3.select("#network");
         svg.selectAll("*").remove();
-        // Transformation
+
+        // Hilfsfunktion zum Kürzen überlanger Texte
+        const truncate = (text, maxLen = 22) => {
+            if (!text) return "";
+            return text.length > maxLen ? text.substring(0, maxLen - 3) + "..." : text;
+        };
+
+        // 1. Transformation
         const nodes = [], links = [];
         contacts.forEach(c => {
             nodes.push({ 
                 id: 'c' + c.id, 
-                label: c.displayname, 
+                label: truncate(c.displayname),
+                fullLabel: c.displayname, 
                 type: 'contact',
                 is_active: c.is_active
             });
             c.emails?.forEach(e => {
                 nodes.push({ 
                     id: 'e' + e.ceid, 
-                    label: c.id + ": " + e.email, 
+                    label: truncate(e.email),
+                    fullLabel: e.email, 
                     type: 'email',
                     is_active: c.is_active
                 });
@@ -281,54 +358,147 @@ const contactsViewComponent = () => ({
                 });
             });
         });
-        // Simulation
-        const width = svg.node().parentElement.clientWidth;
+
+        const parentNode = svg.node().parentElement;
+        const width = parentNode.clientWidth || 500;
+        const height = 450; 
+
+        // 2. OPTIMIERT FÜR NÄHE: Kräfte deutlich sanfter einstellen
+        const isMassive = nodes.length > 25;
+        const chargeStrength = isMassive ? -100 : -160; 
+        const linkDistance = isMassive ? 40 : 55;
+
+        // Simulation aufbauen
         this.simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id(d => d.id).distance(80))
-            .force("charge", d3.forceManyBody().strength(-250))
-            .force("center", d3.forceCenter(width / 2, 200));
-        // Zeichnen (G-Container)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(linkDistance))
+            .force("charge", d3.forceManyBody().strength(chargeStrength))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            
+            // HIER IST DIE DYNAMIK: Jedes Element berechnet seinen eigenen Radius!
+            .force("collide", d3.forceCollide().radius(d => {
+                // Basis-Radius für den Kreis selbst
+                const baseRadius = isMassive ? 14 : 18;
+                
+                // Ungefähre Breite des Textes berechnen (Zeichenlänge * Pixel pro Zeichen)
+                // Ein Buchstabe hat bei 10-11px Schriftgröße ca. 6-7px Breite.
+                const textWidth = d.label ? d.label.length * 6.5 : 0;
+                
+                // Da der Text rechts neben dem Punkt steht, rechnen wir einen 
+                // gewichteten Faktor hinzu, um Platz nach rechts zu schaffen.
+                return baseRadius + (textWidth * 0.45);
+            }))
+            
+            .force("x", d3.forceX(width / 2).strength(0.08))
+            .force("y", d3.forceY(height / 2).strength(0.08));
+
         const g = svg.append("g");
-        svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
-        const link = g.selectAll("line").data(links).enter().append("line").attr("stroke", "#999");
-        const node = g.selectAll("circle").data(nodes).enter().append("circle").attr("r", 8)
-            .style("fill", d => d.is_active == 0 ? '#ef4444' : (d.type === 'contact' ? '#2563eb' : '#10b981'))
-            .on("click", (event, d) => {
+        const zoom = d3.zoom()
+            .scaleExtent([0.15, 4])
+            .on("zoom", (e) => g.attr("transform", e.transform));
+        svg.call(zoom);
+
+        // 3. Render-Elemente generieren
+        const link = g.selectAll("line").data(links).enter().append("line")
+            .attr("stroke", "#cbd5e1")
+            .attr("stroke-width", "1.5px")
+            .attr("stroke-opacity", "0.7");
+
+        // 4. SOLUTION A: Node & Label Container Group
+        // Wir erstellen EINE Gruppe pro Knoten, die Punkt und Text enthält.
+        const nodeGroup = g.selectAll(".node-container")
+            .data(nodes)
+            .enter()
+            .append("g")
+            .attr("class", "node-container cursor-pointer") // cursor-pointer am Container!
+            .on("click", (event, d) => { // Ein einziger Click-Handler am Parent-Group!
                 let foundContact = null;
                 if (d.type === 'contact') {
-                    // Fall 1: Du hast auf den blauen Kontakt-Kreis geklickt
                     foundContact = contacts.find(c => ('c' + c.id) === d.id);
                 } else if (d.type === 'email') {
-                    // Fall 2: Du hast auf eine E-Mail geklickt
-                    // Wir müssen den Kontakt finden, zu dem diese E-Mail gehört
                     foundContact = contacts.find(c => c.emails?.some(e => ('e' + e.ceid) === d.id));
                 }
-                if (foundContact) {
-                    this.openMatchModal(foundContact);
-                } else {
-                    console.warn("Kein Kontakt zu diesem Knoten gefunden:", d.id);
-                }
+                if (foundContact) this.openMatchModal(foundContact);
             });
-        
-        // HIER DIE LABELS:
-        const label = g.selectAll("text").data(nodes).enter().append("text")
+
+        // Native Browser-Tooltips injizieren am Parent-Container
+        nodeGroup.append("title").text(d => d.fullLabel);
+
+        // 4b. SOLUTION B: Anti-Flicker Hover-Effekt (Wir ersetzen scale-125 durch einen fette Border-Effekt)
+        // Dieser CSS-Effekt verändert den Layout-Raum nicht und eliminiert das Springen komplett!
+        const nodeCircle = nodeGroup.append("circle")
+            .attr("r", isMassive ? 7 : 9)
+            .attr("class", "visible-node transition-all duration-200") // Klasse für CSS-Targeting
+            .style("fill", d => d.is_active == 0 ? '#ef4444' : (d.type === 'contact' ? '#3b82f6' : '#10b981'))
+            .style("stroke", "#ffffff") // Weiß default
+            .style("stroke-width", "2.5px")
+            .style("filter", "drop-shadow(0px 2px 3px rgba(0,0,0,0.06))");
+
+        const nodeLabel = nodeGroup.append("text")
             .text(d => d.label)
-            .attr("font-size", "10px")
-            .attr("dx", 12)
-            .attr("dy", 4)
-            .attr("fill", "#334155");
-        // 4. Tick-Update mit Labels
-        this.simulation.on("tick", () => {
-            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            // pointer-events-none, damit Klicks durch den Text auf den Parent-Group durchschlagen
+            .attr("class", "fill-slate-600 dark:fill-slate-300 font-medium select-none pointer-events-none") 
+            .attr("font-size", isMassive ? "10px" : "11px")
+            .attr("dx", isMassive ? 12 : 14)
+            .attr("dy", 4);
             
-            node.attr("cx", d => d.x).attr("cy", d => d.y);
+        // CSS-Hover-Stil für Layout-neutrale visuelle Rückmeldung am Parent-Group
+        svg.append("style").text(`
+            #network .node-container:hover .visible-node {
+                stroke: #2563eb; /* Blauer Rahmen bei Hover */
+                stroke-width: 4px;
+                filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.18));
+            }
+            #network .node-container:hover text {
+                fill: #2563eb; /* Text wird auch blau bei Hover */
+            }
+        `);
+
+        // 4c. OFFLINE PRE-COMPUTATION & FREEZE
+        for (let i = 0; i < 150; i++) {
+            this.simulation.tick();
+        }
+        
+        // Beruhigt den Graph komplett
+        this.simulation.stop(); 
+
+        // Einmalige, finale Zuweisung der berechneten Koordinaten
+        link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+        
+        // Die Koordinaten werden jetzt dem Parent-Group zugewiesen!
+        nodeGroup.attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+        // 5. Auto-Fit Kamera-Fokus
+        if (nodes.length > 0) {
+            const minX = d3.min(nodes, d => d.x);
+            const maxX = d3.max(nodes, d => d.x);
+            const minY = d3.min(nodes, d => d.y);
+            const maxY = d3.max(nodes, d => d.y);
+
+            const graphWidth = maxX - minX;
+            const graphHeight = maxY - minY;
+            const padding = 80; 
             
-            // Labels an die Position der Knoten binden
-            label.attr("x", d => d.x).attr("y", d => d.y);
-        });
+            const scaleX = width / (graphWidth + padding);
+            const scaleY = height / (graphHeight + padding);
+            let idealScale = Math.min(scaleX, scaleY);
+
+            if (idealScale > 1.1) idealScale = 1; 
+
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            const transform = d3.zoomIdentity
+                .translate(width / 2, height / 2)
+                .scale(idealScale)
+                .translate(-midX, -midY);
+
+            svg.call(zoom.transform, transform);
+        }
     }
 });
+
+
 // Sicherheits-Registrierung am Ende von mail.js
 if (window.Alpine) {
     // Falls Alpine bereits voll geladen ist

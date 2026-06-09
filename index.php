@@ -7,11 +7,13 @@
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
+
 date_default_timezone_set('Europe/Berlin');
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
+
 /**
  * Enterprise CRM Hub - Core Controller
  * Lädt Composer-Autoloading und steuert die modulare View-Injektion.
@@ -108,6 +110,7 @@ $viewJsMapping = [
 ];
 $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
 ?>
+
 <!DOCTYPE html>
 <html lang="de" class="h-full">
 <head>
@@ -159,7 +162,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
     
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
-    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>_2" defer></script>
+    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -168,8 +171,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
 <body x-data="crmEngine()" 
       x-init="
         currentView = '<?php echo htmlspecialchars($currentView  ?? ''); ?>';
-        selectedHash = '<?php echo htmlspecialchars($selectedHash ?? ''); ?>';
-      "
+        selectedHash = '<?php echo htmlspecialchars($selectedHash ?? ''); ?>';"
       class="h-full bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 antialiased selection:bg-blue-500 selection:text-white pb-safe">
     <div x-show="!isOnline" x-cloak class="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <div class="flex items-center space-x-2">
@@ -179,7 +181,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     </div>
     <div class="h-full flex flex-col relative overflow-hidden">
         
-        <?php
+    <?php
         try {
             // 1. HEADER (wird immer geladen)
             echo '<div class="shrink-0 z-50">';
@@ -189,15 +191,16 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             echo '</div>';
             echo '<div class="flex-1 flex overflow-hidden relative">';
                 
-                // 2. SIDEBAR
-                if (!@include __DIR__ . '/views/sidebar.php') {
-                    throw new \Exception("Kritischer Fehler: Sidebar-View ('views/sidebar.php') konnte nicht geladen werden.");
+                // 2. DIE NEUE UNIFIZIERTE NAVIGATION (Ersetzt die alte sidebar.php)
+                if (!@include __DIR__ . '/views/navigation_bar.php') {
+                    throw new \Exception("Kritischer Fehler: Navigation ('views/navigation_bar.php') konnte nicht geladen werden.");
                 }
                 // 3. MAIN DYNAMIC VIEW
                 echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
                 $viewPath = __DIR__ . "/views/{$currentView}_view.php";
                 if (!@include $viewPath) {
-                    throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
+                    die("Kritischer Systemfehler: View-Datei nicht gefunden.");
+                    //throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
                 }
                 echo '</main>';
                 // 4. RIGHT SIDEBAR
@@ -205,10 +208,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
                     throw new \Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
                 }
             echo '</div>';
-            // 5. FOOTER (wird immer geladen)
-            if (!@include __DIR__ . '/views/footer_nav.php') {
-                throw new \Exception("Kritischer Fehler: Footer-Nav ('views/footer_nav.php') konnte nicht geladen werden.");
-            }
+            
         } catch (Throwable $e) {
             // Falls IRGENDWAS oben fehlschlägt oder eine Datei fehlt:
             // Wir leeren den bisherigen Buffer (damit kein kaputtes HTML steht) und werfen die Exception
@@ -219,24 +219,60 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     </div>
     <div x-data="{ 
         show: false, 
+        isDetail: false,
         message: '', 
+        item: {},
         onConfirm: null,
-        open(msg, callback) { 
+        
+        // Öffnet bei Bestätigung
+        openConfirm(msg, callback) { 
+            this.isDetail = false;
             this.message = msg; 
             this.onConfirm = callback; 
             this.show = true; 
-        } 
+        },
+        // Öffnet bei Detail-Ansicht
+        openDetail(data) {
+            this.isDetail = true;
+            this.item = data;
+            this.show = true;
+        }
     }" 
-    @confirm-modal.window="open($event.detail.message, $event.detail.callback)"
-    x-show="show" 
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-    x-cloak>
-        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
-            <h3 class="text-lg font-bold mb-4">Bestätigung erforderlich</h3>
-            <p class="mb-6" x-text="message"></p>
-            <div class="flex justify-end gap-3">
-                <button @click="show = false" class="px-4 py-2 bg-gray-200 rounded">Abbrechen</button>
-                <button @click="onConfirm(); show = false" class="px-4 py-2 bg-red-600 text-white rounded">Löschen</button>
+    @open-item-modal.window="openDetail($event.detail)"
+    @confirm-modal.window="openConfirm($event.detail.message, $event.detail.callback)"
+        x-show="show" 
+        x-cloak
+        class="fixed inset-0 z-[999999] flex items-center justify-center px-4"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="show = false"></div>
+
+        <div class="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all"
+            x-show="show"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95">
+            
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Bestätigung</h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm mb-6" x-text="message"></p>
+            
+            <div class="flex gap-3">
+                <button @click="show = false" 
+                        class="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-medium transition-colors">
+                    Abbrechen
+                </button>
+                <button @click="onConfirm(); show = false" 
+                        class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                    Bestätigen
+                </button>
             </div>
         </div>
     </div>

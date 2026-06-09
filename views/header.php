@@ -1,4 +1,4 @@
-/<?php
+<?php
 /**
  * START_LICENSE
  * Enterprise CRM Hub

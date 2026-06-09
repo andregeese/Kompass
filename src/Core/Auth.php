@@ -7,6 +7,7 @@
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
+
 namespace App\Core;
 /**
  * Zentraler Authentifizierungs-Service

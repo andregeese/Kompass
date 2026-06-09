@@ -131,7 +131,7 @@ class Database
                 $result->success = false;
                 $result->error = "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query";
                 
-                throw new \Exception("QUERY ABGEBROCHEN"); // Abbruch, da Query sonst fehlschlägt
+                throw new \Exception("QUERY ABGEBROCHEN" . "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query"); // Abbruch, da Query sonst fehlschlägt
             }
             // --- DER WICHTIGE TEIL: Manuelles Binden für ALLE Parameter ---
             foreach ($params as $key => $value) {
@@ -176,12 +176,14 @@ class Database
             $result->error = "Fehler in " .__FUNCTION__ .": " . $e->getMessage();
             throw new \Exception($e->getMessage());
         }
+
         if ($debug){
             error_log("DB DEBUG: " . print_r($result->debug, true));
         }
         //tbd: ich möchte immer auf $result->success || $result->error im Frontend reagieren
         return (object)$result;
     }
+    
     public function beginTransaction() {
         try {
             $conn = $this->getConnection();

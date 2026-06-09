@@ -85,6 +85,28 @@ class ContactProcessor extends \App\Core\Database
         return ($dbResult->success && !empty($dbResult->data->fetched)) ? $dbResult->data->fetched[0]["id"] : false;
         
     }
+
+    /**
+     * Aktualisiert die ContactID in Contacts
+     * @params int $cid => ContactID
+     * @params int $ceid => ContactEmailID
+     * @params string $link => Verlinken oder nicht!
+     */
+    public function updateContactEmailToContact($cid, $ceid, $action)
+    {
+        $sql = "UPDATE contact_emails SET contact_id=:cid WHERE tenant_id=:tenant_id AND id=:ceid";
+        $params = [
+            'cid' => ($action === 'link') ? $cid : null, 
+            'ceid'=>$ceid
+        ];
+
+        $dbResult = $this->queryIt($sql, $params, true, false, true);
+        if (!$dbResult->success){
+            throw new \Exception("Verknüpfung fehlgeschlagen!");
+        }
+
+        return $dbResult;
+    }
     
     private function getContactEmailId($email, $tenantId): int|bool
     {
@@ -128,6 +150,47 @@ class ContactProcessor extends \App\Core\Database
         
         return $ceId;
     }
+
+    /**
+     * Aktualisiert den Kontakt mit der paperless_id
+     */
+    public function updatePaperlessId($contact_id, $paperless_id)
+    {
+        $sql = "UPDATE contacts SET paperless_id= :pid WHERE tenant_id=:tenant_id AND id=:cid";
+        $params = ["cid" => $contact_id, "pid" => $paperless_id];
+
+        $dbResult = $this->queryIt($sql, $params, true, false, true);
+
+        if (!$dbResult->success) {
+            throw new \Exception("Update Paperless-ID fehlgeschlagen");
+        }
+
+        return $dbResult->data;
+    }
+
+    /**
+     * Speichert den Kontakt
+     */
+    public function saveContact($data)
+    {
+        $sql = "UPDATE contacts SET display_name=:dname, type=:type WHERE tenant_id=:tenant_id AND id=:cid;";
+
+        $params = [
+            'dname' => $data['name'],
+            'type'  => $data['type'],
+            'cid'   => $data['id']
+        ];
+        
+        $dbResult = $this->queryIt($sql, $params, true, false, false);
+
+        if (!$dbResult->success) {
+            return $dbResult;
+            throw new \Exception("Kontakt aktualisieren ist fehlgeschlagen");
+        }else {
+            return $dbResult;
+        }
+    }
+
     /**
      * Kontakte anhand von hashed ID
      * wird benötigt um den Tree in right_sidebar zu erstellen
@@ -151,8 +214,9 @@ class ContactProcessor extends \App\Core\Database
         );
         return $ret;
     }
+
     /**
-     * OBSOLET
+     * @deprecated
      * Speicher die Kontakte und Mails
      * 1 Konakt n Emails
      */
@@ -245,6 +309,7 @@ class ContactProcessor extends \App\Core\Database
         $sql = "SELECT 
                     c.id AS contact_id,
                     c.is_active as is_active,
+                    c.paperless_id as paperless_id,
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
@@ -271,6 +336,7 @@ class ContactProcessor extends \App\Core\Database
             if (!isset($contacts[$cid])) {
                 $contacts[$cid] = [
                     'id' => $cid,
+                    'paperless_id' => $row['paperless_id'],
                     'is_active' => $row['is_active'],
                     'displayname' => $row['display_name'],
                     'type' => $row['type'],
@@ -287,12 +353,14 @@ class ContactProcessor extends \App\Core\Database
         $finalContacts = array_values($contacts);
         return $finalContacts;
     }
+
     public function getContactList(string $query="", int $contact_id=null)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
                     c.id AS contact_id,
                     c.is_active as is_active,
+                    c.paperless_id as paperless_id,
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
@@ -304,12 +372,14 @@ class ContactProcessor extends \App\Core\Database
                     (c.display_name like :search OR ce.email like :search)
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
+
         $dbResult = $this->queryIt($sql,
             ["search" =>"%" . $query . "%"], false, false, false
         );
         if (!$dbResult->success){
             return false;
         }
+
         $ret = $dbResult->data->fetched;
         $contacts=[];
         foreach ($ret as $row) {
@@ -317,6 +387,7 @@ class ContactProcessor extends \App\Core\Database
             if (!isset($contacts[$cid])) {
                 $contacts[$cid] = [
                     'id' => $cid,
+                    'paperless_id' => $row['paperless_id'],
                     'is_active' => $row['is_active'],
                     'displayname' => $row['display_name'],
                     'type' => $row['type'],
@@ -333,8 +404,9 @@ class ContactProcessor extends \App\Core\Database
         $finalContacts = array_values($contacts);
         return $finalContacts;
     }
+
     /**
-     * HASH von der Mail?
+     * Hash von der E-Mail
      */
     public function getContactByEmailHash($hash)
     {

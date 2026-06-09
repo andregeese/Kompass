@@ -532,64 +532,65 @@ class MailProcessor extends \App\Core\Database
     {
         $imapStream = $this->connectIMAP($folder);
         if (!$imapStream) return [];
-        // 1. Hole die letzten $limit UIDs vom Server
+
+        // 1. Sicherheit: Prüfen, ob UIDs überhaupt existieren
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
+        if ($allUids === false) {
+            @imap_close($imapStream);
+            return ['updated' => 0];
+        }
+
+        // 2. Performance: Hole alle relevanten DB-Daten für den Slice in EINER Query
         $checkUids = array_slice($allUids, -$limit);
+        $placeholders = implode(',', array_fill(0, count($checkUids), '?'));
+        
+        $sqlFetch = "SELECT id, uid, is_read, is_flagged, is_answered 
+                    FROM mails 
+                    WHERE uid IN ($placeholders) AND tenant_id = :tenant_id AND imap_folder = :folder";
+        
+        // Wir holen alle existierenden Mails aus diesem Slice als Array (Key = UID)
+        $dbMails = $this->queryIt($sqlFetch, array_merge($checkUids, ['folder' => $folder]), true);
+        $dbMap = [];
+        foreach ($dbMails as $m) $dbMap[$m->uid] = $m;
+
         $updatedCount = 0;
         foreach ($checkUids as $uid) {
-            // Status vom Server abrufen
-            $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
-            if (empty($overview)) continue;
-            $ov = $overview[0];
-            // 2. Prüfen, ob die Mail in unserer DB existiert
-            $sqlCheck = "SELECT id, is_read, is_flagged, is_answered 
-                        FROM mails 
-                        WHERE uid = :uid AND tenant_id=:tenant_id AND imap_folder = :folder";
-            $current = $this->queryIt($sqlCheck, ['uid' => $uid, 'folder' => $folder], false, false, true);
-            if ($current) {
-                // 3. Status-Abgleich
-                $needsUpdate = ($current->is_read != $ov->seen || 
-                                $current->is_flagged != $ov->flagged || 
-                                $current->is_answered != $ov->answered);
-                if ($needsUpdate) {
-                    $sqlUpdate = "UPDATE mails 
-                                SET is_read = :seen, 
-                                    is_flagged = :flagged, 
-                                    is_answered = :answered 
-                                WHERE id = :id";
-                    
-                    $this->queryIt($sqlUpdate, [
-                        'seen'     => (int)$ov->seen,
-                        'flagged'  => (int)$ov->flagged,
-                        'answered' => (int)$ov->answered,
-                        'id'       => $current->id
-                    ]);
-                    $updatedCount++;
-                }
+            if (!isset($dbMap[$uid])) continue; // Mail existiert noch nicht in DB (wird evtl. durch FullSync geladen)
+            
+            $ov = imap_fetch_overview($imapStream, (string)$uid, FT_UID)[0] ?? null;
+            if (!$ov) continue;
+
+            $dbMail = $dbMap[$uid];
+            if ($dbMail->is_read != $ov->seen || $dbMail->is_flagged != $ov->flagged || $dbMail->is_answered != $ov->answered) {
+                $this->queryIt("UPDATE mails SET is_read=?, is_flagged=?, is_answered=? WHERE id=?", 
+                            [(int)$ov->seen, (int)$ov->flagged, (int)$ov->answered, $dbMail->id]);
+                $updatedCount++;
             }
         }
-        // 1. Hole alle UIDs, die aktuell in unserer DB für diesen Ordner stehen
-        $sqlStoredUids = "SELECT uid FROM mails WHERE imap_folder = :folder AND tenant_id=:tenant_id;";
-        $dbUids = $this->queryIt($sqlStoredUids, ['folder' => $folder], true); // Gibt Array von Objekten zurück
-        $dbUidList = array_map(fn($o) => (int)$o->uid, $dbUids);
-        // 2. Vergleiche: Was ist in DB, aber nicht mehr in $allUids vom IMAP?
+
+        // SICHER: Wir erzwingen ein Array, selbst wenn queryIt ein einzelnes Objekt liefert
+        $rawResult = $this->queryIt("SELECT uid FROM mails WHERE imap_folder = ? AND tenant_id = ?", [$folder, $_SESSION['tenant_id']], true);
+
+        // Wenn $rawResult ein einzelnes Objekt ist, machen wir ein Array daraus
+        $dbUids = is_array($rawResult) ? $rawResult : [$rawResult];
+
+        // Jetzt kann array_column nicht mehr abstürzen
+        $dbUidList = array_map('intval', array_column($dbUids, 'uid'));
+
+        // 3. Cleanup: UIDs vergleichen
+        // Hier fixen wir den array_map Fehler durch type-casting im array_map
+        //$dbUidList = array_map('intval', array_column($this->queryIt("SELECT uid FROM mails WHERE imap_folder = ? AND tenant_id = ?", [$folder], true), 'uid'));
         $toDelete = array_diff($dbUidList, array_map('intval', $allUids));
+
         if (!empty($toDelete)) {
-            // 3. Markiere in der DB als gelöscht (Soft-Delete)
             $placeholders = implode(',', array_fill(0, count($toDelete), '?'));
-            $sqlDelete = "UPDATE mails SET status='moved' WHERE uid IN ($placeholders) AND imap_folder = ?";
-            
-            $params = array_merge($toDelete, [$folder]);
-            $dbResult = $this->queryIt($sqlDelete, $params);
-            If (!$dbResult->success){
-                throw new \Exception("Fehler beim erkennen von E-Mails die nicht mehr im Folder sind");
-            }
-            
-            error_log("DeltaSync: " . count($toDelete) . " Mails wurden aus Ordner $folder entfernt.");
+            $this->queryIt("UPDATE mails SET status='moved' WHERE uid IN ($placeholders) AND imap_folder = ?", array_merge($toDelete, [$folder]));
         }
+
         @imap_close($imapStream);
         return ['updated' => $updatedCount];
     }
+
     /**
      * Zerlegt einen E-Mail-Header-String in Name und E-Mail-Adresse.
      * Dekodiert dabei MIME-kodierte Teile korrekt, bevor geparst wird.

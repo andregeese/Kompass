@@ -7,10 +7,6 @@
  * END_LICENSE
  */
 
-/**
- * Enterprise Hub - Kombinierte Core Engine & All-In-One PWA Controller
- * 100% Offline-Sicher, robustes Caching & nahtloses Infinite Loading
- */
 window.crmNotifications = [];
 const GLOBAL_API_URL = 'api.php';
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -24,8 +20,9 @@ function confirmAction(message, callback) {
         detail: { message, callback }
     }));
 }
+//Notify => erzeugt ein notify und eine Mitteilung
 function showNotify(title, message, type = 'danger') {
-    // 1. Notification zum globalen Array hinzufügen (für die Sidebar)
+    // 1. Notification zum globalen Array hinzufügen (für die Sidebar/Counter)
     const newNotification = {
         id: Date.now() + Math.random(),
         title,
@@ -33,17 +30,24 @@ function showNotify(title, message, type = 'danger') {
         type,
         time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
     };
+    
+    if (!window.crmNotifications) window.crmNotifications = [];
     window.crmNotifications.push(newNotification);
-    // Event feuern, damit AlpineJS in der Sidebar den Counter sofort hochzählt
+    
+    // Event feuern, damit AlpineJS reagiert
     document.dispatchEvent(new CustomEvent('notifications-updated', { detail: window.crmNotifications }));
-    // 2. Toast-Container für das flüchtige Popup unten rechts erstellen
+
+    // 2. Toast-Container abgreifen oder dynamisch erstellen
     let container = document.getElementById('notification-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'notification-container';
-        container.className = 'fixed bottom-4 right-4 z-50 space-y-2 max-w-sm w-full';
+        
+        // GEFIXT: Auf Mobilgeräten zentriert über dem Nav-Footer (bottom-20), auf dem Desktop unten rechts (md:...)
+        container.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 md:bottom-4 md:right-4 md:left-auto md:translate-x-0 z-[999999] space-y-2 max-w-sm w-full px-4 md:px-0';
         document.body.appendChild(container);
     }
+
     const colorMapping = {
         'danger': 'bg-red-500 dark:bg-red-600 text-white',
         'success': 'bg-emerald-500 dark:bg-emerald-600 text-white',
@@ -51,27 +55,39 @@ function showNotify(title, message, type = 'danger') {
         'warning': 'bg-amber-500 text-slate-900'
     };
     const bgClass = colorMapping[type] || colorMapping['danger'];
-    // Toast-Element im schicken, abgerundeten Apple-Look erzeugen
+
+    // Toast-Element erzeugen
     const toast = document.createElement('div');
-    toast.className = `transform translate-y-4 opacity-0 transition-all duration-300 ease-out p-4 rounded-2xl shadow-xl flex items-start justify-between backdrop-blur-md ${bgClass}`;
+    toast.className = `transform translate-y-4 opacity-0 transition-all duration-300 ease-out p-4 rounded-2xl shadow-xl flex items-start justify-between backdrop-blur-md border border-white/10 ${bgClass}`;
     toast.innerHTML = `
         <div class="flex-1 pr-3 text-xs">
             <div class="font-bold mb-0.5">${title}</div>
             <div class="opacity-90 leading-relaxed">${message}</div>
         </div>
-        <button type="button" class="text-current opacity-60 hover:opacity-100 font-bold text-sm transition-opacity shrink-0" onclick="this.closest('#notification-container > div').remove()">✕</button>
+        <button type="button" class="text-current opacity-60 hover:opacity-100 font-bold text-sm transition-opacity shrink-0 p-0.5" onclick="this.closest('#notification-container > div').remove()">✕</button>
     `;
+
     container.appendChild(toast);
+
     // Animation einleiten (Slide-In)
     requestAnimationFrame(() => {
         toast.classList.remove('translate-y-4', 'opacity-0');
     });
-    // Auto-Löschen nach 5 Sekunden aus dem flüchtigen Toast-Sichtfeld
+
+    // Auto-Löschen nach 5 Sekunden
     setTimeout(() => {
         toast.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => toast.remove(), 300);
+        setTimeout(() => {
+            toast.remove();
+            // Falls der Container komplett leer ist, auch den Container löschen, damit er im DOM nicht stört
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, 300);
     }, 5000);
-}
+};
+
+
 let ALLOWED_ACTIONS = [];
 function triggerSecurityLockout() {
     // 1. Erstelle das Fullscreen-Schutzschild
@@ -106,7 +122,7 @@ async function initApiConfig() {
     const res = await apiCall('get_allowed_actions', {}, 'GET');
     if (res.success) ALLOWED_ACTIONS = res.data;
 }
-//Standardisierte aufrufe
+
 // Standardisierte Aufrufe
 async function apiCall(action, params = {}, method = 'POST') 
 {
@@ -114,6 +130,7 @@ async function apiCall(action, params = {}, method = 'POST')
     const isPublic = publicActions.includes(action);
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     const currentToken = metaTag ? metaTag.content : '';
+    
     if (!isPublic && (!currentToken || currentToken === '')) {
         console.error("[SECURITY] Abbruch: Kein CSRF-Token im DOM gefunden!");
         triggerSecurityLockout();
@@ -145,6 +162,7 @@ async function apiCall(action, params = {}, method = 'POST')
     }
     return await safeFetch(url, options);
 }
+
 function checkUrlOnLoad() {
     const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash.substring(1); // Entfernt das '#'
@@ -177,35 +195,60 @@ window.addEventListener('select-mail-hash', (event) => {
         window.location.href = `index.php?view=mails#${mailHash}&action=view`;
     }
 });
+
+
+
 /**
  * Der zentrale Verteiler für alle Website-weiten Aktionen
  */
 function dispatchAction(action, context, triggerElement) {
-    onsole.log(`Zentrale Action getriggert: [${action}]`, context);
-    switch (action) {
-        case 'mail_view':
-            // 💡 HIER REAGIERST DU AUF DEN HASH
-            console.log("Öffne Mail mit Hash:", context.hash);
-            
-            // Falls du eine Funktion hast, die die Mail im Hauptfenster rendert:
-            if (typeof window.loadMailByHash === 'function') {
-                window.loadMailByHash(context.hash);
-            }
-            
-            // Optional: Scrollt den Browser zum Mail-Inhalt, falls nötig
-            window.location.hash = context.hash;
-            break;
-        case 'note_add':
-            openNoteModal(context.uid, context.folder);
-            break;
-        case 'mail_archive':
-            archiveMail(context.uid, triggerElement);
-            break;
-        // ... deine anderen Cases ...
-        default:
-            console.warn(`Definition für Action "${action}" fehlt im Switch-Block!`);
+    // 1. Debug-Info für Entwickler
+    if (typeof debug !== 'undefined' && debug) {
+        console.log(`%c[Dispatcher] Triggered: ${action}`, "color: #3b82f6; font-weight: bold;", context);
     }
-}
+
+    // 2. Action-Registry
+    const actions = {
+        'mail_view':    (ctx) => window.loadMailByHash?.(ctx.hash),
+        'note_add':     (ctx) => openNoteModal(ctx.uid, ctx.folder),
+        'mail_archive': (ctx) => archiveMail(ctx.uid, triggerElement),
+        'open_modal':   (ctx) => window.dispatchEvent(new CustomEvent('open-item-modal', { detail: ctx }))
+    };
+
+    // 3. Ausführung mit Fehlerbehandlung
+    if (actions[action]) {
+        try {
+            // Wir prüfen, ob context existiert, da dies oft vergessen wird
+            if (!context && action !== 'open_modal') {
+                console.warn(`[Dispatcher] Warnung: Aktion "${action}" wurde ohne Kontext/Daten aufgerufen.`);
+            }
+            actions[action](context);
+        } catch (err) {
+            console.error(`[Dispatcher] Fehler bei der Ausführung von "${action}":`, err);
+        }
+    } else {
+        // Hier wird es kritisch: Die Aktion ist nicht definiert
+        console.error(`[Dispatcher] Fehler: Definition für Action "${action}" fehlt komplett!`, {
+            action,
+            context,
+            availableActions: Object.keys(actions)
+        });
+    }
+};
+
+async function openItemDetails(item) {
+    // Falls es eine Mail ist, laden wir vielleicht erst den vollen Inhalt via API
+    if (item.type === 'mail') {
+        const res = await apiCall('get_mail_content', { id: item.id }, 'GET');
+        if (res.success) {
+            item.content = res.data.content;
+        }
+    }
+    
+    // Event feuern, das das Modal oben empfängt
+    window.dispatchEvent(new CustomEvent('open-item-modal', { detail: item }));
+};
+
 async function safeFetch(url, customOptions = {}) {
     const defaultOptions = {
         method: 'POST',
