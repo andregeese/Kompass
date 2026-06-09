@@ -24,14 +24,6 @@ Für Anfragen bezüglich kommerzieller Lizenzen, Anpassungen oder Kooperationen 
 
 Copyright (c) 2026 CRM by abwurfzone by André Geese. All rights reserved.
 
-Tipps für die Einbindung:
-Dateiname: Speichere diesen Inhalt in der Datei README.md im Hauptverzeichnis deines Repositories.
-
-Sichtbarkeit: Da GitHub die README.md automatisch unter der Dateiliste anzeigt, wird dies jeder sehen, der das Repo öffnet. Das schreckt "Copy-Paste-Diebe" bereits ab, da du rechtlich unmissverständlich kommuniziert hast.
-
-LICENSE Datei: Lege zusätzlich eine Datei namens LICENSE im Root-Verzeichnis an, in die du den offiziellen Lizenztext der BSL 1.1 (von mariadb.com) hineinkopierst. Das macht es rechtlich wasserdicht.
-
-Damit hast du nun die Kombination aus technischem Schutz (Skript-Header in den Dateien) und rechtlichem Schutz (README + BSL-Lizenz). Möchtest du, dass ich dir noch zeige, wie du den Zugriff auf sensible Ordner (wie core/ oder config/) per .htaccess zusätzlich absicherst, damit niemand von außen den PHP-Code direkt aufrufen kann?
 
 
 # 🚀 [CRM by abwurfzone]
@@ -40,7 +32,7 @@ Damit hast du nun die Kombination aus technischem Schutz (Skript-Header in den D
 
 ---
 
-[Name deines CRM] ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
+[CRM by abwurfzone] ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
 
 ## 🌟 Warum [CRM by abwurfzone]?
 
@@ -113,7 +105,7 @@ Du benötigst Unterstützung bei der Einrichtung oder möchtest, dass sich jeman
 
 *   **Community Support:** Nutze die [GitHub Issues](https://github.com/DEIN-USER/DEIN-REPO/issues) für Fragen oder Fehlerberichte.
 *   **Professionelle Hilfe:** Wir bieten spezielle Support-Pakete für Vereine und Unternehmen an.
-    *   [Hier klicken für mehr Informationen zu unseren Wartungsverträgen]
+    *   [Hier klicken für mehr Informationen zu unseren Wartungsverträgen]: fly@abwurfzone.de
 
 ---
 
@@ -124,15 +116,4 @@ Dieses Projekt ist Open Source. Wenn dir das Tool gefällt und du es in deinem V
 *   **Feedback:** Hast du Verbesserungsvorschläge oder ein Feature, das dir fehlt? Wir freuen uns auf dein Feedback!
 
 ---
-*Entwickelt mit ❤️ für Vereine und den Mittelstand.*
-
-***
-
-### Tipps zur Anpassung:
-*   **Platzhalter:** Ersetze alle `[Text in Klammern]` mit deinen echten Links und Namen.
-*   **Screenshots:** Füge unbedingt 1-2 Screenshots ein (z. B. unter einer neuen Überschrift `## Ein kleiner Einblick`). Ein Bild von der Kontaktübersicht oder dem Dashboard wirkt Wunder für die Vertrauensbildung.
-*   **Versionierung:** Wenn du später Releases auf GitHub veröffentlichst, kannst du oben in die Readme noch ein Badge einfügen, das die aktuelle Version anzeigt.
-
-Möchtest du, dass ich dir noch ein einfaches `backup.sh` Skript schreibe, damit das Kapitel "Sicherheit & Backup" direkt mit Inhalt gefüllt ist?
-
-```
+*Entwickelt mit ❤️ für Vereine und KMU.*
