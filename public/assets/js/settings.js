@@ -17,27 +17,42 @@ const settingsComponent = () => ({
         paperless_url: '', paperless_name: '', paperless_token: '',
         sync_folders: [] // WICHTIG: Muss als Array vorliegen
     },
+    
     async initSettings() {
         try {
-            let res = await safeFetch('api.php?action=get_settings');
-            if (res.success) {
-                // Zusammenführen und existierende Daten behalten
-                this.form = { ...this.form, ...res.details.settings };
+            let res = await apiCall('get_settings', {}, 'POST'); 
+            
+            if (res.success && res.details && res.details.settings) {
+                const dbSettings = res.details.settings;
+
+                // Nur die Felder mappen, die wir im form-Objekt definiert haben
+                for (let key in this.form) {
+                    if (dbSettings[key] !== undefined) {
+                        this.form[key] = dbSettings[key];
+                    }
+                }
                 
-                // Stelle sicher, dass sync_folders ein Array ist
+                // Stelle sicher, dass sync_folders ein sauberes Array ist
                 if (typeof this.form.sync_folders === 'string') {
-                    this.form.sync_folders = JSON.parse(this.form.sync_folders);
+                    try {
+                        this.form.sync_folders = JSON.parse(this.form.sync_folders);
+                    } catch (e) {
+                        this.form.sync_folders = [];
+                    }
                 } else if (!this.form.sync_folders) {
                     this.form.sync_folders = [];
                 }
-                // Passwörter leeren
+                
+                // Damit die Checkboxen der BEREITS GEWÄHLTEN Ordner sofort angezeigt werden:
+                if (this.form.sync_folders.length > 0) {
+                    this.folders = [...this.form.sync_folders];
+                }
+
+                // Aus Sicherheitsgründen die Passwörter aus dem State leeren
                 this.form.imap_password = '';
                 this.form.paperless_token = '';
-                
-                // Falls bereits Ordner gespeichert sind, lade sie direkt
-                if (this.form.sync_folders.length > 0) this.folders = this.form.sync_folders;
             } else {
-                this.showMsg(res.error, 'error');
+                if (res.error) this.showMsg(res.error, 'error');
             }
         } catch (err) {
             console.error("Fehler beim Laden der Einstellungen");
@@ -48,42 +63,48 @@ const settingsComponent = () => ({
     async fetchImapFolders() {
         this.loadingFolders = true;
         try {
-            let fd = new FormData();
-            fd.append('action', 'test_imap');
-            fd.append('imap_host', this.form.imap_host);
-            fd.append('imap_port', this.form.imap_port);
-            fd.append('imap_user', this.form.imap_user);
-            fd.append('imap_password', this.form.imap_password);
-            let res = await safeFetch('api.php', { method: 'POST', body: fd }).then(r => r.json());
+            // Nutzt du apiCall oder safeFetch? apiCall ist oft sauberer für JSON Payloads.
+            const payload = {
+                action: 'test_imap',
+                imap_host: this.form.imap_host,
+                imap_port: this.form.imap_port,
+                imap_user: this.form.imap_user,
+                imap_password: this.form.imap_password
+            };
+
+            let res = await apiCall('test_imap', payload, 'POST');
             
             if (res.success) {
-                this.folders = res.folders; // Erwartet ['INBOX', 'Archiv', ...]
-                this.showMsg('Verbindung erfolgreich!', 'success');
+                // Erwartet ['INBOX', 'Archiv', ...]
+                // Wichtig: Wir fügen die neuen Ordner ein, behalten aber die Selektion
+                this.folders = res.details?.folders || res.folders || [];
+                this.showMsg('Verbindung erfolgreich! Ordner geladen.', 'success');
             } else {
-                console.error('Verbindung fehlgeschlagen');
-                console.error(res.error);
-                this.showMsg('Verbindung fehlgeschlagen: ' + res.error, 'error');
+                this.showMsg('Verbindung fehlgeschlagen: ' + (res.error || 'Unbekannter Fehler'), 'error');
             }
         } catch (err) {
-            this.showMsg('Verbindungsfehler.' + err, 'error');
+            this.showMsg('Verbindungsfehler beim IMAP-Test.', 'error');
         } finally {
             this.loadingFolders = false;
         }
     },
     async saveSettings() {
         this.loading = true;
+        this.message.text = ''; // altes Feedback löschen
         try {
             const res = await apiCall('save_settings', this.form, 'POST');
             
             if (res.success) {
                 this.showMsg('Einstellungen erfolgreich gespeichert!', 'success');
+                // Optional: initSettings() nochmal aufrufen, um State aufzuräumen (Passwörter leeren)
                 this.initSettings();
             } else {
-                this.showMsg(res.error, 'error');
+                this.showMsg(res.error || 'Fehler beim Speichern', 'error');
             }
         } catch (err) {
+            this.showMsg('Verbindungsfehler beim Speichern.', 'error');
+        } finally {
             this.loading = false;
-            this.showMsg('Verbindungsfehler.', 'error');
         }
     },
     showMsg(text, type) {

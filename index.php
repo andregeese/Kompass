@@ -233,11 +233,12 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     </script>
 
     <!-- Core-Scripts permanent laden -->
-    <script src="./public/assets/js/crm.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
-    <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
+    <script src="./public/assets/js/crm.js?v=<?= filemtime(__DIR__ . '/public/assets/js/crm.js') ?>" defer></script>
+    <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/right_sidebar.js') ?>" defer></script>
+    
 
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
-    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
+    <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/'.$jsFile) ?>" defer></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>

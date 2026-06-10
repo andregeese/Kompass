@@ -36,7 +36,7 @@ class MailController extends \App\Core\BaseController
         // Damit die Reflection-Pipeline nicht meckert
         $this->request['page']   = (int)($this->request['page'] ?? 1);
         $this->request['limit']  = (int)($this->request['limit'] ?? 20);
-        $this->request['folder'] = $this->request['folder'] ?? 'INBOX';
+        $this->request['folder'] = $this->request['folder'];
 
         // 2. Spezial-Logik abfangen (cleanBuffer)
         // Wenn 'search' gesetzt ist und page > 1, greift deine Logik:
@@ -47,11 +47,9 @@ class MailController extends \App\Core\BaseController
 
         // 3. Pipeline ausführen
         $processResult = $this->process($this->mailProcess, 'getMailsPaginated', 'mails');
-        error_log("RESULT >>" . print_r($processResult, true));
-
+        
         // 4. Kodieren
         if (isset($processResult['details']['mails'])) {
-            error_log("now utf8");
             $processResult['details']['mails'] = $this->recursiveUtf8Encode($processResult['details']['mails']);
         }
 
@@ -270,7 +268,8 @@ class MailController extends \App\Core\BaseController
         }
 
         $folder = $this->request['folder'] ?? null;
-        $allowedFolders = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
+        $allowedFolders = json_decode($this->systemProcess->getRequiredENV('SYNC_FOLDERS'), true);
+        error_log("ALLOWD SYNC Folders: ". print_r($allowedFolders, true));
 
         if (!in_array($folder, $allowedFolders)) {
             throw new \Exception("Ungültiger Ordner-Name übergeben.");
@@ -282,8 +281,7 @@ class MailController extends \App\Core\BaseController
 
         ob_end_clean();
         return [
-            "sync"      => $syncResult,
-            "update"    => $updateCount
+            "sync"      => $syncResult
         ]; // Gibt das komplette Sync-Array direkt zurück
     }
     /**
@@ -326,7 +324,7 @@ class MailController extends \App\Core\BaseController
         if (!$success) {
             throw new \Exception("Letzte Mails fehlgeschlagen.");
         }
-        error_log(print_r($success, true));
+        
         // 2. Einheitliche Antwort
         // Dein Frontend-Dispatcher liest das 'ui'-Objekt und zeigt den Toast automatisch an.
         return [

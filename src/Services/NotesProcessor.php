@@ -13,6 +13,8 @@ namespace App\Services;
 use Exception; // Falls du Exceptions nutzt
 use App\Services\PaperlessProcessor;
 use App\Services\ContactProcessor;
+use SebastianBergmann\Type\FalseType;
+
 /**
  * @property \App\Services\NotesProcessor $notesProcess
  */
@@ -28,7 +30,7 @@ class NotesProcessor extends \App\Core\Database
     }
     public function getNotes()
     {
-     $sqlNew = "SELECT 
+        $sqlNew = "SELECT 
                 n.id as id,
                 n.content as content,
                 n.mail_uid as uid,
@@ -48,7 +50,7 @@ class NotesProcessor extends \App\Core\Database
             [],
             false,
             false,
-            true
+            false
         );
         $fetched = $dbResult->data->fetched;
         return ['notes' => $fetched];

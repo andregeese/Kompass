@@ -137,7 +137,9 @@ abstract class BaseController
 
             $result = call_user_func_array([$processor, $method], $args);
 
-            error_log(print_r($result, true));
+            # error_log("BASECONTROLLER: " . __FILE__ . ":" . __LINE__ . " >> ");
+            # error_log(print_r($result, true));
+            # error_log("EOF BASECONTROLLER");
             
             // Prüfen, ob das Ergebnis das "queryIt"-Format hat (Objekt mit ->success und ->data)
             if (is_object($result) && isset($result->success)) {

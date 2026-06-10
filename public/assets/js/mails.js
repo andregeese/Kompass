@@ -79,7 +79,7 @@ const mailViewComponent = () => ({
         }
         // DOM-Tick abwarten für Refs
         this.$nextTick(() => {
-            console.log("Mail-Liste Ref:", this.$refs.mailList); 
+            //console.log("Mail-Liste Ref:", this.$refs.mailList); 
         });
     },
     get filteredMails() {
@@ -307,7 +307,7 @@ const mailViewComponent = () => ({
         // Schleife 2: IMAP-Ordner-Sync (vom Mail-Refresh entkoppelt)
         const runFolderSyncLoop = async () => {
             if (this.$data.isOnline) {
-                const foldersToSync = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
+                const foldersToSync = this.SYNCFOLDER;
                 const LIMIT = 20; // Muss exakt mit deinem PHP $maxNewMailsLimit übereinstimmen
                 // Der Loop läuft entkoppelt im Hintergrund
                 (async () => {

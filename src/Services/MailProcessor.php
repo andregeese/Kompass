@@ -363,18 +363,27 @@ class MailProcessor extends \App\Core\Database
         }
         return $filtered;
     }
-    public function syncWithICloud(int $maxNewMailsLimit, string $folder): array
+
+    /**
+     * E-Mail Syncronisation
+     */
+    public function syncWithICloud(int $maxNewMailsLimit, string $folder): int|null
     {
         //@set_time_limit(120);
         $pid = getmypid();
-        error_log("[$pid] Starte Sync für Ordner: $folder");
+        error_log("Prozess: [$pid] Starte Sync für Ordner: $folder");
         $added = 0;
         //$result = ['success' => false, 'added' => 0, 'error' => null];
         $imapFolder = $this->getFullFolderPath($folder);
         $imapStream = $this->connectIMAP($folder);
         // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
-        $lastUid = $this->getSyncCheckpoint($folder);
+        $checkPoint = $this->getSyncCheckpoint($folder);
+        if (!empty($checkPoint->data) && !empty($checkPoint->data->fetched))
+        {
+            $lastUid= $checkPoint->data->fetched[0]['last_uid'];
+        }
+
         // DEBUG-BLOCK (Jetzt mit Werten)
         $maxServerUid = !empty($allUids) ? max($allUids) : 0;
         error_log("DEBUG-SYNC: Gefundene Mails im Ordner ($folder): " . count($allUids) . " | Letzte UID in DB: $lastUid | Höchste UID Server: $maxServerUid");
@@ -385,6 +394,7 @@ class MailProcessor extends \App\Core\Database
 
         sort($newUids);
         $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
+
         if (empty($uidsToProcess)) {
             error_log("keine neuen Mails");
             // FIX: Auch hier die Verbindung sauber schließen, bevor wir vorzeitig abbrechen!
@@ -392,8 +402,9 @@ class MailProcessor extends \App\Core\Database
                 @imap_close($imapStream);
             }
 
-            return [];
+            return null;
         }
+
         error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
         $highestUid = $lastUid;
         foreach ($uidsToProcess as $uid) {
@@ -515,9 +526,7 @@ class MailProcessor extends \App\Core\Database
             $this->saveSyncCheckpoint($folder, $highestUid);
         }
 
-        return [
-            'added' => $added
-        ];
+        return $added;
     }
     /**
      * Synchronisiert Statusänderungen für bereits existierende Mails
@@ -642,7 +651,9 @@ class MailProcessor extends \App\Core\Database
         return $client;
     }
 
-
+    /**
+     * Prüft, ob eine E-Mail schon existiert oder nicht
+     */
     private function mail_exists($id_hash, $uid, $folder)
     {
         $debugSQL = "SELECT Count(0) as Anzahl from mails 
@@ -656,10 +667,7 @@ class MailProcessor extends \App\Core\Database
             'folder'  => $folder,
             'uid'     => $uid
         ];
-        /*$debugSQL = "SELECT Count(0) as Anzahl from mails WHERE tenant_id=:tenant_id AND uid=:uid;";
-        $params = [
-            'uid'     => $uid
-        ];*/
+
         $dbResult = $this->queryIt(
             $debugSQL,
             $params,
@@ -667,14 +675,15 @@ class MailProcessor extends \App\Core\Database
             false,
             false
         );
-        //error_log(print_r($dbResult, true));
+
         $exists = ($dbResult->success &&
             !empty($dbResult->data->fetched) &&
             $dbResult->data->fetched[0]['Anzahl'] > 0)
             ? true
             : false;
 
-        # error_log($exists);
+        # error_log($dbResult->data->fetched[0]['Anzahl'] . ": " . $exists);
+       
         return $exists;
     }
     /**
@@ -714,7 +723,7 @@ class MailProcessor extends \App\Core\Database
     /**
      * Holt die letzte erfolgreich gesyncte UID für diesen Ordner.
      */
-    private function getSyncCheckpoint(string $folder): int|bool
+    private function getSyncCheckpoint(string $folder)
     {
         $dbResult = $this->queryIt(
             "SELECT last_uid FROM imap_sync_checkpoint WHERE tenant_id = :tenant_id AND imap_folder = :folder",
@@ -723,23 +732,8 @@ class MailProcessor extends \App\Core\Database
             false,
             false
         );
-        if ($dbResult->success) {
-            //error_log(__FUNCTION__ . ": " . print_r($dbResult, true));
-            $rows = $dbResult->data->fetched;
-            // Prüfe, ob $rows ein Array ist und ob es nicht leer ist
-            if (is_array($rows) && !empty($rows)) {
-                // Falls queryIt ein numerisches Array von Zeilen zurückgibt (z.B. [[ 'last_uid' => 4933 ]])
-                // greifen wir auf das erste Element zu:
-                $firstRow = isset($rows[0]) ? $rows[0] : $rows;
 
-                return isset($firstRow['last_uid']) ? (int)$firstRow['last_uid'] : false;
-            } else {
-                return false;
-            }
-        } else {
-            error_log("Fehler beim Abrufen des Sync-Checkpoints: " . $dbResult->error);
-            return false;
-        }
+        return $dbResult;
     }
     /**
      * Speichert den Fortschritt.
@@ -923,7 +917,7 @@ class MailProcessor extends \App\Core\Database
             return ['success' => false, 'error' => 'IMAP Verbindung fehlgeschlagen'];
         }
 
-        $targetFolders = ['INBOX', 'DMS', 'DMSDone', 'Sent Messages'];
+        $targetFolders = $this->systemProcess->getRequiredEnv('SYNC_FOLDERS');
         $baseConnString = preg_replace('/\}.*$/', '}', $this->systemProcess->getRequiredEnv('IMAP_HOST'));
         $results = [];
         // 3. Nur den aktuellen Live-Status ermitteln, OHNE in die DB zu schreiben
@@ -1190,54 +1184,47 @@ class MailProcessor extends \App\Core\Database
      */
     private function prepareMailRow(array $row, string $search): ?array
     {
-        try {
-            // Betreff entschlüsseln
-            $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
-            // UTF-8 Absicherung
-            $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            $cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            $cleanRecipient    = mb_convert_encoding($row['recipient'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            // Zusätzlicher PHP-Filter bei aktiver Suche
-            if (!empty($search)) {
-                $searchLower  = mb_strtolower($search, 'UTF-8');
-                $subjectLower = mb_strtolower($cleanSubject, 'UTF-8');
-                $senderLower  = mb_strtolower($cleanSender, 'UTF-8');
-                $dateLower    = mb_strtolower($row['date'], 'UTF-8');
-                $idLower      = mb_strtolower($row['id'], 'UTF-8');
-                $matchesMeta = (
-                    mb_strpos($subjectLower, $searchLower) !== false ||
-                    mb_strpos($senderLower, $searchLower) !== false ||
-                    mb_strpos($dateLower, $searchLower) !== false ||
-                    mb_strpos($idLower, $searchLower) !== false
-                );
-                // Wenn es weder ein Metadaten-Treffer noch ein DB-Inhalts-Treffer ist -> aussortieren
-                if (!$matchesMeta && empty($row['id'])) {
-                    return null;
-                }
+        // Betreff entschlüsseln
+        $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
+        // UTF-8 Absicherung
+        $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        $cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        $cleanRecipient    = mb_convert_encoding($row['recipient'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        // Zusätzlicher PHP-Filter bei aktiver Suche
+        if (!empty($search)) {
+            $searchLower  = mb_strtolower($search, 'UTF-8');
+            $subjectLower = mb_strtolower($cleanSubject, 'UTF-8');
+            $senderLower  = mb_strtolower($cleanSender, 'UTF-8');
+            $dateLower    = mb_strtolower($row['date'], 'UTF-8');
+            $idLower      = mb_strtolower($row['id'], 'UTF-8');
+            $matchesMeta = (
+                mb_strpos($subjectLower, $searchLower) !== false ||
+                mb_strpos($senderLower, $searchLower) !== false ||
+                mb_strpos($dateLower, $searchLower) !== false ||
+                mb_strpos($idLower, $searchLower) !== false
+            );
+            // Wenn es weder ein Metadaten-Treffer noch ein DB-Inhalts-Treffer ist -> aussortieren
+            if (!$matchesMeta && empty($row['id'])) {
+                return null;
             }
-            // Rückgabe-Format für das Frontend
-            return [
-                'hash'         => $row['hash'],
-                'uid'          => $row['uid'] ?? null,
-                'subject'      => $cleanSubject,
-                'sender'       => $cleanSender,
-                'recipient'    => $cleanRecipient,
-                'date'         => date('d.m.Y H:i', strtotime($row['date'])),
-                'paperless_id' => $row['paperless_id'],
-                'is_read'       => $row['is_read'],
-                'is_flagged'      => $row['is_flagged'],
-                'is_answered'     => $row['is_answered'],
-                'displayname'  => $row['displayname'],
-                'emailhash'    => $row['emailhash']
-            ];
-        } catch (\Exception $e) {
-            error_log(__FUNCTION__);
-            return [
-                'success' => false,
-                'error'   => 'Fehler in ' . __FUNCTION__ . ': ' . $e->getMessage(),
-                'matches' => []
-            ];
         }
+
+        // Rückgabe-Format für das Frontend
+        return [
+            'hash'         => $row['hash'],
+            'uid'          => $row['uid'] ?? null,
+            'subject'      => $cleanSubject,
+            'sender'       => $cleanSender,
+            'recipient'    => $cleanRecipient,
+            'date'         => date('d.m.Y H:i', strtotime($row['date'])),
+            'paperless_id' => $row['paperless_id'],
+            'is_read'       => $row['is_read'],
+            'is_flagged'      => $row['is_flagged'],
+            'is_answered'     => $row['is_answered'],
+            'displayname'  => $row['displayname'],
+            'emailhash'    => $row['emailhash']
+        ];
+    
     }
 
     /**

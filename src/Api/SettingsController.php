@@ -51,8 +51,13 @@ class SettingsController extends \App\Core\BaseController {
             if (empty($formData)) {
                 $formData = json_decode(file_get_contents('php://input'), true) ?? [];
             }
+
+            $formData = !empty($_POST) 
+                ? $_POST 
+                : (json_decode(file_get_contents('php://input'), true) ?? []);
             
             $secretKey = $this->tenantConfig->secret_key ?? null;
+            
             $success = $this->settingProcess->saveTenantSettings($_SESSION['tenant_id'], $formData, $secretKey);
             
             if (!$success) {

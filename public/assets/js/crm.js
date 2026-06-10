@@ -115,7 +115,7 @@ function triggerSecurityLockout() {
     showNotify("Sicherheit", "Sicherheitsfall: Token nicht gefunden!", "error");
     // 3. Nach 2 Sekunden Bedenkzeit hart zum Login weiterleiten
     setTimeout(() => {
-        window.location.replace('index.php?view=Login');
+        window.location.replace('index.php?view=login');
     }, 2000);
 }
 async function initApiConfig() {
@@ -318,7 +318,11 @@ async function safeFetch(url, customOptions = {}) {
 window.crmEngine = function() {
     // Fallback falls window.CRM_API_URL in index.php fehlt
     const apiUrl = window.CRM_API_URL || 'api.php';
+    const res = apiCall('get_imap_folder', {}, 'GET');
+    this.SYNCFOLDER = res?.details?.imaps;
+
     return {
+        SYNCFOLDER: [],
         // --- CORE & UI STATE ---
         currentView: 'login', 
         isOnline: navigator.onLine,
@@ -342,7 +346,7 @@ window.crmEngine = function() {
         results: [],
         
         // --- MAIL SYSTEM STACK ---
-        currentFolder: 'INBOX',
+        currentFolder: '',
         page: 1,
         limit: 20,
         hasMore: true,
@@ -358,8 +362,15 @@ window.crmEngine = function() {
         // --- LIVE SYSTEM BANNER STATES ---
         haInfoHtml: '<span class="text-gray-400 text-xs">Lade...</span>',
         serverInfoHtml: '<span class="text-gray-400 text-xs">Lade...</span>',
+        
         // --- GLOBAL INITIALIZATION ---
         async init() {
+            const res = await apiCall('get_imap_folder', {}, 'GET');
+            this.SYNCFOLDER = res?.details?.imaps || [];
+
+            // 🚀 HIER: Den ersten Eintrag als Standard setzen (mit Fallback auf 'INBOX')
+            this.currentFolder = this.SYNCFOLDER.length > 0 ? this.SYNCFOLDER[0] : 'INBOX';
+
             // Wenn wir auf der Login-Seite sind, holen wir KEINE Daten!
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('view') === 'login' || !urlParams.get('view')) {

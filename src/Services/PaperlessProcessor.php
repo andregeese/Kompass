@@ -20,10 +20,11 @@ class PaperlessProcessor extends \App\Core\Database
     private string $apiUrl;
     private string $token;
     protected $dashboard;
+
     public function __construct($dashboard) 
     {
-        $this->apiUrl = "http://192.168.0.72:8030";
-        $this->token = '17a32ab64bd39bfff975e81707e1548d737d424d';
+        $this->apiUrl = $this->systemProcess->getRequiredEnv('PAPERLESS_URL');
+        $this->token = $this->systemProcess->getRequiredEnv('PAPERLESS_TOKEN');
         
         parent::__construct($dashboard); 
     

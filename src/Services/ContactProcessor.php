@@ -117,7 +117,7 @@ class ContactProcessor extends \App\Core\Database
         $sql = "SELECT id FROM contact_emails WHERE tenant_id = :tenant_id AND email = :email LIMIT 1;";
         $dbResult = $this->queryIt($sql, ["tenant_id" => $tenantId, "email" => $email], false, false, false);
 
-        return $dbResult;
+        return $dbResult->data->fetched[0]['id'];
     }
 
 
@@ -506,7 +506,6 @@ class ContactProcessor extends \App\Core\Database
         $notes = $this->getNotesByMailHash($hash);
 
         foreach ($notes as $rowNote) {
-            error_log(print_r($rowNote, true));
             $timeline[] = $this->formatItemTL(
                 'note',
                 $rowNote['id'],
@@ -521,7 +520,6 @@ class ContactProcessor extends \App\Core\Database
         $appoints = $this->getAppointmentsByHash($hash);
 
         foreach ($appoints as $rowAppoint) {
-            error_log(print_r($rowAppoint, true));
             $timeline[] = $this->formatItemTL(
                 'appointment',
                 $rowAppoint['id'],

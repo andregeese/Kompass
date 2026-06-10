@@ -178,6 +178,17 @@ class SystemProcessor extends \App\Core\Database
         imap_close($mbox);
         return $folders; // Rückg
     }
+
+    public function getIMAPFolder()
+    {
+        error_log(__FUNCTION__);
+
+        $a = $this->getRequiredEnv('SYNC_FOLDERS');
+        error_log("IMAP FOLDERS: " . $a);
+
+        return json_decode($a, true);
+    }
+
     // NEU: Eine statische Brücke
     public static function getStaticEnv(string $key) {
         // Hier greifen wir direkt auf die Umgebung zu, 

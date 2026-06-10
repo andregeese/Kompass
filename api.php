@@ -140,6 +140,8 @@ $routes = [
     'imap_mails'                    => [App\Api\SystemController::class, 'syncFolder'],
     'test_imap'                     => [App\Api\SystemController::class, 'testImap'],
     'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
+    'get_imap_folder'               => [App\Api\SystemController::class, 'getIMAPFolder'],
+
     //NOTES
     'get_notes'                     => [App\Api\NotesController::class, 'getNotes'],
     'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],

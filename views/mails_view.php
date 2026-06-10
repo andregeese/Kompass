@@ -33,10 +33,13 @@
             </div>
             
             <div class="p-3 border-b border-slate-100 dark:border-gray-700 flex space-x-1 overflow-x-auto shrink-0">
-                <button @click="switchFolder('INBOX')" :class="currentFolder === 'INBOX' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">📥 Posteingang</button>
-                <button @click="switchFolder('DMS')" :class="currentFolder === 'DMS' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">📁 DMS Archiv</button>
-                <button @click="switchFolder('DMSDone')" :class="currentFolder === 'DMSDone' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">✅ Erledigt</button>
-                <button @click="switchFolder('Sent Messages')" :class="currentFolder === 'Sent Messages' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors">Gesendet</button>
+                <template x-for="folder in SYNCFOLDER" :key="folder">
+                    <button @click="switchFolder(folder)" 
+                            :class="currentFolder === folder ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300'" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors"
+                            x-text="folder">
+                    </button>
+                </template>
             </div>
             <div class="flex justify-between items-center px-3 mt-1.5 text-[11px]" x-show="mailSearchQuery.trim().length >= 0" x-cloak>
                 <span class="text-slate-400" x-text="`Gefunden: ${filteredMails.length} von ${mails.length}`"></span>
