@@ -71,6 +71,73 @@ class PaperlessProcessor extends \App\Core\Database
         return $result;
     }
 
+    public function getCorrespondentByContact($cid)
+    {
+        $sql = "SELECT correspondent_id FROM contact_paperless_map WHERE tenant_id=:tenant_id AND contact_id=:cid;";
+        $params = [
+            'cid' => $cid
+        ];
+
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+        if (!$dbResult->success){
+            throw new Exception("Fehler beim Abrufen der Korrespondenten");
+        }
+    
+
+        $corrIds = array_column($dbResult->data->fetched, 'correspondent_id');
+
+        // 2. Falls keine IDs gefunden wurden, direkt abbrechen (spart API-Call)
+        if (empty($corrIds)) {
+            return [];
+        }
+
+        //jetzt den namen von correspondent in api finden
+        $b = $this->getCorrespondentsById($corrIds);
+
+        return $b;
+
+    }
+
+    private function getCorrespondentsById(array $ids):array
+    {
+        if (empty($ids))
+        {
+            return [];
+        }
+        $idString = implode(',', $ids);
+        
+        $params = [
+            'id__in'   => $idString
+        ];
+        // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
+        $url = '/api/correspondents/?' . http_build_query($params);
+        
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        }
+        $results = $paperlessData['results'] ?? [];
+
+        // Paperless liefert die Liste im 'results'-Key
+        $results = $paperlessData['results'] ?? ["LEER"];
+        $formatted = [];
+        foreach ($results as $key => $item) 
+        {
+            if (empty($item['id'])) continue;
+            if (!isset($item['id']) || !isset($item['name'])) {
+                continue;
+            }
+            $formatted[] = [
+                'id'    => (int)$item['id'],
+                'name'  => (string)$item['name']
+            ];
+        }
+        
+        return $formatted;
+    }
 
     public function getAllCorrespondentsBy()
     {
@@ -162,6 +229,8 @@ class PaperlessProcessor extends \App\Core\Database
             throw new \Exception("Ungültiges JSON von Paperless erhalten.");
         }
         $results = $paperlessData['results'] ?? [];
+        error_log(print_r($results, true));
+
         // Paperless liefert die Liste im 'results'-Key
         $results = $paperlessData['results'] ?? ["LEER"];
         $formatted = [];
@@ -524,17 +593,31 @@ class PaperlessProcessor extends \App\Core\Database
      * @param $contact_id Kontakt
      * @param $paperless_id Paperless
      */
-    public function linkContact(int $contact_id, int $paperless_id):bool
+    public function linkContact(int $contactId, int $corrId, string $action)
     {
-        $sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
+        $params = [
+            'cid'      => $contactId,
+            'corrId'   => $corrId
+        ];
+
+        $sql = "DELETE 
+                  FROM contact_paperless_map 
+                 WHERE 
+                    contact_id=:cid
+                  AND correspondent_id=:corrId
+                  AND tenant_id=:tenant_id";
+
+        if (strtolower($action) == "link"){
+            $sql = "INSERT INTO contact_paperless_map (contact_id, correspondent_id, tenant_id) 
+                         VALUES (:cid, :corrId, :tenant_id);";
+        }
         
-        $this->queryIt($sql, [
-            'paperless' =>  $paperless_id,
-            'cid' => $contact_id
-        ]);
+        //$sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
         
-        return true;
+        return $this->queryIt($sql, $params);
     }
+
+
     /**
      * erstellt den MailTree von Paperless und Mails
      */

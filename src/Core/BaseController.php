@@ -112,7 +112,7 @@ abstract class BaseController
     /**
      * kümmert ich um die Api
      */
-    protected function process($processor, string $method, string $key, string $successMessage = null)
+    protected function process($processor, string $method, string $key, string $successMessage = ''):array
     {
         try {
             $reflector = new \ReflectionMethod($processor, $method);
@@ -135,40 +135,32 @@ abstract class BaseController
                 }
             }
 
-            // Aufruf direkt auf dem Processor
             $result = call_user_func_array([$processor, $method], $args);
 
-            if ($result === null || $result === false) {
-                throw new \Exception("Keine Daten zurückgegeben durch: " . get_class($processor) . "->" . $method . "()");
+            error_log(print_r($result, true));
+            
+            // Prüfen, ob das Ergebnis das "queryIt"-Format hat (Objekt mit ->success und ->data)
+            if (is_object($result) && isset($result->success)) {
+                if (!$result->success) {
+                    // Datenbankfehler aus dem Objekt extrahieren
+                    throw new \Exception($result->error ?? "Unbekannter Datenbankfehler");
+                }
+                // NUR die Daten extrahieren, Debug-Kram wegschmeißen
+                $dataToReturn = $result->data->fetched ?? $result->data->lastId ?? true;
+            } else {
+                $dataToReturn = $result;
             }
 
-            return [
-                $key => $result, // $key ist z.B. 'mails' -> details.mails
-                'ui' => !empty($successMessage) ? [
-                    'notify' => true,
-                    'title' => 'Erfolg',
-                    'message' => $successMessage,
-                    'type' => 'success'
-                ] : ['notify' => false]
-            ];
+            // Jetzt "sendResponse" mit den sauberen Daten
+            return [$key => $dataToReturn];
+
         } catch (\Throwable $e) {
             error_log("API Error in " . $method . ": " . $e->getMessage());
-            throw $e;
+            
+            return ['error' => $e->getMessage()];
         }
     }
 
-
-    protected function getUiResponse($notify, $title, $message, $type = 'success')
-    {
-        return [
-            'ui' => [
-                'notify' => $notify,
-                'title'  => $title,
-                'message' => $message,
-                'type'   => $type
-            ]
-        ];
-    }
     protected function jsonResponse($data, $success = true)
     {
         $this->cleanBuffer();

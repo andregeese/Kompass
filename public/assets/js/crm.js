@@ -265,12 +265,23 @@ async function safeFetch(url, customOptions = {}) {
         finalOptions.body = JSON.stringify(finalOptions.body);
     }
     try {
+
         const response = await fetch(url, finalOptions);
         if (response.redirected && response.url.includes('cloudflareaccess.com')) {
             console.warn('Cloudflare Access Session abgelaufen!');
             window.location.href = response.url;
             return false;
         }
+
+        if (response.status === 403) {
+            const data = await response.json().catch(() => ({})); // Versuch JSON zu lesen
+            if (data.error === 'CSRF Token ungültig' || data.error?.includes('CSRF')) {
+                showNotify("Session abgelaufen", "Die Seite wird neu geladen...", "warning");
+                triggerSecurityLockout();
+                return { success: false, error: 'CSRF_EXPIRED' };
+            }
+        }
+
         if (!response.ok) {
             const rawText = await response.text();
             let errorMsg = `Server antwortete mit Status ${response.status}`;

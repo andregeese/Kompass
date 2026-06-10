@@ -29,10 +29,13 @@ class ContactController extends \App\Core\BaseController {
         
         //Suche mail mit Hash
         if (!empty($id)){
+            error_log("BY ID");
             $contacts = $this->contactProcess->getContactById($id);
         }else{
+            error_log("BY Query");
             $contacts = $this->contactProcess->getContactList($query);
         }
+
         return ['contacts' => $contacts];        
     }
 
@@ -216,6 +219,7 @@ class ContactController extends \App\Core\BaseController {
             'contact_id' => $contactId
         ];
     }
+
     /**
      * Speichert aus der View (namen und Email)
      */

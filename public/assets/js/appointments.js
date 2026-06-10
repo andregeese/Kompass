@@ -65,6 +65,13 @@ document.addEventListener('alpine:init', () => {
             this.calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'de',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                dayMaxEvents: true,
+                eventDisplay: 'block',
                 events: async (fetchInfo, successCallback, failureCallback) => {
                     const data = await apiCall('get_appointments', {}, 'GET');
                     this.loading = false;
@@ -77,6 +84,9 @@ document.addEventListener('alpine:init', () => {
                 },
                 eventClick: (info) => {
                     window.dispatchEvent(new CustomEvent('open-appointment-modal', { detail: info.event.id }));
+                },
+                views: {
+                    dayGridMonth: { dayMaxEventRows: 4 }
                 }
             });
             this.calendar.render();

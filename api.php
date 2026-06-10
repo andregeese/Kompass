@@ -111,9 +111,11 @@ $routes = [
     'paperless_tree'                => [App\Api\PaperlessController::class, 'getTree'],
     'link_mail_to_paperless'        => [App\Api\PaperlessController::class, 'linkMail'],
     'get_correspondet'              => [App\Api\PaperlessController::class, 'getCorrespondentById'],
+    'get_correspondent_by_contact'  => [App\Api\PaperlessController::class, 'getCorrespondentByContact'],
     'search_correspondents'         => [App\Api\PaperlessController::class, 'searchCorrespondents'],
     'get_correspondets'             => [App\Api\PaperlessController::class, 'getCorrespondents'],
     'link_contact_item'             => [App\Api\PaperlessController::class, 'linkContact'],
+    'update_paperless_to_contact'   => [App\Api\PaperlessController::class, 'linkContact'],
 
     // Contacts
     'search_contact'                => [App\Api\ContactController::class, 'getContactByHashMail'],
@@ -161,6 +163,7 @@ try {
     $controller = new $controllerClass($dashboard);
     $result = $controller->$method();
     \App\Dashboard::sendResponse(true, $result ?? new \stdClass());
+    
 } catch (\Throwable $e) {
     error_log("API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
 

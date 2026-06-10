@@ -71,15 +71,16 @@ class PaperlessController extends \App\Core\BaseController {
 
     public function getCorrespondentById() 
     {
-        $id = $this->request['id'] ?? null;
-
-        if (empty($id) || !is_numeric($id)) {
-            // Ein API-Controller sollte im Fehlerfall sauber antworten (z.B. HTTP 400)
-            return ['success' => false, 'error' => 'Ungültige ID übergeben'];
-        }
-
+        
         // Hier wird jetzt korrekterweise die ID (als Int casten!) übergeben
-        return $this->paperlessProcess->getCorrespondentById((int)$id);
+        return $this->process($this->paperlessProcess, 'getCorrespondentById', 'activeCorres');
+    }
+
+    public function getCorrespondentByContact() 
+    {
+        
+        // Hier wird jetzt korrekterweise die ID (als Int casten!) übergeben
+        return $this->process($this->paperlessProcess, 'getCorrespondentByContact', 'activeCorres');
     }
 
     public function searchCorrespondents() 
@@ -98,7 +99,7 @@ class PaperlessController extends \App\Core\BaseController {
      */
     public function linkContact()
     {
-        
+        return $this->process($this->paperlessProcess, 'linkContact', 'match', 'YIPPI');
         $contactid        = $this->request['contactId'] ?? null;
         $correspondentId  = $this->request['correspondentId'] ?? null;
         
@@ -141,13 +142,13 @@ class PaperlessController extends \App\Core\BaseController {
             return ['correspondents' => $finalDetails];
         }
     }
+
     /**
      * @deprecated
      * Holt die Mails und Korrespondeten zu einer mail
      */
     public function getMailTree() 
     {
-        
         $hash = $this->request['hash'] ?? null;
         //Finde die Mail zu dem hash
         $mailDetails = $this->mailProcess->getMailByHash($hash); 
@@ -159,6 +160,7 @@ class PaperlessController extends \App\Core\BaseController {
         
     }
     /**
+     * @deprecated
      * Erstellt den Baum in ganz schön!
      */
     public function getTree() 

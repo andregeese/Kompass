@@ -1,4 +1,5 @@
 <?php
+
 /**
  * START_LICENSE
  * Enterprise CRM Hub
@@ -34,7 +35,7 @@ if (!file_exists($logFile)) {
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
-set_error_handler(function($severity, $message, $file, $line) {
+set_error_handler(function ($severity, $message, $file, $line) {
     // Falls der Fehler durch ein '@' unterdrückt wurde, ignorieren
     if (!(error_reporting() & $severity)) {
         return;
@@ -42,17 +43,17 @@ set_error_handler(function($severity, $message, $file, $line) {
     // Verwandelt JEDE Warnung (z.B. Undefined array key) in eine Exception!
     throw new \ErrorException($message, 0, $severity, $file, $line);
 });
-register_shutdown_function(function() {
+register_shutdown_function(function () {
     $error = error_get_last();
-    
+
     // Prüfen, ob das Skript wegen eines fatalen Fehlers abgebrochen ist
     if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
         // Da wir nicht wissen, ob schon Header gesendet wurden, löschen wir den Buffer
         if (ob_get_length()) ob_end_clean();
-        
+
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
-        
+
         echo json_encode([
             'success' => false,
             'status'  => 'fatal_error',
@@ -113,54 +114,128 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
 
 <!DOCTYPE html>
 <html lang="de" class="h-full">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="<?= \App\Core\Auth::getCSRFToken(); ?>">
     <title>Enterprise CRM Hub</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { gray: { 750: '#1f293d', 850: '#111827' } }
+                    colors: {
+                        gray: {
+                            750: '#1f293d',
+                            850: '#111827'
+                        }
+                    }
                 }
             }
         }
     </script>
     <style>
-        [x-cloak] { display: none !important; }
-        body { -webkit-tap-highlight-color: transparent; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        [x-cloak] {
+            display: none !important;
+        }
+
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        /* Container-Struktur */
         #calendar-container {
             display: flex;
             flex-direction: column;
-            /* Verhindert, dass der Kalender den Container sprengt */
-            height: 700px; 
+            height: 700px;
         }
+
         #calendar {
             flex-grow: 1;
-            overflow: hidden; /* Verhindert doppelte Scrollbars */
+            overflow: hidden;
+            /* Haupt-Container bleibt fix */
         }
-        /* Falls du doch innerhalb scrollen willst, falls der Inhalt zu lang ist */
+
+        /* Scroll-Verhalten & Grid-Feinabstimmung */
         .fc-scroller {
             overflow-y: auto !important;
         }
+
+        .fc .fc-daygrid-body {
+            background-color: transparent !important;
+        }
+
+        .fc-theme-standard td,
+        .fc-theme-standard th {
+            border-color: #f1f5f9 !important;
+            /* Dezente Linien */
+        }
+
+        /* Header & Toolbar */
+        .fc .fc-header-toolbar {
+            margin-bottom: 1rem !important;
+        }
+
+        .fc .fc-button-primary {
+            background-color: transparent !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #475569 !important;
+            padding: 4px 12px !important;
+            font-size: 0.8rem !important;
+            border-radius: 8px !important;
+            transition: all 0.2s ease;
+        }
+
+        .fc .fc-button-primary:hover {
+            background-color: #f8fafc !important;
+            color: #1e293b !important;
+        }
+
+        /* Zellen & Datum */
+        .fc .fc-daygrid-day-top {
+            flex-direction: row !important;
+            padding: 4px !important;
+        }
+
+        .fc .fc-daygrid-day-number {
+            font-size: 0.75rem !important;
+            font-weight: 500;
+            color: #94a3b8 !important;
+            /* Slate-400 */
+            padding: 4px !important;
+            text-decoration: none !important;
+        }
     </style>
-    
+
     <script>
         window.CRM_API_URL = './api.php';
     </script>
-    
+
     <!-- Core-Scripts permanent laden -->
     <script src="./public/assets/js/crm.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
     <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
-    
+
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
     <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/' . $jsFile) ?>" defer></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
@@ -168,11 +243,12 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 </head>
-<body x-data="crmEngine()" 
-      x-init="
+
+<body x-data="crmEngine()"
+    x-init="
         currentView = '<?php echo htmlspecialchars($currentView  ?? ''); ?>';
         selectedHash = '<?php echo htmlspecialchars($selectedHash ?? ''); ?>';"
-      class="h-full bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 antialiased selection:bg-blue-500 selection:text-white pb-safe">
+    class="h-full bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 antialiased selection:bg-blue-500 selection:text-white pb-safe">
     <div x-show="!isOnline" x-cloak class="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <div class="flex items-center space-x-2">
             <span>⚠️ Funkloch aktiv – App läuft im ausfallsicheren Offline-Cache Modus.</span>
@@ -180,8 +256,8 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
         <span class="bg-amber-600 px-2 py-0.5 rounded text-[10px]">LOCAL STORAGE</span>
     </div>
     <div class="h-full flex flex-col relative overflow-hidden">
-        
-    <?php
+
+        <?php
         try {
             // 1. HEADER (wird immer geladen)
             echo '<div class="shrink-0 z-50">';
@@ -190,25 +266,24 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             }
             echo '</div>';
             echo '<div class="flex-1 flex overflow-hidden relative">';
-                
-                // 2. DIE NEUE UNIFIZIERTE NAVIGATION (Ersetzt die alte sidebar.php)
-                if (!@include __DIR__ . '/views/navigation_bar.php') {
-                    throw new \Exception("Kritischer Fehler: Navigation ('views/navigation_bar.php') konnte nicht geladen werden.");
-                }
-                // 3. MAIN DYNAMIC VIEW
-                echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
-                $viewPath = __DIR__ . "/views/{$currentView}_view.php";
-                if (!@include $viewPath) {
-                    die("Kritischer Systemfehler: View-Datei nicht gefunden.");
-                    //throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
-                }
-                echo '</main>';
-                // 4. RIGHT SIDEBAR
-                if (!@include __DIR__ . '/views/right_sidebar.php') {
-                    throw new \Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
-                }
+
+            // 2. DIE NEUE UNIFIZIERTE NAVIGATION (Ersetzt die alte sidebar.php)
+            if (!@include __DIR__ . '/views/navigation_bar.php') {
+                throw new \Exception("Kritischer Fehler: Navigation ('views/navigation_bar.php') konnte nicht geladen werden.");
+            }
+            // 3. MAIN DYNAMIC VIEW
+            echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
+            $viewPath = __DIR__ . "/views/{$currentView}_view.php";
+            if (!@include $viewPath) {
+                die("Kritischer Systemfehler: View-Datei nicht gefunden.");
+                //throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
+            }
+            echo '</main>';
+            // 4. RIGHT SIDEBAR
+            if (!@include __DIR__ . '/views/right_sidebar.php') {
+                throw new \Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
+            }
             echo '</div>';
-            
         } catch (Throwable $e) {
             // Falls IRGENDWAS oben fehlschlägt oder eine Datei fehlt:
             // Wir leeren den bisherigen Buffer (damit kein kaputtes HTML steht) und werfen die Exception
@@ -237,10 +312,10 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             this.item = data;
             this.show = true;
         }
-    }" 
-    @open-item-modal.window="openDetail($event.detail)"
-    @confirm-modal.window="openConfirm($event.detail.message, $event.detail.callback)"
-        x-show="show" 
+    }"
+        @open-item-modal.window="openDetail($event.detail)"
+        @confirm-modal.window="openConfirm($event.detail.message, $event.detail.callback)"
+        x-show="show"
         x-cloak
         class="fixed inset-0 z-[999999] flex items-center justify-center px-4"
         x-transition:enter="transition ease-out duration-200"
@@ -260,21 +335,22 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95">
-            
+
             <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Bestätigung</h3>
             <p class="text-slate-600 dark:text-slate-300 text-sm mb-6" x-text="message"></p>
-            
+
             <div class="flex gap-3">
-                <button @click="show = false" 
-                        class="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-medium transition-colors">
+                <button @click="show = false"
+                    class="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-medium transition-colors">
                     Abbrechen
                 </button>
-                <button @click="onConfirm(); show = false" 
-                        class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                <button @click="onConfirm(); show = false"
+                    class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
                     Bestätigen
                 </button>
             </div>
         </div>
     </div>
 </body>
+
 </html>

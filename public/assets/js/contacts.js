@@ -24,8 +24,9 @@ const contactsViewComponent = () => ({
     loadingMatch: false,
     isMatchPanelOpen: false,
     isEditing: false,
-    activeContact: { displayname: '', type: 'person', emails: [] },
+    activeContact: { displayname: '', type: 'person', emails: [], linked_correspondents: []},
     simulation: null,
+
     async initContacts() {
         const urlParams = new URLSearchParams(window.location.search);
         const hashValue = urlParams.get('hash'); //mail_hash
@@ -69,7 +70,7 @@ const contactsViewComponent = () => ({
             return 0;
         });
     },
-     toggleEmail(contact) {
+    /*toggleEmail(contact) {
         if (!this.activeContact.emails) this.activeContact.emails = [];
         
         const contactId = Number(contact.ceid);
@@ -80,7 +81,7 @@ const contactsViewComponent = () => ({
         } else {
             this.activeContact.emails.splice(existingIndex, 1);
         }
-    },
+    },*/
     // --- Kontakt-Logik ---
     async loadContacts() 
     {
@@ -114,6 +115,7 @@ const contactsViewComponent = () => ({
             displayname: '', 
             type: 'person', 
             emails: [],
+            linked_correspondents: [],
             paperless_id: null,
             paperless_name: null 
         };
@@ -126,49 +128,124 @@ const contactsViewComponent = () => ({
 
     // --- Modal & Verknüpfungs-Logik ---
     openMatchModal(contact) {
+        console.log(contact.paperless_ids);
         // Tiefe Kopie, damit Änderungen nicht sofort im Grid landen, bevor man speichert
         this.activeContact = JSON.parse(JSON.stringify(contact));
         
         // Initialisiere leere Arrays, falls vom Server nichts kam
         if (!this.activeContact.emails) this.activeContact.emails = [];
+        if (!this.activeContact.linked_correspondents) this.activeContact.linked_correspondents = [];
         
         this.isMatchPanelOpen = true;
 
         // Wenn es ein bestehender Kontakt ist, lade seine E-Mails vom Server
         if (this.activeContact.id) {
             this.fetchEmailsForContact(this.activeContact.id);
+            this.fetchCorresForContact(this.activeContact.id);
             
-        }
-        //Hole die PaperlessID und zugehörigen Namen
-        if (this.activeContact.paperless_id && !this.activeContact.paperless_name) {
-            this.fetchPaperlessNameById(this.activeContact.paperless_id);
         }
     },
 
+    // --- Paperless UI Logik ---
+    isPaperlessLinked(corrId) {
+        // Prüft, ob der Correspondent bereits in der Liste ist
+        return this.activeContact.linked_correspondents.some(c => Number(c.id) === Number(corrId));
+    },
+    
+    async togglePaperless(corrObj) {
+        const isLinked = this.isPaperlessLinked(corrObj.id);
 
-    async setPaperlessMatch(paperlessId, paperlessName) {
-        this.activeContact.paperless_id = paperlessId;
-        this.activeContact.paperless_name = paperlessName; // Wichtig für die Anzeige
-        this.paperlessQuery = '';
-        this.paperlessResults = [];
-
-        const data = await apiCall('link_contact_item', { contactId: this.activeContact?.id, correspondentId: paperlessId }, 'POST');
-        
-        if (data?.success) {
-            console.log("YEAH, Kontakt verknüpft!");
+        // 1. Lokale UI sofort aktualisieren mit Array-Kopie (erzwingt Alpine Re-Render)
+        if (isLinked) {
+            this.activeContact.linked_correspondents = this.activeContact.linked_correspondents.filter(
+                c => Number(c.id) !== Number(corrObj.id)
+            );
+        } else {
+            // Sicherstellen, dass das Objekt korrekt hinzugefügt wird
+            this.activeContact.linked_correspondents = [
+                ...this.activeContact.linked_correspondents, 
+                { id: corrObj.id, name: corrObj.name }
+            ];
         }
-        console.log(data);
+
+        // 2. API-Sync im Hintergrund
+        try {
+            await apiCall('update_paperless_to_contact', {
+                corrId: corrObj.id, 
+                contactId: this.activeContact.id, 
+                action: isLinked ? 'unlink' : 'link'
+            }, 'POST');
+        } catch (e) {
+            // Rollback bei Fehler: Wenn API fehlschlägt, UI wieder zurücksetzen
+            console.error("API Sync fehlgeschlagen, mache UI-Änderung rückgängig");
+            // (Optional: Hier Logik zum Wiederherstellen einbauen)
+        }
+    },
+    
+    //Paperless-Suche
+    async performPaperlessSearch() {
+        if (this.paperlessQuery.length < 2) {
+            // Bei leerer Suche zeigen wir nur die schon verknüpften an
+            this.paperlessResults = [...this.activeContact.linked_correspondents];
+            return;
+        }
+        
+        this.loadingPaperless = true;
+        try {
+            const data = await apiCall('search_correspondents', { query: this.paperlessQuery }, 'GET');
+            
+            if (data?.success && data.details?.correspondents) {
+                // FUSION: Wir nehmen die neuen Ergebnisse...
+                const newResults = data.details.correspondents;
+                
+                // ...und stellen sicher, dass die bereits verknüpften in der Liste bleiben 
+                // (falls sie durch die Suche nicht gefunden wurden, aber wir sie behalten wollen)
+                const map = new Map();
+                
+                // Erst die verknüpften in die Map
+                this.activeContact.linked_correspondents.forEach(item => map.set(Number(item.id), item));
+                
+                // Dann die neuen Ergebnisse drüber (oder dazu)
+                newResults.forEach(item => map.set(Number(item.id), item));
+                
+                // Zurück in das Array
+                this.paperlessResults = Array.from(map.values());
+            }
+        } catch (e) {
+            console.error("Fehler", e);
+        } finally {
+            this.loadingPaperless = false;
+        }
     },
 
     closeMatchModal() {
         this.isMatchPanelOpen = false;
-        this.activeContact = null;
 
+        this.emailQuery = '';
+        this.paperlessQuery = '';
+
+        this.matchResults = [];
+        this.paperlessResults = [];
+
+        this.loadingMatch = false;
+        this.loadingPaperless = false;
+
+        this.activeContact = null;
     },
 
     async fetchPaperlessNameById() {
         const data = await apiCall('get_correspondet', {c:this.activeContact.id}, 'GET');
         console.log(data);
+    },
+
+    async fetchCorresForContact(id) {
+        //this.loadingMatch = true;
+        const data = await apiCall('get_correspondent_by_contact', {cid:id},'GET');
+        if (data?.success) {
+            this.activeContact.linked_correspondents = data.details.activeCorres || [];
+            this.paperlessResults = [...this.activeContact.linked_correspondents];
+        }
+        //this.loadingMatch = false;
     },
 
     async fetchEmailsForContact(id) {
@@ -183,8 +260,6 @@ const contactsViewComponent = () => ({
 
     async saveContact() 
     {
-       
-            
         const data = await apiCall('save_contact', this.activeContact, 'POST');
         if (data.success) {
             console.log('Kontakt gespeichert:', data.message);
@@ -246,26 +321,6 @@ const contactsViewComponent = () => ({
         }
     },
 
-    //Paperless-Suche
-    async performPaperlessSearch() 
-    {
-        if (this.paperlessQuery.length < 2) {
-            this.paperlessResults = [];
-            return;
-        }
-        this.loadingPaperless = true;
-        try {
-            // Der Aufruf reduziert sich auf die fachliche Logik:
-            // Action, Daten-Objekt und Methode
-            const data = await apiCall('search_correspondents', { query: this.paperlessQuery }, 'GET');
-            
-            this.paperlessResults = data.details?.correspondents || [];
-        } catch (e) {
-            console.error("Paperless Suche fehlgeschlagen", e);
-        } finally {
-            this.loadingPaperless = false;
-        }
-    },
 
      async performMatchSearch() {
         if (this.emailQuery.length < 2) {
@@ -304,6 +359,8 @@ const contactsViewComponent = () => ({
 
     // --- E-Mail UI Logik ---
     isEmailLinked(ceid) {
+        console.log("isEmailLinked: " + ceid);
+        console.log(this.activeContact.emails);
         return this.activeContact.emails.some(e => Number(e.ceid) === Number(ceid));
     },
     
@@ -325,9 +382,15 @@ const contactsViewComponent = () => ({
     
     // --- D3 Netzwerk-Logik ---
     drawNetwork(contacts) {
-        if (this.simulation) this.simulation.stop();
         const svg = d3.select("#network");
-        svg.selectAll("*").remove();
+        svg.on(".zoom", null);
+
+        if (this.simulation) {
+            this.simulation.stop();
+            this.simulation = null; // Gibt die Referenz frei
+        }
+        
+        svg.selectAll("*").interrupt().remove();
 
         // Hilfsfunktion zum Kürzen überlanger Texte
         const truncate = (text, maxLen = 22) => {

@@ -306,12 +306,14 @@ class ContactProcessor extends \App\Core\Database
                     c.id AS contact_id,
                     c.is_active as is_active,
                     c.paperless_id as paperless_id,
+                    cp.*,
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
                     ce.email
                 FROM contacts c
                 LEFT JOIN contact_emails ce ON c.id = ce.contact_id
+                LEFT JOIN contact_paperless_map cp ON cp.contact_id = c.id
                 WHERE c.tenant_id = :tenant_id
                   AND ce.contact_id=:contact_id
                 -- Hier kannst du nach Bedarf filtern
@@ -322,7 +324,7 @@ class ContactProcessor extends \App\Core\Database
             ["contact_id" => $contact_id],
             false,
             false,
-            false
+            true
         );
 
         if (!$dbRequest->success) {
@@ -363,7 +365,10 @@ class ContactProcessor extends \App\Core\Database
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
-                    ce.email
+                    ce.email,
+                    (SELECT GROUP_CONCAT(correspondent_id) 
+                    FROM contact_paperless_map 
+                    WHERE contact_id = c.id) AS linked_paperless_ids
                 FROM contacts c
                 LEFT JOIN contact_emails ce ON c.id = ce.contact_id
                 WHERE c.tenant_id = :tenant_id
@@ -395,7 +400,8 @@ class ContactProcessor extends \App\Core\Database
                     'is_active' => $row['is_active'],
                     'displayname' => $row['display_name'],
                     'type' => $row['type'],
-                    'emails' => []
+                    'emails' => [],
+                    'paperless_ids' => $row['linked_paperless_ids']
                 ];
             }
             if ($row['ceid']) {
