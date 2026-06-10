@@ -27,22 +27,66 @@ class SettingProcessor extends \App\Core\Database
 
     public function getTenantSettings($tenantId, $encryptionKey=null): array
         {
+            error_log("GET FROM DB");
             $sql = "SELECT config_key, config_value FROM tenant_config WHERE tenant_id = :tenant_id";
-            $rows = $this->queryIt($sql, ['tenant_id' => $tenantId]);
+            $dbResult = $this->queryIt(
+                $sql, 
+                ['tenant_id' => $tenantId], 
+                false, 
+                false,
+                true
+            );
+
+            if (!$dbResult->success)
+            {
+                throw new \Exception("Einstellungen konnten nicht geladen werden!");
+            }
+
+            $rows = $dbResult->data->fetched;
+
             if (!$encryptionKey) {
                 $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
             }
+
             $settings = [];
+
+            // Temporärer Check: Ist der Key überhaupt da?
+            if (!isset($encryptionKey) || empty($encryptionKey)) {
+                throw new \Exception("KREISCH: \$encryptionKey ist leer oder nicht definiert!");
+            }
+
             foreach ($rows as $row) {
                 $key = $row['config_key'];
                 $val = $row['config_value'];
-                // Sensible Werte für das Frontend entschlüsseln
-                if (in_array($key, ['PAPERLESS_URL', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
-                    $settings[$key] = \App\Core\Crypto::decrypt($val, $encryptionKey);
-                } else {
-                    $settings[$key] = $val;
+                error_log("Processing Key: " . $key);
+
+                try {
+                    // Sensible Werte für das Frontend entschlüsseln
+                    if (in_array($key, ['PAPERLESS_URL', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
+                        
+                        // Falls der Wert in der DB leer ist, macht Entschlüsseln keinen Sinn
+                        if (empty($val)) {
+                            $settings[$key] = '';
+                            continue;
+                        }
+
+                        $settings[$key] = \App\Core\Crypto::decrypt($val, $encryptionKey);
+                        
+                    } else if ($key == "SYNC_FOLDERS") {
+                        // Falls val kein valides JSON ist, fängt json_decode das ab (gibt null aus)
+                        $settings[$key] = json_decode($val, true) ?? [];
+                    } else {
+                        $settings[$key] = $val;
+                    }
+                } catch (\Throwable $e) {
+                    // JEDER Fehler (auch Fatal/TypeError) im Loop wird jetzt hier geloggt!
+                    error_log("CRASH in Loop bei Key {$key}: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+                    
+                    // Optional: Setze einen leeren Fallback, damit das Skript nicht stirbt
+                    $settings[$key] = null; 
                 }
             }
+        
             return $settings;
         }
     /**

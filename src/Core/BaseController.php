@@ -16,6 +16,8 @@ abstract class BaseController
     use \App\Core\ServiceTrait; // Kann jetzt sein eigenes __get behalten, wir stören uns nicht mehr
     protected $dashboard;
     protected object $request; // 💡 Fest als Objekt deklariert
+
+
     public function __construct($dashboard)
     {
         error_log("BASECONTROLLER: Geladen von Klasse: " . get_class($this));
@@ -32,7 +34,6 @@ abstract class BaseController
             $this->authorize();
         }
     }
-
 
 
     /**
@@ -181,5 +182,12 @@ abstract class BaseController
         if (ob_get_length()) {
             ob_clean();
         }
+    }
+
+    public function savePushSubscription($data) {
+        // Speichere $data['endpoint'], $data['keys']['p256dh'], $data['keys']['auth']
+        // in deiner Datenbank, verknüpft mit der User-ID.
+        $this->db->execute("INSERT INTO push_subscriptions (...) VALUES (...)");
+        return ['success' => true];
     }
 }

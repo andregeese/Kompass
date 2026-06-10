@@ -9,7 +9,8 @@
         "sabre/vobject": "^4.5",
         "symfony/mime": "^7.4",
         "webklex/php-imap": "^6.2",
-        "egulias/email-validator": "^4.0"
+        "egulias/email-validator": "^4.0",
+        "minishlink/web-push": "^10.1"
     },
     "autoload": {
         "psr-4": {

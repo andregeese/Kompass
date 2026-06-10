@@ -21,14 +21,15 @@ const settingsComponent = () => ({
     async initSettings() {
         try {
             let res = await apiCall('get_settings', {}, 'POST'); 
+            console.log(res);
             
-            if (res.success && res.details && res.details.settings) {
-                const dbSettings = res.details.settings;
+            if (res.success && res.details && res.details.details.settings) {
+                const dbSettings = res.details.details.settings;
 
                 // Nur die Felder mappen, die wir im form-Objekt definiert haben
                 for (let key in this.form) {
-                    if (dbSettings[key] !== undefined) {
-                        this.form[key] = dbSettings[key];
+                    if (dbSettings[key.toUpperCase()] !== undefined) {
+                        this.form[key] = dbSettings[key.toUpperCase()];
                     }
                 }
                 

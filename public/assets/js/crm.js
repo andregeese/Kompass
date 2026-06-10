@@ -367,6 +367,7 @@ window.crmEngine = function() {
         async init() {
             const res = await apiCall('get_imap_folder', {}, 'GET');
             this.SYNCFOLDER = res?.details?.imaps || [];
+            this.registerForPush();
 
             // 🚀 HIER: Den ersten Eintrag als Standard setzen (mit Fallback auf 'INBOX')
             this.currentFolder = this.SYNCFOLDER.length > 0 ? this.SYNCFOLDER[0] : 'INBOX';
@@ -545,6 +546,36 @@ window.crmEngine = function() {
                     this.dmsLoading = false;
                 }
             }
+        },
+        // Hilfsfunktion oben im Script oder der Klasse einfügen
+        urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        },
+        async registerForPush() {
+            console.log("register for push");
+            if (!('serviceWorker' in navigator && 'PushManager' in window)) return;
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Hier den Public Key eintragen!
+            const vapidPublicKey = 'BHPDfcBzsQ5-csRk7GePqcvO0QtZ7yejB-D2bRyNQbW7eilsVrPaVAUQuKtFreNog6SmD0FfmOTBoSw-XhKHW_I';
+            const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+            });
+            console.log("send to Api");
+            // Sende das Objekt an dein Backend
+            await apiCall('save_push_subscription', subscription, 'POST');
+            console.log("Push-Subscription registriert.");
         },
         debounce(func, delay = 300) {
             let timeoutId;

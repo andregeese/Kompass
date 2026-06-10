@@ -7,7 +7,7 @@
  * END_LICENSE
  */
 
-const CACHE_NAME = 'crm_1.86'; 
+const CACHE_NAME = 'crm_1.88'; 
 // Nur lokale Assets cachen! CDNs gehören nicht in den Cache.
 const ASSETS = [
     './manifest.json',
@@ -60,4 +60,24 @@ self.addEventListener('fetch', event => {
             fetch(event.request).catch(() => caches.match('./index.php'))
         );
     }
+});
+
+// Füge das am Ende deiner sw.js hinzu
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : { title: 'CRM Nachricht', body: 'Neue Aktivität im Hub' };
+    
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: '/public/assets/icons/icon-192.png', // Pfad anpassen
+            badge: '/public/assets/icons/badge.png',
+            data: { url: data.url || '/' }
+        })
+    );
+});
+
+// Klick-Verhalten auf die Notification
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow(event.notification.data.url));
 });

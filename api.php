@@ -80,6 +80,8 @@ $routes = [
     'get_settings'                  => [App\Api\SettingsController::class, 'get'],
     'save_settings'                 => [App\Api\SettingsController::class, 'save'],
 
+    'save_push_subscription'        => [App\Api\PushController::class, 'subscribe'],
+
     // Mails
     'get_mail_by_hash'              => [App\Api\MailController::class, 'getMailByHash'],
     'get_mails_by_mailadress'       => [App\Api\MailController::class, 'getMailsByAddress'],

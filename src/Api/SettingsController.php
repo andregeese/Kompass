@@ -16,28 +16,20 @@ class SettingsController extends \App\Core\BaseController {
     public function __construct($dashboard) {
         parent::__construct($dashboard); // Das ist entscheidend!
     }
+
     public function get() 
-    {
-        try{
-            $this->cleanBuffer();
+    {   
+        $this->cleanBuffer();
+    
+        $secretKey = $this->systemProcess->tenantConfig->secret_key ?? null;
+        $settings = $this->settingProcess->getTenantSettings($this->tenantId, $secretKey);
         
-            $secretKey = $this->systemProcess->tenantConfig->secret_key ?? null;
-            $settings = $this->settingProcess->getTenantSettings($this->tenantId, $secretKey);
-            
-            return [
-                'success' => true,
-                'details' => ['settings' => $settings]
-            ];
-            
-        }catch(\Throwable $e){
-            return [
-                'success' => false,
-                'details' => null,
-                'error' => $e->getMessage()
-            ];
-        }
-        
+        return [
+            'success' => true,
+            'details' => ['settings' => $settings]
+        ];
     }
+
     public function save() 
     {
         try 

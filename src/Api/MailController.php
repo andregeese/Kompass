@@ -12,6 +12,7 @@
 namespace App\Api;
 
 use App\Services\MailProcessor; // Importiere den Prozessor
+use App\Services\PushService;
 use Exception;
 
 class MailController extends \App\Core\BaseController
@@ -278,6 +279,14 @@ class MailController extends \App\Core\BaseController
 
         $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
         $updateCount = $this->mailProcess->deltaSync($folder, 100);
+
+        $meineUserId = $_SESSION['user_id'] ?? 1;
+        $this->pushProcess->sendPushNotification(
+            $meineUserId,
+            'Test erfolgreich! 🚀',
+            'Das ist deine erste Web-Push-Benachrichtigung.',
+            '/'
+        );
 
         ob_end_clean();
         return [
