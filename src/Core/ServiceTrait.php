@@ -28,7 +28,7 @@ trait ServiceTrait {
         'settingProcess'   => \App\Services\SettingProcessor::class,
         'appointProcess'   => \App\Services\AppointmentsProcessor::class,
         'notesProcess'     => \App\Services\NotesProcessor::class,
-        'pushProcess'      => \App\Services\PushService::class,
+        'pushService'      => \App\Services\PushService::class,
     ];
     // Greift auf die Eigenschaft $this->dashboard zu
     public function getService($name, $className) {

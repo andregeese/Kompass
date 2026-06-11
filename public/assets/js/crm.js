@@ -318,9 +318,7 @@ async function safeFetch(url, customOptions = {}) {
 window.crmEngine = function() {
     // Fallback falls window.CRM_API_URL in index.php fehlt
     const apiUrl = window.CRM_API_URL || 'api.php';
-    const res = apiCall('get_imap_folder', {}, 'GET');
-    this.SYNCFOLDER = res?.details?.imaps;
-
+    
     return {
         SYNCFOLDER: [],
         // --- CORE & UI STATE ---
@@ -365,6 +363,14 @@ window.crmEngine = function() {
         
         // --- GLOBAL INITIALIZATION ---
         async init() {
+            
+            
+            // Wenn wir auf der Login-Seite sind, holen wir KEINE Daten!
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'login' || !urlParams.get('view')) {
+                return; 
+            }
+            
             const res = await apiCall('get_imap_folder', {}, 'GET');
             this.SYNCFOLDER = res?.details?.imaps || [];
             this.registerForPush();
@@ -372,11 +378,7 @@ window.crmEngine = function() {
             // 🚀 HIER: Den ersten Eintrag als Standard setzen (mit Fallback auf 'INBOX')
             this.currentFolder = this.SYNCFOLDER.length > 0 ? this.SYNCFOLDER[0] : 'INBOX';
 
-            // Wenn wir auf der Login-Seite sind, holen wir KEINE Daten!
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('view') === 'login' || !urlParams.get('view')) {
-                return; 
-            }
+
             if (typeof initApiConfig === 'function') {
                 await initApiConfig();
             }

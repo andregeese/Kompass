@@ -20,6 +20,9 @@ const mailViewComponent = () => ({
     currentMailHtml:'',
     
     async init_mails() {
+        const res = apiCall('get_imap_folder', {}, 'GET');
+        this.SYNCFOLDER = res?.details?.imaps;
+
         // 1. Hash aus der URL extrahieren und säubern
         const rawHash = window.location.hash; // Gibt z.B. '#hash-ID' oder '#ID' zurück
         const hashValue = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;

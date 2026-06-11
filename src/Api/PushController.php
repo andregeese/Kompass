@@ -40,7 +40,7 @@ class PushController extends \App\Core\BaseController
 
             // 3. Abo in der Datenbank speichern
             // Wir übergeben das pure JSON, da WebPush-Bibliotheken genau dieses Format erwarten
-            $this->pushProcessor->saveSubscription($userId, $json);
+            $this->pushService->saveSubscription($userId, $json);
 
             // 4. Response senden
             $this->sendJsonResponse(['status' => 'success', 'message' => 'Erfolgreich abonniert.']);

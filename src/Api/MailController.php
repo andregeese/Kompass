@@ -281,16 +281,11 @@ class MailController extends \App\Core\BaseController
         $updateCount = $this->mailProcess->deltaSync($folder, 100);
 
         $meineUserId = $_SESSION['user_id'] ?? 1;
-        $this->pushProcess->sendPushNotification(
-            $meineUserId,
-            'Test erfolgreich! 🚀',
-            'Das ist deine erste Web-Push-Benachrichtigung.',
-            '/'
-        );
 
         ob_end_clean();
         return [
-            "sync"      => $syncResult
+            "sync"      => $syncResult,
+            "update"    => $updateCount
         ]; // Gibt das komplette Sync-Array direkt zurück
     }
     /**

@@ -117,3 +117,8 @@ Dieses Projekt ist Open Source. Wenn dir das Tool gefällt und du es in deinem V
 
 ---
 *Entwickelt mit ❤️ für Vereine und KMU.*
+
+
+-- AGE:
+docker exec -it webserver composer dump-autoload -o --working-dir=/var/www/html/age_web
+composer install!! ist wichtig, wenn ich nicht vendor ins git packe

@@ -546,14 +546,24 @@ class MailProcessor extends \App\Core\Database
 
         // 2. Performance: Hole alle relevanten DB-Daten für den Slice in EINER Query
         $checkUids = array_slice($allUids, -$limit);
-        $placeholders = implode(',', array_fill(0, count($checkUids), '?'));
+        $namedPlaceholders = [];
+        $params = ['folder' => $folder];
+
+        // 2. Dynamisch benannte Keys für die IN-Klausel erzeugen
+        foreach ($checkUids as $index => $uid) {
+            $paramKey = 'uid_' . $index; 
+            $namedPlaceholders[] = ':' . $paramKey; // Für das SQL (z.B. :uid_0)
+            $params[$paramKey] = $uid;              // Für das Parameter-Array (z.B. ['uid_0' => 1234])
+        }
+        
+        $inClause = implode(', ', $namedPlaceholders);
 
         $sqlFetch = "SELECT id, uid, is_read, is_flagged, is_answered 
                     FROM mails 
-                    WHERE uid IN ($placeholders) AND tenant_id = :tenant_id AND imap_folder = :folder";
+                    WHERE uid IN ($inClause) AND tenant_id = :tenant_id AND imap_folder = :folder;";
 
         // Wir holen alle existierenden Mails aus diesem Slice als Array (Key = UID)
-        $dbMails = $this->queryIt($sqlFetch, array_merge($checkUids, ['folder' => $folder]), true);
+        $dbMails = $this->queryIt($sqlFetch, $params, false, false, true);
         $dbMap = [];
         foreach ($dbMails as $m) $dbMap[$m->uid] = $m;
 
