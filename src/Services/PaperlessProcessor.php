@@ -9,6 +9,7 @@
  */
 
 namespace App\Services;
+use App\Services\SystemProcessor;
 use Exception;
 use Throwable;
 /**
@@ -23,12 +24,11 @@ class PaperlessProcessor extends \App\Core\Database
 
     public function __construct($dashboard) 
     {
+        parent::__construct($dashboard);     
+        $this->dashboard = $dashboard;
+        
         $this->apiUrl = $this->systemProcess->getRequiredEnv('PAPERLESS_URL');
         $this->token = $this->systemProcess->getRequiredEnv('PAPERLESS_TOKEN');
-        
-        parent::__construct($dashboard); 
-    
-        $this->dashboard = $dashboard;
     }
     /**
      * Zentraler cURL-Handler für alle Paperless-API-Requests

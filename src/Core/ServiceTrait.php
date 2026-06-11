@@ -9,7 +9,8 @@
  */
 
 namespace App\Core;
-trait ServiceTrait {
+trait ServiceTrait 
+{
     // Diese Methode wird in Controllern aufgerufen
     protected function authorize() {
         Auth::init();

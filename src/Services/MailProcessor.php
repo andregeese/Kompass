@@ -197,19 +197,35 @@ class MailProcessor extends \App\Core\Database
     /**
      * Holt den reinen Text-Inhalt einer E-Mail (Fallback)
      */
-    public function getTxtBody($hash, &$folder)
+    public function getTxtBody($hash)
     {
         error_log("## " . __FUNCTION__ . " ##");
+        
+        $mail = $this->getMailByHash($hash);
+        if (empty($mail) || !isset($mail['uid'])) {
+            throw new \Exception("Keine gültige Mail oder UID gefunden.");
+        }
+
+        // 1. Immer den echten imap_folder nutzen!
+        $folder = $mail['imap_folder']; 
+        $uid = (int)$mail['uid'];
+
         try {
             $imapStream = $this->connectIMAP($folder);
-            $mail = $this->getMailByHash($hash);
+            if ($folder !== 'INBOX') {
+                if (!imap_reopen($imapStream, $folder)) {
+                    throw new \Exception("Konnte Ordner $folder nicht öffnen: " . imap_last_error());
+                }
+            }
+            
+            //$mail = $this->getMailByHash($hash);
 
-            $msgNumber = imap_msgno($imapStream, $mail['uid']);
+            /*$msgNumber = imap_msgno($imapStream, $mail['uid']);
             if (!$msgNumber) {
                 return "Mail existiert nicht mehr auf dem Server.";
-            }
-            $structure = imap_fetchstructure($imapStream, $msgNumber);
-            $plainText = $this->findPart($msgNumber, $structure, 'TEXT/PLAIN', $imapStream);
+            }*/
+            $structure = imap_fetchstructure($imapStream, $uid);
+            $plainText = $this->findPart($uid, $structure, 'TEXT/PLAIN', $imapStream);
 
             if (!$plainText) {
                 return "<i>(Kein lesbarer Textinhalt gefunden)</i>";
@@ -458,7 +474,7 @@ class MailProcessor extends \App\Core\Database
                     // 4. Und ab in die Verschlüsselung damit!
                     $subjectHash = $this->dashboard->encrypt($cleanSubject);
                     # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
-                    $sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
+                    /*$sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
 
                     $this->queryIt(
                         $sqlMaillog,
@@ -467,7 +483,8 @@ class MailProcessor extends \App\Core\Database
                             "folder"        => $folder,
                             "imapFolder"    => $imapFolder
                         ]
-                    );
+                    );*/
+
                     $exists = $this->mail_exists(bin2Hex($idHash), $uid, $folder);
                     if (!$exists) {
                         // 1. Mail anlegen und ID zurückholen
@@ -528,6 +545,8 @@ class MailProcessor extends \App\Core\Database
 
         return $added;
     }
+
+
     /**
      * Synchronisiert Statusänderungen für bereits existierende Mails
      * Konzentriert sich nur auf die letzten N Mails, um Performance zu sparen.
@@ -560,7 +579,7 @@ class MailProcessor extends \App\Core\Database
 
         $sqlFetch = "SELECT id, uid, is_read, is_flagged, is_answered 
                     FROM mails 
-                    WHERE uid IN ($inClause) AND tenant_id = :tenant_id AND imap_folder = :folder;";
+                    WHERE uid IN ($inClause) AND status='active' tenant_id = :tenant_id AND imap_folder = :folder;";
 
         // Wir holen alle existierenden Mails aus diesem Slice als Array (Key = UID)
         $dbMails = $this->queryIt($sqlFetch, $params, false, false, true);
@@ -576,31 +595,60 @@ class MailProcessor extends \App\Core\Database
 
             $dbMail = $dbMap[$uid];
             if ($dbMail->is_read != $ov->seen || $dbMail->is_flagged != $ov->flagged || $dbMail->is_answered != $ov->answered) {
+
+                // KORREKTUR: SQL auf benannte Platzhalter umgestellt und Array assoziativ übergeben
                 $this->queryIt(
-                    "UPDATE mails SET is_read=?, is_flagged=?, is_answered=? WHERE id=?",
-                    [(int)$ov->seen, (int)$ov->flagged, (int)$ov->answered, $dbMail->id]
+                    "UPDATE mails 
+                    SET is_read = :is_read, is_flagged = :is_flagged, is_answered = :is_answered 
+                    WHERE id = :id  AND tenant_id=:tenant:_id",
+                    [
+                        'is_read'     => (int)$ov->seen,
+                        'is_flagged'  => (int)$ov->flagged,
+                        'is_answered' => (int)$ov->answered,
+                        'id'          => $dbMail->id
+                    ]
+                    
                 );
                 $updatedCount++;
             }
         }
 
-        // SICHER: Wir erzwingen ein Array, selbst wenn queryIt ein einzelnes Objekt liefert
-        $rawResult = $this->queryIt("SELECT uid FROM mails WHERE imap_folder = ? AND tenant_id = ?", [$folder, $_SESSION['tenant_id']], true);
+        // 1. SELECT ausführen (Platzhalter sind so korrekt)
+        $sql = "SELECT uid FROM mails WHERE imap_folder = :folder AND tenant_id = :tenant_id";
+        $rawResult = $this->queryIt($sql, ['folder' => $folder], false);
 
-        // Wenn $rawResult ein einzelnes Objekt ist, machen wir ein Array daraus
-        $dbUids = is_array($rawResult) ? $rawResult : [$rawResult];
-
-        // Jetzt kann array_column nicht mehr abstürzen
-        $dbUidList = array_map('intval', array_column($dbUids, 'uid'));
+        // KORREKTUR: Sauber auf die fetched-Daten des queryIt-Objekts zugreifen
+        $dbUidList = [];
+        if ($rawResult && $rawResult->success && !empty($rawResult->data->fetched)) {
+            $dbUidList = array_map('intval', array_column($rawResult->data->fetched, 'uid'));
+        }
 
         // 3. Cleanup: UIDs vergleichen
-        // Hier fixen wir den array_map Fehler durch type-casting im array_map
-        //$dbUidList = array_map('intval', array_column($this->queryIt("SELECT uid FROM mails WHERE imap_folder = ? AND tenant_id = ?", [$folder], true), 'uid'));
         $toDelete = array_diff($dbUidList, array_map('intval', $allUids));
 
+        // KORREKTUR: Wenn UIDs gelöscht werden müssen, bauen wir wieder benannte Parameter für das IN-Statement
         if (!empty($toDelete)) {
-            $placeholders = implode(',', array_fill(0, count($toDelete), '?'));
-            $this->queryIt("UPDATE mails SET status='moved' WHERE uid IN ($placeholders) AND imap_folder = ?", array_merge($toDelete, [$folder]));
+            $namedPlaceholders = [];
+            $params = [
+                'folder' => $folder
+            ];
+
+            // Wir indizieren die UIDs für die Platzhalter (:uid_0, :uid_1, ...)
+            foreach (array_values($toDelete) as $index => $uid) {
+                $paramKey = 'uid_' . $index;
+                $namedPlaceholders[] = ':' . $paramKey;
+                $params[$paramKey] = (int)$uid;
+            }
+
+            $inClause = implode(', ', $namedPlaceholders);
+            
+            // SQL mit dem dynamischen IN-Clause und dem Ordner-Platzhalter
+            $sqlUpdate = "UPDATE mails 
+                        SET status = 'moved' 
+                        WHERE uid IN ($inClause) AND imap_folder = :folder AND tenant_id=:tenant_id;";
+
+            // Übergabe des sauberen, assoziativen Parameter-Arrays
+            $this->queryIt($sqlUpdate, $params);
         }
 
         @imap_close($imapStream);
@@ -1007,15 +1055,18 @@ class MailProcessor extends \App\Core\Database
     {
         $mail = $this->getMailByHash($hash);
         if (!$mail) return 'Inhalt nicht gefunden.';
+        
         // 1. Erst versuchen, aus der DB zu laden (entschlüsselt)
-        $htmlContent = $this->getDecryptedMailBody($hash);
+        $htmlContent = ""; 
+        $thmlfromDB = $this->getDecryptedMailBody($hash);
+
         // 2. Wenn DB leer, IMAP anzapfen
         if (empty($htmlContent)) {
-            $htmlContent = $this->getHtmlBody($hash, $mail['folder']);
+            $htmlContent = $this->getHtmlBody($hash);
 
             if (empty($htmlContent)) {
                 // Fallback: Wenn kein HTML, versuche PlainText
-                $htmlContent = $this->getTxtBody($hash, $mail['folder']);
+                $htmlContent = $this->getTxtBody($hash);
             }
 
             if (empty($htmlContent)) {
@@ -1023,13 +1074,14 @@ class MailProcessor extends \App\Core\Database
             }
 
             // Jetzt in die DB schreiben (Sicherheit vor Speichern!)
-            $this->saveMailWithContent($hash, $htmlContent, strip_tags($htmlContent));
+            //$this->saveMailWithContent($hash, $htmlContent, strip_tags($htmlContent));
         }
-        // 3. Hier kommt die finale Bereinigung (HTML Purifier!)
+
+        
         // Sicherheit: Erst hier wird das HTML für die Anzeige/Ausgabe "geputzt"
-        $purified = $this->purifyHtml($htmlContent);
-        $this->dashboard->sendResponse(true, ["mail" => $purified], null, 'success');
-        //return $this->purifyHtml($htmlContent);        
+        return $this->purifyHtml($htmlContent);
+        
+        
     }
     private function purifyHtml(string $html): string
     {
@@ -1054,6 +1106,8 @@ class MailProcessor extends \App\Core\Database
 
         return $purifier->purify($html);
     }
+
+
     private function getIMAPFolderByHash(&$hash)
     {
         $sql = "SELECT imap_folder FROM mails WHERE tenant_id=:tenant_id AND id_hash=UNHEX(:hash);";
@@ -1067,6 +1121,84 @@ class MailProcessor extends \App\Core\Database
             return $dbResult->data->fetched[0]['imap_folder'];
         }
     }
+
+    /**
+     * Alle Mails vom Absender löschen
+     */
+    public function deleteAllMailsByHash($hash)
+    {
+        $sql = "SELECT id_hash, imap_folder, uid, sender_ceid 
+                  FROM mails 
+                  WHERE 
+                    tenant_id=:tenant_id
+                    AND sender_ceid IN (
+                        SELECT sender_ceid FROM mails WHERE id_hash=UNHEX(:hash)
+                    );";
+
+        $dbResult = $this->queryIt(
+            $sql,
+            ['hash' => $hash],
+            false,
+            false,
+            false
+        );
+
+        if (!$dbResult->success || empty($dbResult->data->fetched)) {
+            // Keine Mails gefunden oder Fehler -> Abbruch
+            throw new \Exception("Keine Mails gefunden oder Fehler in der Abfrage!");
+        }
+
+        $senderCeid = $dbResult->data->fetched[0]['sender_ceid'];
+        $mailsByFolder = [];
+        foreach ($dbResult->data->fetched as $row) {
+            if (!empty($row['uid']) && !empty($row['imap_folder'])) {
+                $mailsByFolder[$row['imap_folder']][] = $row['uid'];
+            }
+        }
+
+        $imapStream = $this->connectIMAP();
+        $destFolder = "Deleted Messages";
+
+        if (!empty($mailsByFolder)) {
+            
+            $host = $this->systemProcess->getRequiredEnv('IMAP_HOST');
+            $port = $this->systemProcess->getRequiredEnv('IMAP_PORT');
+            $ssl  = ($port == 993) ? '/imap/ssl' : '';
+            $imapServerBase = "{" . $host . ":" . $port . $ssl . "}";
+
+            // 3. IMAP-Schleife: Wir gehen Ordner für Ordner durch
+            foreach ($mailsByFolder as $folderName => $uids) {
+                
+                // Verbindung ohne Neu-Authentifizierung auf den nächsten Ordner umbiegen
+                $fullMailboxPath = $imapServerBase . $folderName;
+                
+                // Bestehenden Stream ohne Re-Authentifizierung auf den neuen Ordner umbiegen
+                if (!imap_reopen($imapStream, $fullMailboxPath)) {
+                    throw new \Exception("Konnte Ordner $fullMailboxPath nicht öffnen: " . imap_last_error());
+                }
+                
+                // Alle UIDs dieses Ordners als kommagetrennte Liste (Bulk-Operation)
+                $sequence = implode(',', $uids);
+                
+                $moveSuccess = imap_mail_move($imapStream, $sequence, $destFolder, CP_UID);
+                if (!$moveSuccess) {
+                    throw new \Exception("IMAP-Move aus $folderName nach $destFolder fehlgeschlagen: " . imap_last_error($imapStream));
+                }
+
+                // Löschung im aktuellen Ordner finalisieren
+                imap_expunge($imapStream);
+                error_log("Mail $sequence gelöscht.");
+            }
+
+            // 4. DATENBANK UPDATE: Alle betroffenen Mails auf einmal als gelöscht markieren
+            $sqlUpdate = "UPDATE mails 
+                        SET status = 'deleted' 
+                        WHERE sender_ceid = :senderceid AND tenant_id=:tenant_id";
+                        
+            return $this->queryIt($sqlUpdate, ['senderceid' => $senderCeid], false, false, true);
+        }
+    }
+
     /**
      * Löscht eine Mail anhand ihres Hashes. WICHTIG: Diese Methode sollte mit Vorsicht verwendet werden, da sie die Mail endgültig entfernt. Es wird empfohlen, stattdessen moveToDMS zu verwenden, um die Mail zu archivieren.
      * @param string $hash Der Hash der Mail, die gelöscht werden soll.
@@ -1155,7 +1287,7 @@ class MailProcessor extends \App\Core\Database
                 LEFT JOIN contacts as c ON c.id = cm.contact_id
                 WHERE m.tenant_id = :tenant_id
                 AND imap_folder = :folder
-                AND (status NOT IN('deleted') OR status IS NULL)";
+                AND (status IN('active') OR status IS NULL)";
 
         // Fall A: Zugriff auf eine spezifische Mail (Detailansicht)
         if ($targetHash !== null) {

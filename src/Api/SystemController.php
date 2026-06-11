@@ -11,6 +11,7 @@
 namespace App\Api;
 use App\Services\ContactProcessor;
 use App\Services\SystemProcessor;
+
 class SystemController extends \App\Core\BaseController
 {
     public function __construct($dashboard) {

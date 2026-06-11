@@ -20,6 +20,10 @@ abstract class BaseController
 
     public function __construct($dashboard)
     {
+        // Debug-Lines zum Lösen des Rätsels:
+        error_log("CONSTRUCTOR CHECK: Ich bin in " . get_class($this));
+        error_log("DASHBOARD TYPE: " . gettype($dashboard));
+        
         error_log("BASECONTROLLER: Geladen von Klasse: " . get_class($this));
         $this->dashboard = $dashboard;
 
@@ -115,53 +119,60 @@ abstract class BaseController
      */
     protected function process($processor, string $method, string $key, string $successMessage = ''):array
     {
-        try {
-            $reflector = new \ReflectionMethod($processor, $method);
-            $params = $reflector->getParameters();
-            $args = [];
+        $reflector = new \ReflectionMethod($processor, $method);
+        $params = $reflector->getParameters();
+        $args = [];
 
-            foreach ($params as $param) {
-                $name = $param->getName();
-                $value = $this->request[$name] ?? null;
+        foreach ($params as $param) {
+            $name = $param->getName();
+            $value = $this->request[$name] ?? null;
 
-                // Prüfen auf Fehlendes oder leeres String-Argument
-                if ($value === null || ($param->getType() == 'string' && trim((string)$value) === '')) {
-                    if ($param->isOptional()) {
-                        $args[] = $param->getDefaultValue();
-                    } else {
-                        throw new \Exception("Parameter '$name' darf nicht leer sein.");
-                    }
+            // Prüfen auf Fehlendes oder leeres String-Argument
+            if ($value === null || ($param->getType() == 'string' && trim((string)$value) === '')) {
+                if ($param->isOptional()) {
+                    $args[] = $param->getDefaultValue();
                 } else {
-                    $args[] = $value;
+                    throw new \Exception("Parameter '$name' darf nicht leer sein.");
                 }
-            }
-
-            $result = call_user_func_array([$processor, $method], $args);
-
-            # error_log("BASECONTROLLER: " . __FILE__ . ":" . __LINE__ . " >> ");
-            # error_log(print_r($result, true));
-            # error_log("EOF BASECONTROLLER");
-            
-            // Prüfen, ob das Ergebnis das "queryIt"-Format hat (Objekt mit ->success und ->data)
-            if (is_object($result) && isset($result->success)) {
-                if (!$result->success) {
-                    // Datenbankfehler aus dem Objekt extrahieren
-                    throw new \Exception($result->error ?? "Unbekannter Datenbankfehler");
-                }
-                // NUR die Daten extrahieren, Debug-Kram wegschmeißen
-                $dataToReturn = $result->data->fetched ?? $result->data->lastId ?? true;
             } else {
-                $dataToReturn = $result;
+                $args[] = $value;
             }
-
-            // Jetzt "sendResponse" mit den sauberen Daten
-            return [$key => $dataToReturn];
-
-        } catch (\Throwable $e) {
-            error_log("API Error in " . $method . ": " . $e->getMessage());
-            
-            return ['error' => $e->getMessage()];
         }
+
+        $result = call_user_func_array([$processor, $method], $args);
+
+        // Prüfen, ob das Ergebnis das "queryIt"-Format hat (Objekt mit ->success und ->data)
+        if (is_object($result) && isset($result->success)) {
+            if (!$result->success) {
+                // Datenbankfehler aus dem Objekt extrahieren
+                throw new \Exception($result->error ?? "Unbekannter Datenbankfehler");
+            }
+            // NUR die Daten extrahieren, Debug-Kram wegschmeißen
+            $dataToReturn = $result->data->fetched ?? $result->data->lastId ?? true;
+        } else {
+            $dataToReturn = $result;
+        }
+
+        $details = [$key => $dataToReturn];
+
+        // 2. KORREKTUR: Wenn eine echte Nachricht übergeben wurde, füttern wir deinen Steuerknoten!
+        if (trim($successMessage) !== '' && $successMessage !== 'success') {
+            $details['ui'] = [
+                'notify'  => true,
+                'title'   => 'Erfolg',
+                'message' => $successMessage,
+                'type'    => 'success' // "success", "info", "warning", "danger"
+            ];
+        }
+
+        //Das vollständige Paket für api.php packen
+        return [
+            'success' => true,
+            'status'  => trim($successMessage) !== '' ? $successMessage : 'success',
+            'details' => $details,
+            'error'   => null
+        ];
+
     }
 
     protected function jsonResponse($data, $success = true)

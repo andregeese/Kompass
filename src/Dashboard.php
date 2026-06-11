@@ -157,6 +157,8 @@ class Dashboard
     public static function sendResponse(bool $success, $data = null, ?string $error = null, string $status = 'success'): void 
     {
         header('Content-Type: application/json');
+        $status = $status ?? 'success';
+        
         // HTTP-Statuscode setzen
         if (!$success) {
             http_response_code(400); 

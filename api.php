@@ -88,6 +88,7 @@ $routes = [
     'list_mails'                    => [App\Api\MailController::class, 'listMails'],
     'view'                          => [App\Api\MailController::class, 'viewMail'],
     'delete'                        => [App\Api\MailController::class, 'deleteMail'],
+    'delete_all_mails'              => [App\Api\MailController::class, 'deleteAllMailsByHash'],
     'dms'                           => [App\Api\MailController::class, 'moveToDms'],
     'pdf'                           => [App\Api\MailController::class, 'handlePdf'],
     'sync'                          => [App\Api\MailController::class, 'syncICloud'],
@@ -159,47 +160,44 @@ if ($action === 'get_allowed_actions') {
 if (!array_key_exists($action, $routes)) {
     throw new \Exception("Aktion '$action' unbekannt.");
 }
+
 // 4. Controller ausführen
 $controllerClass = $routes[$action][0];
 $method = $routes[$action][1];
+
 try {
     // Hier greift der BaseController Konstruktor (Sicherheits-Check passiert automatisch!)
     $controller = new $controllerClass($dashboard);
-    $result = $controller->$method();
-    \App\Dashboard::sendResponse(true, $result ?? new \stdClass());
+    $responseBody = $controller->$method();
+
+    // KORREKTUR: Wenn das Ergebnis KEIN standardisiertes Paket ist, schnüren wir es hier!
+    if (!is_array($responseBody) || !isset($responseBody['success'])) {
+        $responseBody = [
+            'success' => true,
+            'status'  => 'success', // Standard-Status
+            'details' => $responseBody ?? new \stdClass(), // Das rohe Array wandert nach 'details'
+            'error'   => null
+        ];
+    }
+
+    
+    // ERFOLG: Wir nehmen Status und Details aus dem Rückgabewert
+    \App\Dashboard::sendResponse(
+        true, 
+        $responseBody['details'], 
+        null, 
+        $responseBody['status']
+    );
     
 } catch (\Throwable $e) {
-    error_log("API Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-
-    // Status Code setzen
-    http_response_code(500);
-
-    // Versuch 1: Über dein Framework-Dashboard ausgeben
-    try {
-        // 💡 Wir übergeben die Fehlerdetails & den StackTrace als Array im zweiten Parameter!
-        \App\Dashboard::sendResponse(false, [
-            'file'  => $e->getFile(),
-            'line'  => $e->getLine(),
-            'trace' => explode("\n", $e->getTraceAsString()) // Macht ein schönes JSON-Array draus
-        ], $e->getMessage());
-        exit;
-    } catch (\Throwable $internalError) {
-        // 1. Immer sofort in den System-Log schreiben
-        error_log("API Global Catch: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
-
-        // 2. HTTP-Statuscode setzen
-        http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
-
-        // 3. Pures, ungezähmtes JSON ausgeben inklusive StackTrace im Fallback
-        echo json_encode([
-            'success' => false,
-            'status'  => 'error',
-            'error'   => $e->getMessage(),
-            'file'    => $e->getFile(),
-            'line'    => $e->getLine(),
-            'trace'   => explode("\n", $e->getTraceAsString())
-        ]);
-        exit;
-    }
+    // FEHLER: Hier greift success = false
+    // Wir loggen den Fehler und schicken die Meldung an den error-Key
+    error_log("API Global Catch: " . $e->getMessage());
+    
+    \App\Dashboard::sendResponse(
+        false, 
+        new \stdClass(), 
+        $e->getMessage(), 
+        'error'
+    );
 }

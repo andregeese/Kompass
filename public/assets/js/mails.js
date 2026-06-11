@@ -245,26 +245,35 @@ const mailViewComponent = () => ({
     },
     async deleteMail(mail) 
     {
-        confirmAction('Diese Mail wirklich löschen?', async() => {
-            try {
-                
-                const jResponse = await apiCall('delete', { id: mail.hash }, 'POST');
-                
+        confirmAction('Wie möchtest du diese Mail löschen?', [
+        {
+            label: 'Abbrechen',
+            class: 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white',
+            onClick: () => { console.log('Aktion abgebrochen'); }
+        },
+        {
+            label: 'alle löschen',
+            class: 'bg-amber-500 hover:bg-amber-600 text-white',
+            onClick: async () => {
+                // Deine originale Lösch-Logik
+                const jResponse = await apiCall('delete_all_mails', { hash: mail.hash }, 'POST');
                 if (jResponse?.success) {
-                    // UI aktualisieren
                     this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
-                    localStorage.setItem('cached_mails', JSON.stringify(this.$data.mails));
-                    
-                    if (this.$data.selectedHash === mail.hash) {
-                        this.$data.currentMail = null;
-                    }
-                } else {
-                    console.error("Löschen fehlgeschlagen:", jResponse?.error);
                 }
-            } catch (err) { 
-                console.error("Netzwerkfehler beim Löschen:", err);
             }
-        });
+        },
+        {
+            label: 'Endgültig Löschen',
+            class: 'bg-red-600 hover:bg-red-700 text-white',
+            onClick: async () => {
+                // Deine originale Lösch-Logik
+                const jResponse = await apiCall('delete', { id: mail.hash }, 'POST');
+                if (jResponse?.success) {
+                    this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
+                }
+            }
+        }
+    ]);
         
     },
     async trackFoldersSilent(showLoadingIndicator, folderName = 'INBOX') {

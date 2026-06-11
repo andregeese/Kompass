@@ -294,64 +294,72 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
         ?>
     </div>
     <div x-data="{ 
-        show: false, 
-        isDetail: false,
-        message: '', 
-        item: {},
-        onConfirm: null,
-        
-        // Öffnet bei Bestätigung
-        openConfirm(msg, callback) { 
-            this.isDetail = false;
-            this.message = msg; 
-            this.onConfirm = callback; 
-            this.show = true; 
-        },
-        // Öffnet bei Detail-Ansicht
-        openDetail(data) {
-            this.isDetail = true;
-            this.item = data;
-            this.show = true;
-        }
-    }"
-        @open-item-modal.window="openDetail($event.detail)"
-        @confirm-modal.window="openConfirm($event.detail.message, $event.detail.callback)"
-        x-show="show"
-        x-cloak
-        class="fixed inset-0 z-[999999] flex items-center justify-center px-4"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0">
-
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="show = false"></div>
-
-        <div class="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all"
+                show: false, 
+                isDetail: false,
+                message: '', 
+                item: {},
+                buttons: [], // Neu: Hier landen die dynamischen Buttons
+                
+                openConfirm(msg, buttonsOrCallback) { 
+                    this.isDetail = false;
+                    this.message = msg; 
+                    
+                    // Abwärtskompatibilität: Wenn es ein alter Callback ist, baue Standard-Buttons
+                    if (typeof buttonsOrCallback === 'function') {
+                        this.buttons = [
+                            { label: 'Abbrechen', class: 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200', onClick: () => {} },
+                            { label: 'Bestätigen', class: 'bg-red-600 hover:bg-red-700 text-white', onClick: buttonsOrCallback }
+                        ];
+                    } else if (Array.isArray(buttonsOrCallback)) {
+                        // Wenn es das neue Array ist, direkt zuweisen
+                        this.buttons = buttonsOrCallback;
+                    }
+                    
+                    this.show = true; 
+                },
+                openDetail(data) {
+                    this.isDetail = true;
+                    this.item = data;
+                    this.show = true;
+                }
+            }"
+            @open-item-modal.window="openDetail($event.detail)"
+            @confirm-modal.window="openConfirm($event.detail.message, $event.detail.buttons)"
             x-show="show"
+            x-cloak
+            class="fixed inset-0 z-[999999] flex items-center justify-center px-4"
             x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0 scale-95"
-            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
             x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100 scale-100"
-            x-transition:leave-end="opacity-0 scale-95">
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
 
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Bestätigung</h3>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-6" x-text="message"></p>
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="show = false"></div>
 
-            <div class="flex gap-3">
-                <button @click="show = false"
-                    class="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 font-medium transition-colors">
-                    Abbrechen
-                </button>
-                <button @click="onConfirm(); show = false"
-                    class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
-                    Bestätigen
-                </button>
+            <div class="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all"
+                x-show="show"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95">
+
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Bestätigung</h3>
+                <p class="text-slate-600 dark:text-slate-300 text-sm mb-6" x-text="message"></p>
+
+                <div class="flex flex-wrap gap-3">
+                    <template x-for="(btn, index) in buttons" :key="index">
+                        <button @click="if(btn.onClick) btn.onClick(); show = false"
+                            :class="btn.class || 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200'"
+                            class="flex-1 min-w-[100px] px-4 py-2.5 rounded-xl font-medium transition-colors text-sm"
+                            x-text="btn.label">
+                        </button>
+                    </template>
+                </div>
             </div>
         </div>
-    </div>
 </body>
 
 </html>

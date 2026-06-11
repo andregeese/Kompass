@@ -7,11 +7,18 @@
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
+
 namespace App\Api;
 use App\Services\PaperlessProcessor; // Importiere den Prozessor
 use Exception;
+
 class PaperlessController extends \App\Core\BaseController {
     
+    public function __construct($dashboard)
+    {
+        parent::__construct($dashboard); 
+    }
+
     /**
      * @deprecated
      */

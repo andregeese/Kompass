@@ -185,6 +185,14 @@ class MailController extends \App\Core\BaseController
             'paperless_id' => $mailDetails['paperless_id']
         ];
     }
+
+    public function deleteAllMailsByHash()
+    {
+        return $this->process($this->mailProcess, 'deleteAllMailsByHash', "allMails", 'Erfolgreich gelöscht');
+        error_log("ALLE LÖSCHEN: Response");
+        error_log(print_r($a, true));
+        error_log("EOF ALLE LÖSCHEN:");
+    }
     /**
      * lösche die E-Mail
      */
@@ -300,18 +308,20 @@ class MailController extends \App\Core\BaseController
             'logs'    => $syncResult['logs'] ?? []
         ];
     }
+    
     /**
      * streamt die Mail
      */
     public function streamHtml()
     {
+        return $this->process($this->mailProcess, 'getMailBody', "mail",'');
         $hash = $this->request['hash'] ?? ''; // Nutze dein zentrales Request-Objekt!
         if (empty($hash)) {
             throw new \Exception("Kein gültiger Mail-Hash übergeben.");
         }
         // Die Logik bleibt im Processor
         $body = $this->mailProcess->getMailBody($hash);
-        error_log("MAILBody GEFUNDEN: " . $body);
+        
         // Jetzt die Ausnahme-Ausgabe
         header('Content-Type: text/html; charset=utf-8');
         header("Content-Security-Policy: default-src 'self' 'unsafe-inline' *; script-src 'none';");

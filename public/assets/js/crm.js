@@ -15,9 +15,12 @@ const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content ||
  * @param {} message 
  * @param {*} callback 
  */
-function confirmAction(message, callback) {
+function confirmAction(message, buttonsOrCallback) {
     window.dispatchEvent(new CustomEvent('confirm-modal', {
-        detail: { message, callback }
+        detail: { 
+            message: message,
+            buttons: buttonsOrCallback 
+        }
     }));
 }
 //Notify => erzeugt ein notify und eine Mitteilung
