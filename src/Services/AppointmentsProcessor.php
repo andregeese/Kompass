@@ -38,28 +38,154 @@ class AppointmentsProcessor extends BaseProcessor
         $client->addCurlSetting(CURLOPT_HTTPHEADER, ['X-Apple-Request-UUID: ' . bin2hex(random_bytes(8))]);
         return $client;
     }
-    public function getAppointmentsFromDB()
+
+    /**
+     * Holt alle Appointments zu einer Mail-ID (TIMELINE)
+     */
+    public function getAppointmentsById($id)
     {
-        $dbResult = $this->queryIt(
-            "SELECT id, summary as title, start_time as start, end_time as end FROM appointments WHERE tenant_id=:tenant_id",
-            [],
+        error_log("Lade alle Appointments");
+        // alle Notizen zu einer Mail
+        $sql = "SELECT DISTINCT 
+                a.*,
+                TRIM(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(
+                            REPLACE(REPLACE(a.ical_data, '\r', ''), '\n', '<BR>'), 
+                        'SUMMARY:', -1), 
+                    '<BR>', 1)
+                ) AS extracted_summary
+                FROM `appointments` a
+                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
+                JOIN `contact_emails` ce_all 
+                ON (a.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
+                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
+                JOIN `contact_emails` ce_current_mail 
+                ON ce_all.contact_id = ce_current_mail.contact_id
+                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
+                JOIN `mails` m 
+                ON (m.sender_ceid = ce_current_mail.id) -- OR m.recipient_ceid = ce_current_mail.id)
+                -- 4. Filter für die Sidebar
+                WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
+                AND m.tenant_id = :tenant_id
+                AND a.tenant_id = :tenant_id
+                -- Neueste Notizen immer zuerst anzeigen
+                ORDER BY a.updated_at DESC;";
+        $params = ['id' => $id];
+
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+        if (!$dbResult->success) {
+            throw new \Exception("Fehler bei Appointment!");
+        }
+        return $dbResult->data->fetched;
+    }
+
+    /**
+     * Holt alle Appointments aus der DB
+     */
+    public function getAppointments($start_date, $end_date)
+    {
+        
+        return $this->queryIt(
+            "WITH RECURSIVE calendar AS (
+                SELECT CAST(:start_date AS DATE) AS d_date
+                UNION ALL
+                SELECT DATE_ADD(d_date, INTERVAL 1 DAY)
+                FROM calendar
+                WHERE d_date < :end_date
+            )
+            SELECT 
+                HEX(AES_ENCRYPT(CAST(a.id as CHAR), :crypto_key)) as id, 
+                a.uid, 
+                a.ceid, 
+                a.summary, 
+                a.start_time, 
+                a.end_time,
+                CONCAT(a.id, '_', DATE_FORMAT(calendar.d_date, '%Y%m%d')) AS unique_id,
+                DATE_FORMAT(calendar.d_date, '%a, %d. %b') AS date_str,
+                CASE 
+                    WHEN DATE(COALESCE(a.end_time, a.start_time)) > DATE(a.start_time) THEN '🌴 Ganztägig' 
+                    -- 2. Wenn ein Enddatum existiert
+                    WHEN a.end_time IS NOT NULL AND a.end_time != a.start_time THEN 
+                        CONCAT(DATE_FORMAT(a.start_time, '%H:%i'), ' - ', DATE_FORMAT(a.end_time, '%H:%i'))
+                    
+                    -- 3. Fallback: Nur die Startzeit
+                    ELSE DATE_FORMAT(a.start_time, '%H:%i')
+                END AS time_str,
+                IF(calendar.d_date = CURDATE(), 1, 0) AS is_today,
+                CASE 
+                    WHEN WEEKOFYEAR(calendar.d_date) != LAG(WEEKOFYEAR(calendar.d_date)) OVER (ORDER BY calendar.d_date ASC, a.start_time ASC) THEN 1 
+                    ELSE 0 
+                END AS week_transition
+            FROM calendar
+            -- COALESCE fängt ab, falls end_time NULL ist, und nimmt dann einfach start_time an
+            JOIN appointments a ON calendar.d_date >= DATE(a.start_time) 
+                            AND calendar.d_date <= DATE(COALESCE(a.end_time, a.start_time))
+            ORDER BY calendar.d_date ASC, a.start_time ASC;",
+            [
+                'start_date'    => $start_date,
+                'end_date'      => $end_date,
+                'crypto_key'    => $this->dashboard->getTenantCryptoKey()
+            ],
             false,
             false,
-            true
+            false
+        );
+    }
+
+    /**
+     * aktualisiert ein Appointment
+     */
+    public function updateAppointment($appointment_id, $ceid='')
+    {
+        $sql = "UPDATE appointments 
+                   SET ceid=:ceid 
+                 WHERE tenant_id=:tenant_id 
+                   AND id=CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
+        
+        return $this->queryIt(
+            $sql,
+            [
+                'ceid'  => $ceid == '' ? NULL : (int)$ceid,
+                'id'    => $appointment_id
+            ],
+            false,
+            false,
+            false
         );
 
-        return $dbResult;
     }
-    public function getAppointment($id)
+
+    /**
+     * zieht exakt ein Appointment aus der DB
+     * @param int $id
+     */
+    public function getAppointment(int $id)
     {
-        $sql = "SELECT * FROM appointments WHERE tenant_id=:tenant_id AND id=:id";
-        $dbResult = $this->queryIt(
+        $sql = "SELECT summary, start_time, end_time, ceid, uid, ical_data 
+                  FROM appointments 
+                 WHERE tenant_id=:tenant_id 
+                   AND id=:crypto_key";
+
+        return $this->queryIt(
             $sql, 
             ['id' => $id]
         );
-        
-        return $dbResult;
     }
+
+
+    public function getUpcomingEvents()
+    {
+        $sql = "SELECT summary, start_time, end_time, ceid, uid, ical_data  
+                  FROM appointments 
+                 WHERE tenant_id=:tenant_id
+                   AND `start_time` >= now()
+                   AND `end_time` <= now()+ INTERVAL 7 DAY";
+
+        return $this->queryIt($sql, [], false, false, true);
+    }
+
     private function getPrincipalPath()
     {
         $client = $this->getClient();
@@ -73,6 +199,7 @@ class AppointmentsProcessor extends BaseProcessor
         }
         throw new Exception("Konnte Principal Path nicht ermitteln.");
     }
+
     /**
      * alle Kalender ermitteln, Name und URL
      */
@@ -174,54 +301,59 @@ class AppointmentsProcessor extends BaseProcessor
             error_log("Sync abgebrochen: " . $e->getMessage());
         }
     }
+
     public function syncCalendarToDb($calendarUrl, $tableName = 'appointments')
     {
-        //error_log("syncCalendarToDb: "  . $calendarUrl);
         // 1. Stelle sicher, dass $calendarUrl absolut ist
         if (strpos($calendarUrl, 'https://') !== 0) {
             $calendarUrl = 'https://p' . $this->getPartition(). "-caldav.icloud.com" . $calendarUrl;
-            //$calendarUrl = 'https://p41-caldav.icloud.com' . $calendarUrl;
         }
-        //error_log("syncCalendarToDb A: "  . $calendarUrl);
+        
         // 1. Termine abrufen
         $icsData = $this->getEventsParsed($calendarUrl);
+
         
-        //error_log('ICS READ' . print_r($icsData, true));
         // 2. Parsen mit Sabre VObject
         //$vcalendar = \Sabre\VObject\Reader::read($icsData);
-        //error_log('EVENTs TO DB');
-        foreach ($icsData as $_event) {
-            //error_log(print_r($_event, true));
-            // 3. Datenbank-Update vorbereiten
-            $dbResult = $this->queryit("
-                    INSERT INTO $tableName (uid, summary, start_time, end_time, location, ical_data, updated_at, tenant_id)
-                    VALUES (:uid, :summary, :start, :end, :loc, :data, NOW(), :tenant_id)
-                    ON DUPLICATE KEY UPDATE 
-                        summary = VALUES(summary), 
-                        start_time = VALUES(start_time), 
-                        end_time = VALUES(end_time),
-                        location = VALUES(location),
-                        ical_data = VALUES(ical_data),
-                        updated_at = NOW();"
-                    ,
-                    [
-                        'uid'     => $_event['uid'],
-                        'summary' =>  (string)$_event['summary'],
-                        'start'   => $_event['start'],
-                        'end'     => $_event['end'],
-                        'loc'     => $_event['loc'],
-                        'data'    => $_event['data'], // Speichert den Teil-ICS-String
-                    ],
-                    true,
-                    false,
-                    false
-                    );
-            }
-            if (!$dbResult->sucess)
+        foreach ($icsData as $_event) 
+        {
+            $this->transaction( function () use ($tableName, $_event) 
             {
-                return $dbResult->error;
-            }
+                $this->queryit("UPDATE $tableName SET status = 'del' WHERE status='active'");
+
+                $dbResult = $this->queryit("
+                        INSERT INTO $tableName (uid, summary, start_time, end_time, location, ical_data, updated_at, tenant_id, status)
+                        VALUES (:uid, :summary, :start, :end, :loc, :data, NOW(), :tenant_id, 'active')
+                        ON DUPLICATE KEY UPDATE 
+                            summary = VALUES(summary), 
+                            start_time = VALUES(start_time), 
+                            end_time = VALUES(end_time),
+                            status = 'active',
+                            location = VALUES(location),
+                            ical_data = VALUES(ical_data),
+                            updated_at = NOW();"
+                        ,
+                        [
+                            'uid'     => $_event['uid'],
+                            'summary' =>  (string)$_event['summary'],
+                            'start'   => $_event['start'],
+                            'end'     => $_event['end'],
+                            'loc'     => $_event['loc'],
+                            'data'    => $_event['data']
+                        ],
+                        true,
+                        false,
+                        false
+                        );
+                
+                if (!$dbResult->sucess)
+                {
+                    return $dbResult->error;
+                }
+            });
+        }
     }
+
     // In deiner AppointmentsProcessor.php
     public function getEventsParsed(string $calendarUrl):array
     {
@@ -358,7 +490,7 @@ class AppointmentsProcessor extends BaseProcessor
         $sql = "UPDATE appointments 
             SET summary = :summary, 
                 ceid = :ceid 
-            WHERE id = :id AND tenant_id = :tenant_id";
+            WHERE id = :crypto_key AND tenant_id = :tenant_id";
             
         $dbResult = $this->queryIt($sql, [
             'summary'   => $data['title'],
@@ -368,4 +500,6 @@ class AppointmentsProcessor extends BaseProcessor
 
         return $dbResult;
     }
+
+
 }

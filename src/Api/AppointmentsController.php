@@ -20,14 +20,13 @@ class AppointmentsController extends \App\Core\BaseController
         $id = $this->request->get('id');
         $appointment = $this->appointProcess->getAppointment($id);
         
+        return $this->process($this->appointProcess, 'getAppointment','appointment','');
         return ['appointment' => $appointment];
     }
+
     public function getAppointments()
     {
-        $appointments = $this->appointProcess->getAppointmentsFromDB();
-        error_log(print_r($appointments, true));
-        
-        return ['appointments' => $appointments];
+        return $this->process($this->appointProcess, 'getAppointments', 'appointments','');
         
     }
     public function getEventsParsed() 
@@ -35,13 +34,20 @@ class AppointmentsController extends \App\Core\BaseController
         $url = '/228168594/calendars/80E56597-9429-4383-A5F4-5180DC81144B/';
         return $this->appointProcess->getEventsParsed($url);
     }
+
     public function fullSync()
     {
         return $this->appointProcess->runFullSync();
     }
+    
     public function getPartition()  
     {
         return $this->appointProcess->getPartition();
+    }
+    
+    public function updateAppointment()
+    {
+        return $this->process($this->appointProcess, 'updateAppointment', 'updateAppoint','');
     }
     public function saveAppointment()
     {
@@ -55,5 +61,10 @@ class AppointmentsController extends \App\Core\BaseController
             return ['success' => false, 'error' => 'Keine ID angegeben'];
         }
         return $this->appointProcess->saveAppointment($data);
+    }
+
+    public function getUpcomingEvents()
+    {
+        return $this->process($this->appointProcess, 'getUpcomingEvents', 'upcoming_events', '');
     }
 }

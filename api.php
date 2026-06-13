@@ -85,28 +85,33 @@ $routes = [
     // Mails
     'get_mail_by_hash'              => [App\Api\MailController::class, 'getMailByHash'],
     'get_mails_by_mailadress'       => [App\Api\MailController::class, 'getMailsByAddress'],
+    'get_accelerate_cluster'        => [App\Api\MailController::class, 'getAccelorateClusters'],
     'list_mails'                    => [App\Api\MailController::class, 'listMails'],
     'view'                          => [App\Api\MailController::class, 'viewMail'],
     'delete'                        => [App\Api\MailController::class, 'deleteMail'],
     'delete_all_mails'              => [App\Api\MailController::class, 'deleteAllMailsByHash'],
     'dms'                           => [App\Api\MailController::class, 'moveToDms'],
     'pdf'                           => [App\Api\MailController::class, 'handlePdf'],
-    'sync'                          => [App\Api\MailController::class, 'syncICloud'],
+    'sync_mails'                          => [App\Api\MailController::class, 'syncMails'],
     'track_folders'                 => [App\Api\MailController::class, 'trackFolders'],
     'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
+
     //Appointment
     'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
     'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
+    'get_upcoming_events'           => [App\Api\AppointmentsController::class, 'getUpcomingEvents'],
     'get_events'                    => [App\Api\AppointmentsController::class, 'getEventsParsed'],
     'full_sync'                     => [App\Api\AppointmentsController::class, 'fullSync'],
     'get_parti'                     => [App\Api\AppointmentsController::class, 'getPartition'],
     'save_appointment'              => [App\Api\AppointmentsController::class, 'saveAppointment'],
+    'update_appointment_contact'    => [App\Api\AppointmentsController::class, 'updateAppointment'],
     //Sidebar
 
 
     // Paperless
+    'get_last_documents'            => [App\Api\PaperlessController::class, 'getLastDocuments'],
     'syncPaperless'                 => [App\Api\PaperlessController::class, 'sync'],
     'paperless_search'              => [App\Api\PaperlessController::class, 'search'],
     //'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondents'], //mail als 
@@ -150,6 +155,7 @@ $routes = [
     'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],
     'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
     'toggle_note'                   => [App\Api\NotesController::class, 'toogleNote'],
+    'get_critical_memos'            => [App\Api\NotesController::class, 'getCriticalMemos'],
 ];
 
 // 1. Spezieller Endpunkt für die Routen-Konfiguration

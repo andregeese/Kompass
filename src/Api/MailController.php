@@ -270,31 +270,19 @@ class MailController extends \App\Core\BaseController
     /**
      * Sychronisiere die Postfächer
      */
-    public function syncICloud()
+    public function syncMails()
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
 
-        $folder = $this->request['folder'] ?? null;
-        $allowedFolders = json_decode($this->systemProcess->getRequiredENV('SYNC_FOLDERS'), true);
-        error_log("ALLOWD SYNC Folders: ". print_r($allowedFolders, true));
-
-        if (!in_array($folder, $allowedFolders)) {
-            throw new \Exception("Ungültiger Ordner-Name übergeben.");
-        }
-        ob_start();
-
-        $syncResult = $this->mailProcess->syncWithICloud(100, $folder);
-        $updateCount = $this->mailProcess->deltaSync($folder, 100);
-
-        $meineUserId = $_SESSION['user_id'] ?? 1;
-
-        ob_end_clean();
-        return [
-            "sync"      => $syncResult,
-            "update"    => $updateCount
-        ]; // Gibt das komplette Sync-Array direkt zurück
+        return $this->process(
+            $this->mailProcess, 
+            'syncMails', 
+            'sync_result', 
+            'iCloud-Synchronisation erfolgreich abgeschlossen'
+        );
+        
     }
     /**
      * 
@@ -350,5 +338,10 @@ class MailController extends \App\Core\BaseController
                 'type'    => 'success'
             ]
         ];
+    }
+
+    public function getAccelorateClusters()
+    {
+        return $this->process($this->mailProcess, 'getAccelorateClusters', 'accelorate_clusters','');
     }
 }

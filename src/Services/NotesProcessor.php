@@ -56,6 +56,41 @@ class NotesProcessor extends \App\Core\Database
         return ['notes' => $fetched];
         
     }
+
+    /** alle Notizen zu einer Mail (TIMELINE) */
+    public function getNotesByMailId($id)
+    {
+        // alle Notizen zu einer Mail
+        $sql = "SELECT DISTINCT n.*
+                FROM `notes` n
+                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
+                JOIN `contact_emails` ce_all 
+                ON (n.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
+                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
+                JOIN `contact_emails` ce_current_mail 
+                ON ce_all.contact_id = ce_current_mail.contact_id
+                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
+                JOIN `mails` m 
+                ON (m.sender_ceid = ce_current_mail.id OR m.recipient_ceid = ce_current_mail.id)
+                -- 4. Filter für die Sidebar
+                WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
+                AND m.tenant_id = :tenant_id
+                AND n.tenant_id = :tenant_id
+                -- Neueste Notizen immer zuerst anzeigen
+                ORDER BY n.created_at DESC;
+        );";
+
+        $params = ['id' => $id];
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+
+        if (!$dbResult->success) {
+            throw new \Exception("Fehler bei Notiz!");
+        }
+        return $dbResult->data->fetched;
+    }
+
+
     public function saveNote(array $memoData)
     {
         error_log(print_r($memoData, true));
@@ -95,5 +130,21 @@ class NotesProcessor extends \App\Core\Database
             throw new \Exception ("Notiz nicht geändert");
         }
         return $dbResult->data;
+    }
+
+    /**
+     * Erstellt eine Liste aller offenen kritischen Memos / Aufgaben
+     */
+    public function getCriticalMemos()
+    {
+        $sql = "SELECT ceid, mail_uid, mail_folder, category, content, status, due_date 
+                  FROM notes 
+                 WHERE tenant_id=:tenant_id 
+                   AND due_date<=now()
+                   AND status ='active';";
+
+        return $this->queryIt($sql, [], false, false, true);
+        
+
     }
 };

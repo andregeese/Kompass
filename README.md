@@ -122,3 +122,13 @@ Dieses Projekt ist Open Source. Wenn dir das Tool gefällt und du es in deinem V
 -- AGE:
 docker exec -it webserver composer dump-autoload -o --working-dir=/var/www/html/age_web
 composer install!! ist wichtig, wenn ich nicht vendor ins git packe
+
+Verschlüsselungen von id aus DB
+UPDATE: 
+AND id=CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
+
+SELECT 
+HEX(AES_ENCRYPT(CAST(a.id as CHAR), :crypto_key)) as id, 
+
+crypto_key ist ein schüssel der direkt injektiert wird in der SQL!
+

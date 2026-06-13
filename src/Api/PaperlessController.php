@@ -20,24 +20,6 @@ class PaperlessController extends \App\Core\BaseController {
     }
 
     /**
-     * @deprecated
-     */
-    public function sync() 
-    {
-        $hash = $_GET['hash'] ?? $_POST['hash'] ?? null;
-        $id   = $_GET['id'] ?? $_POST['id'] ?? null;
-        if ($hash !== null) {
-            $syncResult = $this->mailProcessProc->getSingleMail2Paperless($hash, $id);   
-        } else {
-            $syncResult = $this->mailProcessProc->getMails2Paperless(2000);
-        }
-        $isSuccess = $syncResult['success'] ?? false;
-        $statusType = $isSuccess ? 'success' : 'info_error';
-        $errorMessage = !$isSuccess ? ($syncResult['error'] ?? 'Unbekannter Fehler beim Abgleich.') : null;
-        $this->cleanBuffer();
-        return [];
-    }
-    /**
      * Sucht in Paperless nach Dokumenten anhand von 
      * @param string $query
      * @param string $query
@@ -74,6 +56,11 @@ class PaperlessController extends \App\Core\BaseController {
                 'type'    => 'info'
             ]
         ];
+    }
+
+    public function getLastDocuments()
+    {
+        return $this->process($this->paperlessProcess, 'getLastDocuments', 'last_docs', '');
     }
 
     public function getCorrespondentById() 

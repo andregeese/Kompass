@@ -7,7 +7,7 @@
  * END_LICENSE
  */
 
-const CACHE_NAME = 'crm_1.88'; 
+const CACHE_NAME = 'crm_1.89'; 
 // Nur lokale Assets cachen! CDNs gehören nicht in den Cache.
 const ASSETS = [
     './manifest.json',

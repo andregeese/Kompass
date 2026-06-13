@@ -24,39 +24,74 @@ class Dashboard
     
     // Cache für Tenant-Validierung
     private static ?bool $tenantValidated = null;
+
     public function __construct(\App\Core\Database $db) {
         $this->db = $db;
     }
+    
     public static function hashId($id): string {
         return hash('sha256', $id . HASH_SALT);
     }
+
+    /**
+     * Generiert einen isolierten, 32-Byte starken Kryptoschlüssel für den aktuellen Tenant
+     */
+    public function getTenantCryptoKey(): string 
+    {
+        if ($this->tenant_id === null) {
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            if (!empty($_SESSION['tenant_id'])) {
+                $this->tenant_id = (int)$_SESSION['tenant_id'];
+            }
+        }
+        
+        if ($this->tenant_id === null || $this->tenant_id <= 0) {
+            throw new Exception("Kryptografie fehlgeschlagen: Keine gültige Tenant-ID im Dashboard-Kontext gesetzt.");
+        }
+
+        // Dein ENC_KEY aus der .env dient als globales Master-Geheimnis
+        $globalSecret = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
+        
+        // Das 'true' am Ende liefert 32 Byte Raw Output statt eines 64-Zeichen Hex-Strings
+        return hash_hmac('sha256', (string)$this->tenant_id, $globalSecret, true);
+    }
+
     public function decrypt(string $data): ?string 
     {
+        $tenantKey = $this->getTenantCryptoKey();
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
         $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);
-        return openssl_decrypt($data, 'aes-256-cbc', $ENC_KEY, 0, $iv) ?: null;
+
+        return openssl_decrypt($data, 'aes-256-cbc', $tenantKey, 0, $iv) ?: null;
     }
     
     public function encrypt(string $data): ?string 
     {
+        $tenantKey = $this->getTenantCryptoKey();
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
         $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);
-        return openssl_encrypt($data, 'aes-256-cbc', $ENC_KEY, 0, $iv) ?: null;
+
+        return openssl_encrypt($data, 'aes-256-cbc', $tenantKey, 0, $iv) ?: null;
     }
+
     public function setTenantId(int $id): void {
         if ($id <= 0) {
             throw new \InvalidArgumentException("Ungültige tenant_id: $id");
         }
         $this->tenant_id = $id;
     }
+
     public function getService(string $name, string $className) {
         if (!isset($this->services[$name])) {
             $this->services[$name] = new $className($this);
         }
         return $this->services[$name];
     }
+
     public function verifyCredentials(string $email, string $password): ?array 
     {
         $sql = "SELECT id, tenant_id, password_hash FROM users WHERE username = :email LIMIT 1";
@@ -66,7 +101,7 @@ class Dashboard
             ['email' => $email],
             false,
             false,
-            true
+            false
         );
         if ($dbResult->success)
         {
@@ -87,6 +122,7 @@ class Dashboard
         }
         return null; // Login fehlgeschlagen
     }
+
     /**
      * Prüft, ob der Tenant in der Datenbank existiert.
      */
@@ -107,6 +143,7 @@ class Dashboard
         self::$tenantValidated = !empty($result);
         return self::$tenantValidated;
     }
+
     public function checkUserInDB(string $user): bool
     {
         try {
@@ -120,6 +157,7 @@ class Dashboard
             return false;
         }
     }
+
     public function registerUser(string $mail, string $pwHash)
     {
         try {
@@ -135,22 +173,51 @@ class Dashboard
             throw new Exception("Registrierung fehlgeschlagen: " . $t->getMessage());
         }
     }
+
     public function loginUser(string $email, string $password): array
     {
         // 1. Lass den Parameter-Namen exakt so wie im SQL
         $sql = "SELECT id, password_hash FROM users WHERE username = :email LIMIT 1";
+        
         // 2. Rufe queryIt auf
-        $result = $this->db->queryIt($sql, [
-            'email' => $email
-        ]);
-        // 3. Debug-Ausgabe: Was kommt wirklich an?
-        //error_log("LOGIN RESULT FÜR " . $email . ": " . json_encode($result));
-        return !empty($result) ? $result : [];
+        $dbResult = $this->db->queryIt(
+            $sql, 
+            [
+                'email' => $email
+            ]
+        );
+
+        // Validierung des DB-Ergebnisses (Verhindert Abstürze bei leeren Daten)
+        if (!$dbResult || !$dbResult->success || empty($dbResult->data->fetched)) {
+            throw new \Exception("LOGIN FEHLGESCHLAGEN: Benutzer nicht gefunden.");
+        }
+
+        $user = $dbResult->data->fetched[0];   
+
+        // 2. Passwort prüfen (Solltest du wieder einkommentieren, sobald Hashes aktiv sind)
+        if (!password_verify($password, $user['password_hash'])) {
+            throw new \Exception("LOGIN FEHLGESCHLAGEN: Passwort falsch.");
+        }
+        
+        // 3. JETZT DIE TENANT-ID REAKTIV SETZEN
+        $tenantId = (int)$user['tenant_id'];
+        $this->setTenantId($tenantId);
+        
+        // 4. WICHTIG: Sofort in die Session schreiben! 
+        // Deine injectTenantId- und injectCryptoKey-Methoden greifen genau hierauf zu.
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['tenant_id'] = $tenantId;
+
+        return $user;
     }
+
     public function getHashSalt(): string
     {
         return defined('HASH_SALT') ? HASH_SALT : '';
     }
+
     /**
      * Standard-Antwort an JSON
      */

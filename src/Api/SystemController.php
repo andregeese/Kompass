@@ -40,7 +40,7 @@ class SystemController extends \App\Core\BaseController
                 throw new \Exception("Bitte alle Felder ausfüllen.");
             }
             // Aufruf des Prozessors
-            $folders = $this->systemProcess->testImapConnection($host, $port, $user, $pass);
+            $folders = $this->systemProcess->testImap($host, $port, $user, $pass);
             // Erfolgreiche Antwort
             echo json_encode(['success' => true, 'folders' => $folders]);
         } catch (\Exception $e) {

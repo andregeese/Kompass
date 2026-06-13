@@ -97,7 +97,7 @@ if ($isLoggedIn && isset($_SESSION['tenant_id'])) {
         exit;
     }
 }
-$currentView = $_GET['view'] ?? 'mails';
+$currentView = $_GET['view'] ?? 'start';
 // 📂 3. STATISCHES JS-MAPPING STATT TEUREM `file_exists()` FILING
 $viewJsMapping = [
     'login'        => 'login.js',
@@ -107,9 +107,10 @@ $viewJsMapping = [
     'appointments' => 'appointments.js',
     'detail'       => 'detail.js',
     'setting'      => 'settings.js',
-    'contacts'     => 'contacts.js'
+    'contacts'     => 'contacts.js',
+    'start'        => 'start.js'
 ];
-$jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
+$jsFile = $viewJsMapping[$currentView] ?? 'start.js';
 ?>
 
 <!DOCTYPE html>
@@ -249,6 +250,14 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
     x-init="
         currentView = '<?php echo htmlspecialchars($currentView  ?? ''); ?>';
         selectedHash = '<?php echo htmlspecialchars($selectedHash ?? ''); ?>';"
+    
+    @navigate.window="
+        const view = $event.detail.view;
+        const id = $event.detail.id;
+        if (view) {
+            window.location.href = `./index.php?view=${view}&id=${id}`;
+        }
+    "
     class="h-full bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 antialiased selection:bg-blue-500 selection:text-white pb-safe">
     <div x-show="!isOnline" x-cloak class="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <div class="flex items-center space-x-2">
@@ -273,7 +282,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'mail.js';
                 throw new \Exception("Kritischer Fehler: Navigation ('views/navigation_bar.php') konnte nicht geladen werden.");
             }
             // 3. MAIN DYNAMIC VIEW
-            echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
+            echo '<main class="flex-1 flex overflow-hidden relative min-h-0 pb-16 md:pb-0">';
             $viewPath = __DIR__ . "/views/{$currentView}_view.php";
             if (!@include $viewPath) {
                 die("Kritischer Systemfehler: View-Datei nicht gefunden.");

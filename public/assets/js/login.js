@@ -52,7 +52,7 @@ const loginComponent = () => ({
                             showNotify('Erfolgreich', 'Login erfolgreich! Leite weiter...', 'success');
                         }
                         // Leite den Browser auf die Mail-Ansicht um
-                        window.location.href = 'index.php?view=mails';
+                        window.location.href = 'index.php?view=start';
                     }else {
                         // Wenn es eine Registrierung war, schalte das Formular um
                         if (typeof showNotify === 'function') {

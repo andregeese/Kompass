@@ -7,7 +7,7 @@
  * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
- */
+ */ 
 
 namespace App\Services;
 
@@ -106,26 +106,32 @@ class MailProcessor extends \App\Core\Database
         // Wir speichern den IV einfach vor den Daten, damit wir ihn beim Entschlüsseln wieder haben
         return base64_encode($iv . $encrypted);
     }
+
+
     /**
      * Holt eine Mail anhand ihres Hashes. WICHTIG: Der Hash wird in der DB generiert, um die ID zu verschleiern.
      * @param string $hash Der SHA256-Hash der Mail-ID mit Salt.
      */
-    public function getMailByHash($hash)
+    public function getMailById($id)
     {
         error_log("## " . __FUNCTION__ . " ##");
-        $sql = "SELECT * FROM mails 
-                WHERE 
-                    tenant_id=:tenant_id
-                    AND id_hash = UNHEX(:hash)
+        $sql = "SELECT m.uid, m.date_received, m.sender_ceid, m.recipient_ceid, m.status, m.imap_folder
+                  FROM mails m
+                 WHERE tenant_id=:tenant_id
+                    AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                     AND (status NOT IN('deleted') OR status IS NULL) 
                     LIMIT 1";
+
         $dbResult = $this->queryIt(
             $sql,
-            ['hash' => $hash],
+            ['id' => $id],
             false,
             false,
-            false
+            true
         );
+
+        error_log(print_r($dbResult, true));
+
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
             ?  $dbResult->data->fetched[0]
             : null;
@@ -136,26 +142,29 @@ class MailProcessor extends \App\Core\Database
      * @param int $msgNumber Die Nummer der Mail im Postfach
      * @return string HTML-Inhalt oder leerer String
      */
-    public function getHtmlBody($hash)
+    public function getHtmlBody($id)
     {
-        $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailById($id);
         $folder = $mail['imap_folder'];
-        error_log("## " . __FUNCTION__ . " mit $hash und $folder aufgerufen ##");
+
+        error_log("## " . __FUNCTION__ . " mit $id und $folder aufgerufen ##");
+
         if (empty($mail) || !isset($mail['uid']) || (int)$mail['uid'] <= 0) {
             error_log("NO MAIL OR UID");
             throw new \Exception("Ungültige Mail-Referenz oder UID fehlt in der lokalen Datenbank.");
         }
 
         $uid = (int)$mail['uid'];
-        $imapStream = $this->connectIMAP($mail['imap_folder']);
+        $imapStream = $this->connectIMAP($folder);
 
         if ($folder !== 'INBOX') {
-            if (!imap_reopen($imapStream, $mail['imap_folder'])) {
+            if (!imap_reopen($imapStream, $folder)) {
                 throw new \Exception("Konnte Ordner $folder nicht öffnen: " . imap_last_error());
             }
         }
         try {
             $structure = imap_fetchstructure($imapStream, $uid, FT_UID);
+
             if ($structure === false) {
                 $imapError = imap_last_error();
                 throw new \Exception("IMAP Fehler: " . ($imapError ?: "Unbekannter Fehler beim Abrufen der Struktur"));
@@ -165,11 +174,14 @@ class MailProcessor extends \App\Core\Database
             $htmlContent = $this->findPart($uid, $structure, 'TEXT/HTML', $imapStream);
 
             if (!$htmlContent) return null;
+
             // 2. Security: HTML Purifier zum Säubern
             $config = \HTMLPurifier_Config::createDefault();
             $purifier = new \HTMLPurifier($config);
             imap_close($imapStream);
+
             return $purifier->purify($htmlContent);
+
         } catch (\Throwable $e) {
             imap_close($imapStream);
             // Logge den Fehler für deine Analyse
@@ -201,7 +213,7 @@ class MailProcessor extends \App\Core\Database
     {
         error_log("## " . __FUNCTION__ . " ##");
         
-        $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailById($hash);
         if (empty($mail) || !isset($mail['uid'])) {
             throw new \Exception("Keine gültige Mail oder UID gefunden.");
         }
@@ -218,7 +230,7 @@ class MailProcessor extends \App\Core\Database
                 }
             }
             
-            //$mail = $this->getMailByHash($hash);
+            //$mail = $this->getMailById($hash);
 
             /*$msgNumber = imap_msgno($imapStream, $mail['uid']);
             if (!$msgNumber) {
@@ -233,9 +245,10 @@ class MailProcessor extends \App\Core\Database
             imap_close($imapStream);
             $cleanText = mb_convert_encoding($plainText, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
             return nl2br(htmlspecialchars($cleanText));
-        } catch (\Throwable $e) {
+        
+            } catch (\Throwable $e) {
             imap_close($imapStream);
-            // Reicht den Fehler mit Kontext nach oben an getMails2Paperless weiter
+            
             throw new \Exception("Fehler beim Lesen des Mail-Inhalts: " . $e->getMessage());
         }
     }
@@ -280,11 +293,11 @@ class MailProcessor extends \App\Core\Database
      * @param string $hash Der Hash der Mail, die verschoben werden soll.
      * @param string $targetFolder Optional: Zielordner im DMS, Standard ist "Recht". Der tatsächliche IMAP-Ordner könnte z.B. "INBOX/DMS" sein, abhängig von der Serverstruktur.
      */
-    public function moveToDMS($hash, $targetFolder = 'DMS')
+    public function moveToDMS($id, $targetFolder = 'DMS')
     {
         // Verbindung sicherstellen (nutzt die private connect Methode)
         $imapStream = $this->connectIMAP();
-        $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailById($id);
         $msgUid = $mail['uid'];
         // Verschieben via UID
         $moveSuccess = imap_mail_move($imapStream, $msgUid, $targetFolder, CP_UID);
@@ -299,12 +312,13 @@ class MailProcessor extends \App\Core\Database
         $res = $this->queryIt(
             "UPDATE mails SET status = 'archived' 
                 WHERE tenant_id=:tenant_id 
-                AND id_hash = UNHEX(:hash)",
-            ['hash' => $hash]
+                AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)",
+            ['id' => $id]
         );
         imap_close($imapStream);
         return true;
     }
+
     private function loadAllEmailsIntoCache(): array
     {
         $cache = [];
@@ -327,8 +341,11 @@ class MailProcessor extends \App\Core\Database
             }
         }
         error_log("Cache geladen: " . count($cache) . " E-Mail-Adressen im Speicher.");
+        
         return $cache;
     }
+
+
     /**
      * lehnt sich an die Suche Mail an, wird in Notizen genutzt.
      * @param $last int
@@ -337,8 +354,8 @@ class MailProcessor extends \App\Core\Database
     public function getRecentMails(int $last = 10): array
     {
         $sql = "SELECT 
-                        m.id,
-                        m.id_hash as hash,
+                        HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
+                        -- m.id_hash as hash,
                         ce.contact_id, 
                         m.imap_folder as folder,
                         ce.email as sender,
@@ -383,7 +400,7 @@ class MailProcessor extends \App\Core\Database
     /**
      * E-Mail Syncronisation
      */
-    public function syncWithICloud(int $maxNewMailsLimit, string $folder): int|null
+    public function syncMails(int $maxNewMailsLimit, string $folder): array
     {
         //@set_time_limit(120);
         $pid = getmypid();
@@ -395,6 +412,8 @@ class MailProcessor extends \App\Core\Database
         // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
         $checkPoint = $this->getSyncCheckpoint($folder);
+        $updateCount = 0;
+
         if (!empty($checkPoint->data) && !empty($checkPoint->data->fetched))
         {
             $lastUid= $checkPoint->data->fetched[0]['last_uid'];
@@ -403,6 +422,7 @@ class MailProcessor extends \App\Core\Database
         // DEBUG-BLOCK (Jetzt mit Werten)
         $maxServerUid = !empty($allUids) ? max($allUids) : 0;
         error_log("DEBUG-SYNC: Gefundene Mails im Ordner ($folder): " . count($allUids) . " | Letzte UID in DB: $lastUid | Höchste UID Server: $maxServerUid");
+        
         // 2. Filtern
         $newUids = array_filter($allUids, function ($uid) use ($lastUid) {
             return (int)$uid > (int)$lastUid;
@@ -417,8 +437,9 @@ class MailProcessor extends \App\Core\Database
             if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
                 @imap_close($imapStream);
             }
-
-            return null;
+            
+            return [];
+            
         }
 
         error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
@@ -488,16 +509,13 @@ class MailProcessor extends \App\Core\Database
                     $exists = $this->mail_exists(bin2Hex($idHash), $uid, $folder);
                     if (!$exists) {
                         // 1. Mail anlegen und ID zurückholen
-                        $sqlInsert = "INSERT INTO mails (uid, id_hash, message_id, subject_hash, sender, recipient, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                                    VALUES (:uid, :id_hash, :message_id, :subject_hash, :sender, :recipient, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
+                        $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
+                                    VALUES (:uid, :message_id, :subject_hash,  :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
                                     ;";
                         $params = [
                             'uid'           => $ov->uid,
-                            'id_hash'       => $idHash,
                             'message_id'    => $ov->message_id ?? '',
                             'subject_hash'  => $subjectHash,
-                            'sender'        => $senderString,
-                            'recipient'     => $recipientString,
                             'date_received' => $formattedDate,
                             'folder'        => $folder,
                             'is_read'       => (int)$ov->seen,
@@ -508,10 +526,10 @@ class MailProcessor extends \App\Core\Database
                         ];
                         $paramsLog = $params;
                         $paramsLog['subject_hash'] = "HASH";
-                        $paramsLog['recipient'] = "NIX FÜR KI";
-                        $paramsLog['sender'] = "NIX FÜR KI";
-                        $paramsLog['id_hash'] = "NIX FÜR KI";
+                        //$paramsLog['recipient'] = "NIX FÜR KI";
+                        //$paramsLog['sender'] = "NIX FÜR KI";
                         $paramsLog['message_id'] = "NIX FÜR KI";
+
                         $dbResult = $this->queryIt(
                             $sqlInsert,
                             $params,
@@ -531,6 +549,7 @@ class MailProcessor extends \App\Core\Database
             $added++;
             $highestUid = max($highestUid, (int)$uid);
         }
+
         // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen und PHP 8+ absichern
         if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
             try {
@@ -543,7 +562,12 @@ class MailProcessor extends \App\Core\Database
             $this->saveSyncCheckpoint($folder, $highestUid);
         }
 
-        return $added;
+        //$updateCount = $this->deltaSync($folder, 100);
+
+        return [
+            "added"     => $added,
+            "update"    => 0
+        ];
     }
 
 
@@ -577,9 +601,12 @@ class MailProcessor extends \App\Core\Database
         
         $inClause = implode(', ', $namedPlaceholders);
 
-        $sqlFetch = "SELECT id, uid, is_read, is_flagged, is_answered 
-                    FROM mails 
-                    WHERE uid IN ($inClause) AND status='active' tenant_id = :tenant_id AND imap_folder = :folder;";
+        $sqlFetch = "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, uid, is_read, is_flagged, is_answered 
+                       FROM mails as m
+                      WHERE uid IN ($inClause) 
+                        AND status='active' 
+                        AND tenant_id = :tenant_id 
+                        AND imap_folder = :folder;";
 
         // Wir holen alle existierenden Mails aus diesem Slice als Array (Key = UID)
         $dbMails = $this->queryIt($sqlFetch, $params, false, false, true);
@@ -712,16 +739,16 @@ class MailProcessor extends \App\Core\Database
     /**
      * Prüft, ob eine E-Mail schon existiert oder nicht
      */
-    private function mail_exists($id_hash, $uid, $folder)
+    private function mail_exists($id, $uid, $folder)
     {
         $debugSQL = "SELECT Count(0) as Anzahl from mails 
                       WHERE tenant_id=:tenant_id 
                         AND (
-                             (id_hash = UNHEX(:id_hash) AND imap_folder=:folder)
+                             (id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND imap_folder=:folder)
                          OR (uid=:uid AND imap_folder=:folder)
                         );";
         $params = [
-            'id_hash' => $id_hash,
+            'id' => $id,
             'folder'  => $folder,
             'uid'     => $uid
         ];
@@ -839,16 +866,15 @@ class MailProcessor extends \App\Core\Database
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
-        $sql = "SELECT m.uid, m.id_hash as hash, m.subject_hash as sHash, m.sender, m.date_received, m.paperless_id, 
-                        c.email as contact_name
-                FROM mails m
-                LEFT JOIN contact_emails c ON m.sender_ceid = c.id
+        $sql = "SELECT m.uid, HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, m.subject_hash as sHash, m.date_received, m.paperless_id, 
+                        ce.display_name as contact_name
+                FROM mails as m
+                LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
                 WHERE m.tenant_id = :tenant_id 
                 AND m.imap_folder = :folder
                 AND (
-                    c.email LIKE :search 
-                    OR m.sender LIKE :search
-                    OR m.recipient LIKE :search
+                    ce.email LIKE :search 
+                    OR ce.display_name LIKE :search
                 )
                 ORDER BY m.date_received DESC;";
 
@@ -875,18 +901,9 @@ class MailProcessor extends \App\Core\Database
                 $row['hash'] = bin2hex($row['hash']);
             }
             $subject = strtolower($this->dashboard->decrypt($row['sHash']));
-            $sender = strtolower($row['sender']);
             $contactName = strtolower($row['contact_name'] ?? '');
-            // Suche im Betreff, Absender ODER dem verknüpften Kontaktnamen
-            if (
-                str_contains($subject, $search) ||
-                str_contains($sender, $search) ||
-                str_contains($contactName, $search)
-            ) {
-
-                $row['subject'] = $subject; // Zurückgeben als Klartext
-                $filtered[] = $row;
-            }
+            $row['subject'] = $subject;
+            $filtered[] = $row;
         }
         // 3. Paging auf dem gefilterten Array
         $offset = ($page - 1) * $limit;
@@ -898,12 +915,11 @@ class MailProcessor extends \App\Core\Database
     /**
      * Emails per Hash einer Mail ermitteln
      */
-    public function getMailsByAddress($hash)
+    public function getMailsByAddress($id)
     {
         $sql = "SELECT m.uid,
-                    LOWER(HEX(m.id_hash)) as hash,
+                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, 
                     m.subject_hash as sHash,
-                    m.sender,
                     m.date_received,
                     m.paperless_id,
                     c.display_name as contact_name,
@@ -925,7 +941,7 @@ class MailProcessor extends \App\Core\Database
         $dbResult = $this->queryIt(
             $sql,
             [
-                'hash' => $hash,
+                'id' => $id,
             ],
             false,
             false,
@@ -942,10 +958,8 @@ class MailProcessor extends \App\Core\Database
                 $row['hash'] = bin2hex($row['hash']);
             }
             $subject = strtolower($this->dashboard->decrypt($row['sHash']));
-            $sender = strtolower($row['sender']);
             $contactName = strtolower($row['contact_name'] ?? '');
             $row['subject'] = $subject; // Zurückgeben als Klartext
-            $row['sender'] = strtolower($row['sender']);
             $row['contact_name'] = strtolower($row['contact_name'] ?? '');
             $row['date'] = !empty($row['date_received'])
                 ? (new \DateTime($row['date_received']))->format('d.m.Y H:i')
@@ -955,6 +969,64 @@ class MailProcessor extends \App\Core\Database
 
         return $results;
     }
+
+    /**
+     * 
+     */
+    public function getAccelorateClusters()
+    {
+        $sql = "WITH aggregated_mails AS (
+                    -- SCHRITT 1: Mails gruppieren, zählen und das Datum der NEUESTEN Mail ermitteln
+                    SELECT 
+                        ce.email AS sender,
+                        m.imap_folder AS folder,
+                        COUNT(*) AS mail_count,
+                        MAX(m.date_received) AS latest_received,
+                        MAX(COALESCE(NULLIF(c.display_name, ''), ce.email)) as showname
+                    FROM `mails` as m
+                    -- FIX 1: Dynamischer Join – bei 'Sent Messages' auf den Empfänger prüfen
+                    INNER JOIN contact_emails ce ON ce.`id` = CASE 
+                        WHEN m.imap_folder = 'Sent Messages' THEN m.recipient_ceid -- Falls die Spalte 'recipient_ceid' heißt, hier anpassen
+                        ELSE m.sender_ceid 
+                    END
+                    LEFT JOIN contacts c ON c.id = ce.contact_id
+                    WHERE m.tenant_id = 6
+                    -- FIX 2: Flexibler Filter je nach Ordnertyp
+                    AND (
+                        -- Für den aktuellen Posteingang & Gesendet: Letzte 4 Wochen & aktiver Status
+                        (m.imap_folder IN ('INBOX', 'Sent Messages') 
+                        AND m.`status` = 'active' 
+                        AND m.date_received >= NOW() - INTERVAL 4 WEEK)
+                        OR
+                        -- Für Archiv/DMS: Kein Zeitlimit & alle DMS-relevanten Statuswerte erlauben
+                        (m.imap_folder IN ('DMS', 'DMSDone') 
+                        AND m.`status` IN ('active', 'dms', 'archived', 'DMSDone'))
+                    )
+                    AND ce.email NOT LIKE 'noreply%'
+                    AND ce.email NOT LIKE 'no-reply%'
+                    GROUP BY ce.email, m.imap_folder
+                    HAVING mail_count > 1
+                ),
+                ranked_clusters AS (
+                    -- SCHRITT 2: Ränge vergeben (Die zeitlich neuesten Gruppen pro Ordner zuerst)
+                    SELECT 
+                        showname,
+                        sender,
+                        folder,
+                        mail_count,
+                        latest_received,
+                        ROW_NUMBER() OVER (PARTITION BY folder ORDER BY latest_received DESC) as rank_num
+                    FROM aggregated_mails
+                )
+                -- SCHRITT 3: Die letzten 5 Gruppen pro Ordner stumpf ausgeben
+                SELECT showname, sender, folder, mail_count, latest_received
+                FROM ranked_clusters
+                WHERE rank_num <= 5
+                ORDER BY folder, latest_received DESC;";
+        
+        return $this->queryIt($sql, [], false, false, false);
+    }
+
     /**
      * Prüft unfertige lokale Mails gegen die realen IMAP-Ordner.
      * Nutzt die Message-ID für ordnerübergreifendes Tracking.
@@ -963,7 +1035,7 @@ class MailProcessor extends \App\Core\Database
     {
         // 1. Alle Mails holen, die lokal noch aktiv sind (mit Mandanten-Schutz)
         $localMails = $this->queryIt(
-            "SELECT id, uid, message_id, imap_folder FROM mails WHERE tenant_id = :tenant_id AND imap_folder != 'DMSDone'"
+            "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,  uid, message_id, imap_folder FROM mails as m WHERE tenant_id = :tenant_id AND imap_folder != 'DMSDone'"
         );
         if (empty($localMails)) {
             return ['success' => true, 'updated' => 0];
@@ -1011,16 +1083,17 @@ class MailProcessor extends \App\Core\Database
     /**
      * Entschlüsselt den Mail-Inhalt für das Iframe
      */
-    public function getDecryptedMailBody(string $hash): ?string
+    public function getDecryptedMailBody(string $id): ?string
     {
         error_log(__FUNCTION__);
         $sql = "SELECT mb.body_encrypted 
             FROM mail_bodies AS mb 
             INNER JOIN mails AS m ON m.id = mb.mail_id 
-            WHERE id_hash = UNHEX(:hash)
+            WHERE id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
             AND m.tenant_id = :tenant_id;";
+
         $dbResult = $this->queryIt($sql, [
-            'hash' => $hash
+            'id' => $id
         ]);
         if (!$dbResult->success && !empty($dbResult->data->fetched)) {
             return "Mail Body leer";
@@ -1051,22 +1124,22 @@ class MailProcessor extends \App\Core\Database
      * @return string Der bereinigte, lesbare UTF-8 Body der Mail
      * @throws Exception Wenn die Mail nicht existiert oder IMAP fehlschlägt
      */
-    public function getMailBody($hash): string
+    public function getMailBody($id): string
     {
-        $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailById($id);
         if (!$mail) return 'Inhalt nicht gefunden.';
-        
+
         // 1. Erst versuchen, aus der DB zu laden (entschlüsselt)
         $htmlContent = ""; 
-        $thmlfromDB = $this->getDecryptedMailBody($hash);
+        $thmlfromDB = $this->getDecryptedMailBody($id);
 
         // 2. Wenn DB leer, IMAP anzapfen
         if (empty($htmlContent)) {
-            $htmlContent = $this->getHtmlBody($hash);
+            $htmlContent = $this->getHtmlBody($id);
 
             if (empty($htmlContent)) {
                 // Fallback: Wenn kein HTML, versuche PlainText
-                $htmlContent = $this->getTxtBody($hash);
+                $htmlContent = $this->getTxtBody($id);
             }
 
             if (empty($htmlContent)) {
@@ -1108,12 +1181,12 @@ class MailProcessor extends \App\Core\Database
     }
 
 
-    private function getIMAPFolderByHash(&$hash)
+    private function getIMAPFolderByHash(&$id)
     {
-        $sql = "SELECT imap_folder FROM mails WHERE tenant_id=:tenant_id AND id_hash=UNHEX(:hash);";
+        $sql = "SELECT imap_folder FROM mails WHERE tenant_id=:tenant_id AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
         $dbResult = $this->queryIt(
             $sql,
-            ["hash" => $hash]
+            ["id" => $id]
         );
         if (!$dbResult->success) {
             return "";
@@ -1123,21 +1196,69 @@ class MailProcessor extends \App\Core\Database
     }
 
     /**
+     * Email und Kontakt für TimeLine
+     */
+    public function getMailItems($id)
+    {
+        error_log(__FUNCTION__);
+
+        $sql = "SELECT CASE 
+                        WHEN m.recipient_ceid = ce.id THEN 'mail_send'
+                        ELSE 'mail'
+                    END AS type,
+                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
+                    m.paperless_id AS paperlessdocument,
+                    m.date_received AS mdate,
+                    m.subject_hash AS title
+                    FROM mails m
+                    -- Join, um alle ceids zu finden, die zum Kontakt der Ausgangs-Mail gehören
+                    JOIN contact_emails ce ON (m.sender_ceid = ce.id OR m.recipient_ceid = ce.id)
+                    WHERE ce.contact_id IN (
+                        -- Subquery: Finde den Kontakt, der zur Ausgangs-Mail gehört
+                        SELECT contact_id 
+                        FROM contact_emails 
+                        WHERE id IN (
+                            SELECT sender_ceid 
+                            FROM mails 
+                            WHERE id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
+                        )
+                    )
+                    AND m.tenant_id = :tenant_id 
+                    AND m.status != 'deleted'
+                    ORDER BY m.date_received DESC
+                    LIMIT 1000;"; // Dein SQL von oben
+
+        $dbResult = $this->queryIt(
+            $sql,
+            [
+                "id" => $id
+            ],
+            false,
+            false,
+            true
+        );
+
+        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
+            $dbResult->data->fetched :
+            [];
+    }
+
+    /**
      * Alle Mails vom Absender löschen
      */
-    public function deleteAllMailsByHash($hash)
+    public function deleteAllMailsByHash($id)
     {
-        $sql = "SELECT id_hash, imap_folder, uid, sender_ceid 
-                  FROM mails 
+        $sql = "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, imap_folder, uid, sender_ceid 
+                  FROM mails as m
                   WHERE 
                     tenant_id=:tenant_id
                     AND sender_ceid IN (
-                        SELECT sender_ceid FROM mails WHERE id_hash=UNHEX(:hash)
+                        SELECT sender_ceid FROM mails WHERE id=CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                     );";
 
         $dbResult = $this->queryIt(
             $sql,
-            ['hash' => $hash],
+            ['id' => $id],
             false,
             false,
             false
@@ -1207,7 +1328,7 @@ class MailProcessor extends \App\Core\Database
     {
         // Verbindung sicherstellen (nutzt die private connect Methode)
         $imapStream = $this->connectIMAP();
-        $mail = $this->getMailByHash($hash);
+        $mail = $this->getMailById($hash);
         $msgUid = $mail['uid'];
         $destFolder = "Deleted Messages"; // Oder dynamisch basierend auf $targetFolder
         // Verschieben via UID
@@ -1219,7 +1340,7 @@ class MailProcessor extends \App\Core\Database
         // Wichtig, um die Mail aus der INBOX zu löschen
         imap_expunge($imapStream);
         $res = $this->queryIt(
-            "UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id_hash = UNHEX(:hash)",
+            "UPDATE mails Set status='deleted' WHERE tenant_id = :tenant_id AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)",
             [
                 'hash' => $hash
             ]
@@ -1278,13 +1399,30 @@ class MailProcessor extends \App\Core\Database
         ];
 
         $sql = "SELECT 
-                    m.id, uid, sender, recipient, subject_hash, m.paperless_id, imap_folder,
-                    date_received as date, LOWER(HEX(id_hash)) as hash,
-                    is_read, is_flagged, is_answered, c.display_name as displayname, cm.email_hash as emailhash
+                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
+                    uid, m.recipient_ceid, subject_hash, m.paperless_id, imap_folder,
+                    date_received as date,
+                    is_read, is_flagged, is_answered,
+                    -- 1. SENDER (Absender) sauber zusammenbauen mit Fallback, falls kein Name da ist
+                    IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
+                    CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
+                    cm_snd.email) AS sender,
+                    cm_snd.email_hash AS emailhash, -- Für deine Gravatar-/Sidebar-Logik
+                    
+                    -- 2. RECIPIENT (Empfänger) exakt genau so auflösen
+                    IF(c_rcp.display_name IS NOT NULL AND c_rcp.display_name != '', 
+                    CONCAT(c_rcp.display_name, ' <', cm_rcp.email, '>'), 
+                    cm_rcp.email) AS recipient
                 FROM mails as m
                 LEFT JOIN mail_bodies as mb on mb.mail_id = m.id
-                LEFT JOIN contact_emails as cm ON cm.id = m.sender_ceid
-                LEFT JOIN contacts as c ON c.id = cm.contact_id
+                -- Doppelte Join-Struktur: Einmal für den Sender...
+                LEFT JOIN contact_emails AS cm_snd ON cm_snd.id = m.sender_ceid
+                LEFT JOIN contacts AS c_snd ON c_snd.id = cm_snd.contact_id
+
+                -- ...und einmal exakt das Gleiche für den Empfänger
+                LEFT JOIN contact_emails AS cm_rcp ON cm_rcp.id = m.recipient_ceid
+                LEFT JOIN contacts AS c_rcp ON c_rcp.id = cm_rcp.contact_id
+                
                 WHERE m.tenant_id = :tenant_id
                 AND imap_folder = :folder
                 AND (status IN('active') OR status IS NULL)";
@@ -1300,7 +1438,7 @@ class MailProcessor extends \App\Core\Database
             $sql .= " AND (";
             $searchNormalized = $this->normalizeString($search);
             $hashedSearch = substr(hash('sha256', $searchNormalized . $salt), 0, 12);
-            $sql .= "LOWER(sender) LIKE :like_q OR mb.body_search_index LIKE :hash_q";
+            $sql .= "LOWER(sender) LIKE :like_q OR LOWER(recipient) LIKE :like_q OR mb.body_search_index LIKE :hash_q";
             $params['like_q'] = '%' . mb_strtolower($search, 'UTF-8') . '%';
             $params['hash_q'] = '%' . $hashedSearch . '%';
 
@@ -1330,18 +1468,18 @@ class MailProcessor extends \App\Core\Database
         $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
         // UTF-8 Absicherung
         $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-        $cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-        $cleanRecipient    = mb_convert_encoding($row['recipient'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        //$cleanSender  = mb_convert_encoding($row['sender'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        //$cleanRecipient    = mb_convert_encoding($row['recipient'], 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+
         // Zusätzlicher PHP-Filter bei aktiver Suche
         if (!empty($search)) {
             $searchLower  = mb_strtolower($search, 'UTF-8');
             $subjectLower = mb_strtolower($cleanSubject, 'UTF-8');
-            $senderLower  = mb_strtolower($cleanSender, 'UTF-8');
             $dateLower    = mb_strtolower($row['date'], 'UTF-8');
             $idLower      = mb_strtolower($row['id'], 'UTF-8');
             $matchesMeta = (
                 mb_strpos($subjectLower, $searchLower) !== false ||
-                mb_strpos($senderLower, $searchLower) !== false ||
+                //mb_strpos($senderLower, $searchLower) !== false ||
                 mb_strpos($dateLower, $searchLower) !== false ||
                 mb_strpos($idLower, $searchLower) !== false
             );
@@ -1353,11 +1491,11 @@ class MailProcessor extends \App\Core\Database
 
         // Rückgabe-Format für das Frontend
         return [
-            'hash'         => $row['hash'],
+            'id'         => $row['id'],
             'uid'          => $row['uid'] ?? null,
             'subject'      => $cleanSubject,
-            'sender'       => $cleanSender,
-            'recipient'    => $cleanRecipient,
+            //'sender'       => $cleanSender,
+            //'recipient'    => $cleanRecipient,
             'date'         => date('d.m.Y H:i', strtotime($row['date'])),
             'paperless_id' => $row['paperless_id'],
             'is_read'       => $row['is_read'],
@@ -1369,186 +1507,8 @@ class MailProcessor extends \App\Core\Database
     
     }
 
-    /**
-     * @deprecated
-     * Holt Mails, die für Paperless bereit sind, basierend auf einem optionalen Hash oder dem Alter der Mails. Wenn ein Hash übergeben wird, wird gezielt nach dieser Mail gesucht. Ansonsten werden die ältesten unverarbeiteten Mails zurückgegeben, basierend auf dem Limit. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind und noch keinen Paperless-Eintrag haben. Der Betreff wird entschlüsselt und bereinigt, um sicherzustellen, dass er korrekt im Dashboard angezeigt wird.
-     * @param string|null $hash Optionaler Hash der Mail, die gezielt gesucht werden soll. Wenn null, werden die ältesten Mails zurückgegeben.
-     * @param int $limit Anzahl der Mails, die zurückgegeben werden sollen (nur relevant, wenn kein Hash übergeben wird)
-     * @return array Eine Liste von Mails mit Hash, bereinigtem Betreff, Sender, Datum und Paperless-Status
-     */
-    public function getMails2Paperless(int $limit = 1): array
-    {
-        try {
-            $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-            $limit = (int)$limit;
-            // Nur unverarbeitete Mails holen
-            $sql = "SELECT *, SHA2(CONCAT(id, :salt), 256) as hashed_id 
-                    FROM mails 
-                    WHERE 
-                      tenant_id = :tenant_id
-                      AND(status NOT IN('deleted', 'synced') OR status IS NULL) 
-                      AND paperless_id IS NULL 
-                    ORDER BY date_received DESC 
-                    LIMIT $limit";
-            $result = $this->queryIt($sql, ['salt' => $salt]);
-            $processedMails = [];
-            if (empty($result)) {
-                return [
-                    'success' => true,
-                    'message' => 'Keine unverarbeiteten Mails in der Datenbank gefunden.',
-                    'matches' => []
-                ];
-            }
-            $paperless = new \App\Services\PaperlessProcessor($this->dashboard);
-            foreach ($result as $row) {
-                $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
-                $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-                $pureMailDate = date('Y-m-d', strtotime($row['date_received']));
-                if (empty($cleanSubject)) {
-                    $processedMails[] = [
-                        'id'      => $row['id'],
-                        'subject' => '[Kein Betreff]',
-                        'match'   => false,
-                        'reason'  => 'Suche übersprungen: Betreff leer oder unleserlich.'
-                    ];
-                    continue;
-                }
-                // Paperless API Abfrage
-                $a = $paperless->searchBySubject($cleanSubject, $pureMailDate);
-                $trefferAnzahl = is_array($a) ? count($a) : 0;
-                if ($trefferAnzahl === 1) {
-                    // Eindeutiger Treffer -> Sync und DB-Update
-                    try {
-                        $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE tenant_id=:tenant_id AND 
-                        id_hash = :hash";
-                        $this->queryIt($updateSql, ['hash' => hash('sha256', $messageId . $salt, true), 'paperless_id' => $a[0]['id']]);
-                        $processedMails[] = [
-                            'id'                 => $row['id'],
-                            'subject'            => $cleanSubject,
-                            'paperless_match_id' => $a[0]['id'],
-                            'paperless_title'    => $a[0]['title'],
-                            'match'              => true,
-                            'reason'             => 'Erfolgreich synchronisiert.'
-                        ];
-                    } catch (\Exception $e) {
-                        $processedMails[] = [
-                            'id'      => $row['id'],
-                            'subject' => $cleanSubject,
-                            'match'   => false,
-                            'reason'  => 'Datenbank-Update fehlgeschlagen: ' . $e->getMessage()
-                        ];
-                    }
-                } elseif ($trefferAnzahl > 1) {
-                    // Mehrfach-Match -> Überspringen
-                    $processedMails[] = [
-                        'id'      => $row['id'],
-                        'subject' => $cleanSubject,
-                        'match'   => false,
-                        'reason'  => "Mehrdeutig: {$trefferAnzahl} Treffer in Paperless gefunden."
-                    ];
-                } else {
-                    // Kein Match
-                    $processedMails[] = [
-                        'id'      => $row['id'],
-                        'subject' => $cleanSubject,
-                        'match'   => false,
-                        'reason'  => 'Kein passendes Dokument in Paperless gefunden.'
-                    ];
-                }
-            }
-            return [
-                'success' => true,
-                'matches' => $processedMails
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error'   => 'Fehler in getMails2Paperless: ' . $e->getMessage(),
-                'matches' => []
-            ];
-        }
-    }
-    /**
-     * @deprecated !!
-     */
-    public function getSingleMail2Paperless(?string $hash = null, ?int $id = null): array
-    {
-        try {
-            if (empty($hash) && empty($id)) {
-                return ['success' => false, 'error' => 'Weder ID noch Hash übergeben.'];
-            }
-
-
-            $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
-            // Query je nachdem ob ID oder Hash gegeben ist
-            if (!empty($id)) {
-                $sql = "SELECT *, SHA2(CONCAT(id, :salt), 256) as hashed_id FROM mails WHERE tenant_id = :tenant_id AND id = :mailid LIMIT 1";
-                $params = ['salt' => $salt, 'mailid' => $id];
-            } else {
-                $sql = "SELECT *, SHA2(CONCAT(id, :salt), 256) as hashed_id FROM mails WHERE tenant_id = :tenant_id HAVING hashed_id = :hash LIMIT 1";
-                $params = ['salt' => $salt, 'hash' => $hash];
-            }
-            $result = $this->queryIt($sql, $params);
-            if (empty($result)) {
-                return ['success' => false, 'error' => 'Die gesuchte E-Mail existiert nicht oder wurde bereits gelöscht.'];
-            }
-            $row = $result[0];
-            // Falls das Dokument bereits synchronisiert wurde, melden wir das direkt zurück
-            if (!empty($row['paperless_id'])) {
-                return [
-                    'success' => true,
-                    'match'   => true,
-                    'message' => 'E-Mail ist bereits synchronisiert.',
-                    'paperless_match_id' => $row['paperless_id']
-                ];
-            }
-            $decryptedSubject = $this->dashboard->decrypt($row['subject_hash']);
-            $cleanSubject = mb_convert_encoding($decryptedSubject, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-            $pureMailDate = date('Y-m-d', strtotime($row['date_received']));
-            if (empty($cleanSubject)) {
-                return ['success' => false, 'error' => 'Der Betreff der E-Mail ist leer oder unleserlich. Suche nicht möglich.'];
-            }
-            // Live-Suche in Paperless anstoßen
-            $paperless = new Paperless($this->dashboard);
-            $a = $paperless->searchBySubject($cleanSubject, $pureMailDate);
-            $trefferAnzahl = is_array($a) ? count($a) : 0;
-            // Fehlerfall 1: Kein Eintrag
-            if ($trefferAnzahl === 0) {
-                return [
-                    'success' => false,
-                    'error'   => 'Kein passender Eintrag in Paperless gefunden.',
-                    'subject' => $cleanSubject
-                ];
-            }
-            // Fehlerfall 2: Mehrdeutigkeit
-            if ($trefferAnzahl > 1) {
-                return [
-                    'success' => false,
-                    'error'   => "Keinen eindeutigen Eintrag gefunden (Es gibt {$trefferAnzahl} mögliche Treffer in Paperless).",
-                    'subject' => $cleanSubject
-                ];
-            }
-            // Erfolgsfall: Genau 1 Treffer gefunden -> DB aktualisieren
-            $paperlessId = $a[0]['id'];
-            $paperlessTitle = $a[0]['title'];
-            $updateSql = "UPDATE mails SET status = 'synced', paperless_id = :paperless_id WHERE tenant_id = :tenant_id AND id_hash = :hash";
-            $this->queryIt($updateSql, ['hash' => $hash, 'paperless_id' => $paperlessId]);
-            return [
-                'success'            => true,
-                'match'              => true,
-                'message'            => 'E-Mail erfolgreich mit Paperless verknüpft.',
-                'mail_id'            => $row['id'],
-                'subject'            => $cleanSubject,
-                'paperless_match_id' => $paperlessId,
-                'paperless_title'    => $paperlessTitle
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error'   => 'Schwerwiegender Fehler bei der Einzelverarbeitung: ' . $e->getMessage()
-            ];
-        }
-    }
+    
+    
     /**
      * Aktualisiert eine bestehende Mail mit dem verschlüsselten Inhalt 
      * und dem kryptografischen Suchindex anhand ihres Hashes.
@@ -1557,15 +1517,15 @@ class MailProcessor extends \App\Core\Database
      * @param string $plainText Der reine Textinhalt der Mail für den Index
      * @return void
      */
-    public function saveMailWithContent(string $hash, string $htmlBody, string $plainText): void
+    public function saveMailWithContent(string $id, string $htmlBody, string $plainText): void
     {
         // 1. Erst die ID zur Hash-Referenz finden
-        $sql = "SELECT id FROM mails WHERE id_hash = UNHEX(:hash) LIMIT 1";
+        $sql = "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id FROM mails WHERE id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) LIMIT 1";
         //$result = $this->queryIt($sql, ['hash' => $hash]);
 
         $dbResult = $this->queryIt(
             $sql,
-            ['hash' => $hash],
+            ['id' => $id],
             false,
             false,
             false

@@ -36,6 +36,7 @@ const rightSidebarComponent = () => ({
     currentSearchQuery: '',
     timelineData: [],
     paperlessContacts: [],
+
     async initSidebar() {
         console.log("Smart Context Hub erfolgreich initialisiert.");
         // ⚡ DIREKT-FILL BEIM START: Falls beim Öffnen der Sidebar schon eine Mail aktiv ist
@@ -112,8 +113,8 @@ const rightSidebarComponent = () => ({
         //this.searchDMS();
         //this.loadPaperlessTree(mail);
         this.getTimelineofContact();
-        if (mail.hash) {
-            this.checkCRMStatus(mail.hash);
+        if (mail.id) {
+            this.checkCRMStatus(mail.id);
         }
     },
     // 🛠️ Hilfsfunktion: Leert die Daten sauber
@@ -123,6 +124,7 @@ const rightSidebarComponent = () => ({
         this.formData = { name: '', email: '', type: 'company' };
         this.contactState = null;
     },
+
     // 🚀 NEW CHRONOLOGICAL TIMELINE TREE
     async getTimelineofContact() {
         // Zieht sich die Mail primär aus Alpine, nutzt initialMail als Fallback
@@ -130,14 +132,14 @@ const rightSidebarComponent = () => ({
                   || window.mailComponent?.currentMail 
                   || (typeof currentMail !== 'undefined' ? currentMail : null);
                   
-        if (!mail || !mail.hash) return;
+        if (!mail || !mail.id) return;
         
         try {
-            const params = { hash: mail.hash };
+            const params = { id: mail.id };
             const data = await apiCall('get_contact_timeline', params, 'GET');
-            //wichtig, reagiert auf timelineData!!
-            if (data && data.success && data.details) {
-                this.timelineData = data.details.timeline ? data.details.timeline : data.details;
+            
+            if (data && data?.success && data?.details) {
+                this.timelineData = data.details.timeline;
                 
             } else {
                 this.timelineData = [];
@@ -146,10 +148,16 @@ const rightSidebarComponent = () => ({
             console.error("Fehler beim Laden der Timeline:", err);
         }
     },
+
+
     // 🚀 DMS VERLAUF (ACTION: paperless_mail_tree -> details.tree)
+    /**
+     * @deprecated
+     * @param {*} mail 
+     */
     async loadPaperlessTree(mail) {
         const searchQuery = mail ? (mail.subject || '') : '';
-        const mailHash = mail ? (mail.hash || '') : '';
+        const mailHash = mail ? (mail.id || '') : '';
         try {
             const data = await apiCall('paperless_mail_tree', {query:searchQuery, hash:mailHash}, 'GET');
             if (data?.success && data.details?.tree) {
@@ -162,6 +170,7 @@ const rightSidebarComponent = () => ({
             this.paperlessTree = {};
         }
     },
+
     // 🚀 DMS SUCHE (ACTION: paperless_search -> details.documents)
     async searchDMS() {
         console.log("SEARCH DMS:" + this.manualSearchQuery);
@@ -190,9 +199,9 @@ const rightSidebarComponent = () => ({
     },
     async linkToPaperless(documentId) {
         const mail = this.$data.currentMail;
-        if (!mail || !mail.hash) return;
+        if (!mail || !mail.id) return;
         try {
-            const data = apiCall('link_mail_to_paperless', { hash: mail.hash, paperless_id: documentId }, 'POST')
+            const data = apiCall('link_mail_to_paperless', { id: mail.id, paperless_id: documentId }, 'POST')
             
             if (data?.success) {
                 this.$data.currentMail.paperless_id = documentId;
@@ -205,11 +214,11 @@ const rightSidebarComponent = () => ({
     },
     async unlinkFromPaperless() {
         const mail = this.$data.currentMail;
-        if (!mail || !mail.hash) return;
+        if (!mail || !mail.id) return;
         if (!confirm('Möchtest du die Verknüpfung wirklich aufheben?')) return;
         try {
             const url = `api.php?action=unlink_mail_from_paperless`;
-            const data = await apiCall('unlink_mail_from_paperless', { hash: mail.hash }, 'POST');
+            const data = await apiCall('unlink_mail_from_paperless', { id: mail.id }, 'POST');
             if (data?.success) {
                 this.$data.currentMail.paperless_id = null;
                 this.manualSearchQuery = mail.subject || '';
@@ -378,8 +387,8 @@ const rightSidebarComponent = () => ({
             
             if (data.success) {
                 const urlParams = new URLSearchParams(window.location.search);
-                const hash = urlParams.get('hash') || this.$data.currentMail.hash || '';
-                if (hash) await this.checkCRMStatus(this.$data.currentMail.hash);
+                const hash = urlParams.get('hash') || this.$data.currentmail.id || '';
+                if (hash) await this.checkCRMStatus(this.$data.currentmail.id);
             } else {
                 alert(json.error);
             }

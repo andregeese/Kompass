@@ -57,10 +57,15 @@ class NotesController extends \App\Core\BaseController
                 'type'    => 'success'
             ]
         ];
-        
+    }
+
+    public function getCriticalMemos()
+    {
+        return $this->process($this->notesProcess, 'getCriticalMemos', 'critical_memos', '');
     }
     
-    public function getNotes() {
+    public function getNotes() 
+    {
         $pResult = $this->notesProcess->getNotes();
         
         return ["notes" => $pResult];

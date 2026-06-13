@@ -13,18 +13,25 @@ const settingsComponent = () => ({
     folders: [], // WICHTIG: Muss im State initialisiert werden
     message: { text: '', type: 'success' },
     form: {
-        imap_host: '', imap_port: '993', imap_user: '', imap_password: '',
-        paperless_url: '', paperless_name: '', paperless_token: '',
-        sync_folders: [] // WICHTIG: Muss als Array vorliegen
+        imap_host: '', 
+        imap_port: '993', 
+        imap_user: '', 
+        imap_password: '',
+        paperless_url: '', 
+        paperless_name: '', 
+        paperless_token: '',
+        sync_folders: [],
+        // HIER DIE ERWEITERUNG: Die neuen Felder im State registrieren
+        sent_folder: '',
+        dms_folder: ''
     },
     
     async initSettings() {
         try {
             let res = await apiCall('get_settings', {}, 'POST'); 
-            console.log(res);
             
-            if (res.success && res.details && res.details.details.settings) {
-                const dbSettings = res.details.details.settings;
+            if (res.success && res.details && res.details?.settings) {
+                const dbSettings = res.details.settings;
 
                 // Nur die Felder mappen, die wir im form-Objekt definiert haben
                 for (let key in this.form) {
@@ -44,14 +51,20 @@ const settingsComponent = () => ({
                     this.form.sync_folders = [];
                 }
                 
-                // Damit die Checkboxen der BEREITS GEWÄHLTEN Ordner sofort angezeigt werden:
-                if (this.form.sync_folders.length > 0) {
-                    this.folders = [...this.form.sync_folders];
+                // KORREKTUR/ERWEITERUNG: Damit auch die Dropdowns für die Spezialordner 
+                // sofort beim Laden Optionen anzeigen, befüllen wir das Array mit allen bekannten Ordnern
+                const trackedFolders = [...this.form.sync_folders];
+                if (this.form.sent_folder) trackedFolders.push(this.form.sent_folder);
+                if (this.form.dms_folder) trackedFolders.push(this.form.dms_folder);
+                
+                // Duplikate via Set entfernen
+                if (trackedFolders.length > 0) {
+                    this.folders = [...new Set(trackedFolders)];
                 }
 
                 // Aus Sicherheitsgründen die Passwörter aus dem State leeren
-                this.form.imap_password = '';
-                this.form.paperless_token = '';
+                //this.form.imap_password = '';
+                //this.form.paperless_token = '';
             } else {
                 if (res.error) this.showMsg(res.error, 'error');
             }
@@ -78,7 +91,7 @@ const settingsComponent = () => ({
             if (res.success) {
                 // Erwartet ['INBOX', 'Archiv', ...]
                 // Wichtig: Wir fügen die neuen Ordner ein, behalten aber die Selektion
-                this.folders = res.details?.folders || res.folders || [];
+                this.folders = res?.folders  || [];
                 this.showMsg('Verbindung erfolgreich! Ordner geladen.', 'success');
             } else {
                 this.showMsg('Verbindung fehlgeschlagen: ' + (res.error || 'Unbekannter Fehler'), 'error');
@@ -92,6 +105,7 @@ const settingsComponent = () => ({
     async saveSettings() {
         this.loading = true;
         this.message.text = ''; // altes Feedback löschen
+
         try {
             const res = await apiCall('save_settings', this.form, 'POST');
             

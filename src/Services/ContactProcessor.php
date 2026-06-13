@@ -478,38 +478,44 @@ class ContactProcessor extends \App\Core\Database
     /**
      * Erzeugt die TimeLine von Kontakten
      */
-    public function getTimelineData(mixed $hash, string $salt)
+    public function getTimelineData(mixed $id)
     {
         error_log(__FUNCTION__);
-        $salt ??= $this->dashboard->getHashSalt();
-
-        $tenantId = $_SESSION['tenant_id'];
+        
         $timeline = [];
         error_log("## " . __FUNCTION__ . " ## START");
         // ==========================================
         // 1. MAILS QUELLE
         // ==========================================
-        $mailItems = $this->getMailItems($hash, $salt, $tenantId);
+
+        $mail = new MailProcessor($this->dashboard);
+        $mailItems = $mail->getMailItems($id);
+
         //error_log(print_r($mailItems, true));
-        foreach ($mailItems as $row) {
+        foreach ($mailItems as $row) 
+        {
+            error_log("MI:" . print_r($row, true));
+
             $timeline[] = $this->formatItemTL(
                 $row['type'],
                 $row['id'],
                 $row['mdate'] ?? null,
                 $this->dashboard->decrypt($row['title']),
                 $row['detail'] ?? '',
-                '#hash-' . $row['hash'],
-                $row['hash']
+                '#hash-' . $row['id'],
+                $row['id']
             );
         }
-        //Notizen
-        $notes = $this->getNotesByMailHash($hash);
 
-        foreach ($notes as $rowNote) {
+        //Notizen
+        $note = new NotesProcessor($this->dashboard);
+        $noteItems = $note->getNotesByMailId($id);
+
+        foreach ($noteItems as $rowNote) {
             $timeline[] = $this->formatItemTL(
                 'note',
                 $rowNote['id'],
-                $rowNote['updated_date'] ?? null,
+                !empty($rowNote['due_date']) ? $rowNote['due_date'] : (!empty($rowNote['created_at']) ? $rowNote['created_at'] : null),
                 $rowNote['content'],
                 $rowNote['content'],
                 '#note-' . $rowNote['id'],
@@ -517,9 +523,10 @@ class ContactProcessor extends \App\Core\Database
             );
         }
         //Appointments
-        $appoints = $this->getAppointmentsByHash($hash);
+        $appoint = new AppointmentsProcessor($this->dashboard);
+        $appointItems = $appoint->getAppointmentsById($id);
 
-        foreach ($appoints as $rowAppoint) {
+        foreach ($appointItems as $rowAppoint) {
             $timeline[] = $this->formatItemTL(
                 'appointment',
                 $rowAppoint['id'],
@@ -530,13 +537,17 @@ class ContactProcessor extends \App\Core\Database
                 $rowAppoint['id']
             );
         }
+
+
         // Paperless IDs im Vorfeld holen
-        $paperlessIDs = $this->getPaperlessIdsByMailHash($hash, $salt, $tenantId);
-        //error_log(print_r($paperlessIDs, true));
+        $paperless = new PaperlessProcessor($this->dashboard);
+        $paperlessItems = $paperless->getPaperlessIdsByMailID($id);
+        
         // ==========================================
         // 2. DOKUMENTE QUELLE: KORRESPONDENTEN
         // ==========================================
-        $corres = $this->getDocumentItemsByCorrespondent($paperlessIDs['korrespondenten'] ?? []);
+        $corres = $this->getDocumentItemsByCorrespondent($paperlessItems['korrespondenten'] ?? []);
+
         if (!empty($corres) && is_array($corres)) {
             foreach ($corres as $_cor) {
                 $timeline[] = $this->formatItemTL(
@@ -551,10 +562,11 @@ class ContactProcessor extends \App\Core\Database
         } else {
             error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Korrespondenten gefunden");
         }
+
         // ==========================================
         // 3. DOKUMENTE QUELLE: DIREKTE IDS
         // ==========================================
-        $dokumenteIds = $paperlessIDs['dokumente'] ?? [];
+        $dokumenteIds = $paperlessItems['dokumente'] ?? [];
         //error_log(print_r($dokumenteIds, true));
         if (!empty($dokumenteIds)) {
             $cleanIdsD = implode(",", array_map('intval', $dokumenteIds));
@@ -581,83 +593,14 @@ class ContactProcessor extends \App\Core\Database
         usort($timeline, function ($a, $b) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
-        //error_log(print_r($timeline,true));
-        //error_log("buildTL");
+        
         $TL = $this->buildTimeline($timeline);
-        //error_log(print_r($TL, true));
-        error_log("buildedTL");
+        
         return $TL;
     }
 
-    /**
-     * Finde Notizen zu der Mail
-     */
-    private function getNotesByMailHash($hash)
-    {
-        // alle Notizen zu einer Mail
-        $sql = "SELECT DISTINCT n.*
-                FROM `notes` n
-                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
-                JOIN `contact_emails` ce_all 
-                ON (n.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
-                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
-                JOIN `contact_emails` ce_current_mail 
-                ON ce_all.contact_id = ce_current_mail.contact_id
-                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
-                JOIN `mails` m 
-                ON (m.sender_ceid = ce_current_mail.id OR m.recipient_ceid = ce_current_mail.id)
-                -- 4. Filter für die Sidebar
-                WHERE m.id_hash = UNHEX(:hash)
-                AND m.tenant_id = :tenant_id
-                AND n.tenant_id = :tenant_id
-                -- Neueste Notizen immer zuerst anzeigen
-                ORDER BY n.created_at DESC;
-        );";
-        $params = ['hash' => $hash];
-        $dbResult = $this->queryIt($sql, $params, false, false, false);
-        if (!$dbResult->success) {
-            throw new \Exception("Fehler bei Notiz!");
-        }
-        return $dbResult->data->fetched;
-    }
-    private function getAppointmentsByHash($hash)
-    {
-        error_log("Lade alle Appointments");
-        // alle Notizen zu einer Mail
-        $sql = "SELECT DISTINCT 
-                a.*,
-                TRIM(
-                    SUBSTRING_INDEX(
-                        SUBSTRING_INDEX(
-                            REPLACE(REPLACE(a.ical_data, '\r', ''), '\n', '<BR>'), 
-                        'SUMMARY:', -1), 
-                    '<BR>', 1)
-                ) AS extracted_summary
-                FROM `appointments` a
-                -- 1. Finde alle E-Mail-Adressen/IDs, die zum selben Kontakt gehören
-                JOIN `contact_emails` ce_all 
-                ON (a.ceid = ce_all.id) -- OR LOWER(TRIM(n.email)) = LOWER(TRIM(ce_all.email)))
-                -- 2. Schlage die Brücke zum gemeinsamen Hauptkontakt (contacts)
-                JOIN `contact_emails` ce_current_mail 
-                ON ce_all.contact_id = ce_current_mail.contact_id
-                -- 3. Knüpfe an die aktuell in der Sidebar geöffnete Mail an (über sender oder recipient)
-                JOIN `mails` m 
-                ON (m.sender_ceid = ce_current_mail.id) -- OR m.recipient_ceid = ce_current_mail.id)
-                -- 4. Filter für die Sidebar
-                WHERE m.id_hash = UNHEX(:hash)
-                AND m.tenant_id = :tenant_id
-                AND a.tenant_id = :tenant_id
-                -- Neueste Notizen immer zuerst anzeigen
-                ORDER BY a.updated_at DESC;";
-        $params = ['hash' => $hash];
-
-        $dbResult = $this->queryIt($sql, $params, false, false, false);
-
-        if (!$dbResult->success) {
-            throw new \Exception("Fehler bei Appointment!");
-        }
-        return $dbResult->data->fetched;
-    }
+    
+    
     /**
      * Suche nach einer E-Mail-Adresse
      * @param string $query: die E-Mail-Adresse
@@ -689,90 +632,12 @@ class ContactProcessor extends \App\Core\Database
         }
         return $dbResult->data->fetched;
     }
-    /**
-     * Email und Kontakt
-     */
-    private function getMailItems($hash, $salt, $tenantId)
-    {
-        error_log(__FUNCTION__);
 
-        $sql = "SELECT CASE 
-                        WHEN m.recipient_ceid = ce.id THEN 'mail_send'
-                        ELSE 'mail'
-                    END AS type,
-                    m.id AS id,
-                    m.id_hash as idhash,
-                    LOWER(HEX(id_hash)) as hash,
-                    m.paperless_id AS paperlessdocument,
-                    m.date_received AS mdate,
-                    m.subject_hash AS title,
-                    m.sender AS detail
-                    FROM mails m
-                    -- Join, um alle ceids zu finden, die zum Kontakt der Ausgangs-Mail gehören
-                    JOIN contact_emails ce ON (m.sender_ceid = ce.id OR m.recipient_ceid = ce.id)
-                    WHERE ce.contact_id IN (
-                        -- Subquery: Finde den Kontakt, der zur Ausgangs-Mail gehört
-                        SELECT contact_id 
-                        FROM contact_emails 
-                        WHERE id IN (
-                            SELECT sender_ceid 
-                            FROM mails 
-                            WHERE id_hash = UNHEX(:hash)
-                        )
-                    )
-                    AND m.tenant_id = :tenant_id 
-                    AND m.status != 'deleted'
-                    ORDER BY m.date_received DESC
-                    LIMIT 1000;"; // Dein SQL von oben
-        $dbResult = $this->queryIt(
-            $sql,
-            [
-                "hash" => $hash
-            ],
-            false,
-            false,
-            false
-        );
-        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
-            $dbResult->data->fetched :
-            [];
-    }
-    private function getPaperlessIdsByMailHash(string $hash, string $salt, int $tenantId): array
-    {
-        error_log(__FUNCTION__);
-        $salt = $this->dashboard->getHashSalt();
-        $sql = "SELECT 
-                GROUP_CONCAT(DISTINCT m.paperless_id) as dokumente,
-                GROUP_CONCAT(DISTINCT c.paperless_id) AS korrespondenten
-                -- CASE 
-                --     WHEN m.paperless_id IS NOT NULL THEN 'linked' 
-                --     ELSE 'standalone' 
-                -- END AS relation_type
-            FROM mails AS m
-            -- 1. Von Mail zu der E-Mail-Adresse, von der sie kam
-            INNER JOIN contact_emails ce ON m.sender_ceid = ce.id
-            -- 2. Von der E-Mail-Adresse zum Kontakt
-            INNER JOIN contacts c ON ce.contact_id = c.id
-            -- 3. Vom Kontakt zu den Paperless-Mappings
-            -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
-            WHERE m.id_hash = UNHEX(:hash) AND m.tenant_id=:tenant_id;";
-        $dbResult = $this->queryIt($sql, ['hash' => $hash, 'tenant_id' => $tenantId]);
-        // 1. Prüfen, ob überhaupt ein Ergebnis da ist
-        if (!empty($dbResult->data) && is_array($dbResult->data->fetched)) {
-            // Da GROUP_CONCAT nur eine Zeile liefert, nehmen wir den ersten Index [0]
-            $row = $dbResult->data->fetched[0];
-            // Filtert leere Strings (falls nur NULL vorhanden war) und gibt ein sauberes Array
-            $resAr['dokumente'] = array_filter(explode(',', $row['dokumente'] ?? ''));
-            $resAr['korrespondenten'] = array_filter(explode(',', $row['korrespondenten'] ?? ''));
-        } else {
-            $resAr['dokumente'] = [];
-            $resAr['korrespondenten'] = [];
-        }
-        #error_log(print_r($resAr, true));
-        // Wandle das Ergebnis-Array in ein flaches Array von IDs um
-        return $resAr;
-    }
-    public function getContactByMail(string $hash)
+
+    /**
+     * tbd auf id umstellen
+     */
+    public function getContactByMail(string $id)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
@@ -786,12 +651,12 @@ class ContactProcessor extends \App\Core\Database
                 INNER JOIN contact_emails AS ce ON m.sender_ceid = ce.id
                 -- 2. Verbindung zur Kontakt-Tabelle
                 INNER JOIN contacts AS c ON ce.contact_id = c.id
-                WHERE m.id_hash = UNHEX(:hash)
+                WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                 AND m.tenant_id = 6
                 GROUP BY c.id, c.display_name, c.type, c.paperless_id;";
         $dbResult = $this->queryIt(
             $sql,
-            ["hash" => $hash],
+            ["id" => $id],
             false,
             false,
             false

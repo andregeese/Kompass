@@ -25,16 +25,16 @@ class SettingProcessor extends \App\Core\Database
         parent::__construct($dashboard);
     }
 
-    public function getTenantSettings($tenantId, $encryptionKey=null): array
+    public function getTenantSettings(): array
         {
             error_log("GET FROM DB");
             $sql = "SELECT config_key, config_value FROM tenant_config WHERE tenant_id = :tenant_id";
             $dbResult = $this->queryIt(
                 $sql, 
-                ['tenant_id' => $tenantId], 
+                [], 
                 false, 
                 false,
-                true
+                false
             );
 
             if (!$dbResult->success)
@@ -44,10 +44,9 @@ class SettingProcessor extends \App\Core\Database
 
             $rows = $dbResult->data->fetched;
 
-            if (!$encryptionKey) {
-                $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
-            }
-
+            
+            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
+            
             $settings = [];
 
             // Temporärer Check: Ist der Key überhaupt da?
@@ -92,21 +91,18 @@ class SettingProcessor extends \App\Core\Database
     /**
      * Aktualisiert oder erstellt die Einstellungen eines Mandanten
      */
-    public function saveTenantSettings($tenantId, $data, $encryptionKey=null): bool
+    public function saveTenantSettings($data)
     {
-        error_log(__FILE__ . ": " . "aufgerufen");
-        error_log(print_r($data, true));
         // Falls kein Key übergeben wurde, greifen wir auf die globale Konstante zurück
-        if (!$encryptionKey || $encryptionKey == null || trim($encryptionKey) =="") {
-            $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
-        }
-
-        $allowedKeys = ['IMAP_HOST', 'IMAP_PORT', 'IMAP_USER', 'IMAP_PASSWORD', 'PAPERLESS_URL', 'PAPERLESS_TOKEN','SYNC_FOLDERS'];
+        $encryptionKey = $this->systemProcess->getRequiredEnv('APP_KEY');
+    
+        $allowedKeys = ['IMAP_HOST', 'IMAP_PORT', 'IMAP_USER', 'IMAP_PASSWORD', 'PAPERLESS_URL', 'PAPERLESS_TOKEN','SYNC_FOLDERS', 'DMS_FOLDER', 'SENT_FOLDER'];
         
         $sql = "INSERT INTO tenant_config (tenant_id, config_key, config_value) 
                 VALUES (:tenant_id, :config_key, :config_value)
                 ON DUPLICATE KEY UPDATE config_value = :config_value_update";
         
+        $dbResult = [];
         foreach ($data as $key => $val) 
         {
             // 1. Key normieren: Alles groß
@@ -131,16 +127,19 @@ class SettingProcessor extends \App\Core\Database
                 }
             }
             
-            $this->queryIt($sql, [
-                'tenant_id'           => $tenantId,
-                'config_key'          => $key,
-                'config_value'        => $finalValue,
-                'config_value_update' => $finalValue
-            ],
-            false,
-            false,
-            true);
+            $dbResult[] = $this->queryIt(
+                $sql, 
+                [
+                    'config_key'          => $key,
+                    'config_value'        => $finalValue,
+                    'config_value_update' => $finalValue
+                ],
+                false,
+                false,
+                false
+            );
         }
-        return true;
+
+        return ['settings' => $dbResult];
     }
 }

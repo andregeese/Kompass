@@ -50,7 +50,7 @@
                 <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Gesamt: <span x-text="mails.length"></span> Mails
                 </div>
-                <template x-for="mail in mails" :key="mail.hash">
+                <template x-for="mail in mails" :key="mail.id">
                     <div @click="viewMail(mail); currentMail=mail; isSidebarOpen = false; $dispatch('toggle-sidebar-request', { tab: 'context' });" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
                         :class="{
@@ -63,7 +63,7 @@
                         <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-gray-400 mb-1 min-w-0">
                             <div class="flex items-center space-x-1 truncate mr-2">
                                 <span x-show="mail.is_answered" class="text-blue-500 font-bold">↩️</span>
-                                <span class="text-blue-500 dark:text-blue-400 truncate" :class="mail.is_read===0 ? 'font-black' : 'font-medium'" x-text="mail.sender"></span>
+                                <span class="text-blue-500 dark:text-blue-400 truncate" :class="mail.is_read===0 ? 'font-black' : 'font-medium'" x-text="mail.display_name"></span>
                             </div>
                             <div class="flex items-center space-x-1.5 shrink-0">
                                 <span x-show="mail.is_flagged" class="text-amber-500 text-[12px]">📌</span>

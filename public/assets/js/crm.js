@@ -212,10 +212,17 @@ function dispatchAction(action, context, triggerElement) {
 
     // 2. Action-Registry
     const actions = {
-        'mail_view':    (ctx) => window.loadMailByHash?.(ctx.hash),
-        'note_add':     (ctx) => openNoteModal(ctx.uid, ctx.folder),
-        'mail_archive': (ctx) => archiveMail(ctx.uid, triggerElement),
-        'open_modal':   (ctx) => window.dispatchEvent(new CustomEvent('open-item-modal', { detail: ctx }))
+        'mail_view':        (ctx) => window.loadMailByHash?.(ctx.hash),
+        'note_add':         (ctx) => openNoteModal(ctx.uid, ctx.folder),
+        'mail_archive':     (ctx) => archiveMail(ctx.uid, triggerElement),
+        'open_modal':       (ctx) => {
+            // Falls ein spezifisches Event genannt wird, nutzen wir das, sonst den alten Default
+            const eventName = ctx.targetEvent || 'open-item-modal';
+            // Wenn Daten gekapselt in .payload liegen, nimm die, sonst den ganzen Kontext
+            const data = ctx.payload !== undefined ? ctx.payload : ctx;
+            
+            window.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+        },
     };
 
     // 3. Ausführung mit Fehlerbehandlung

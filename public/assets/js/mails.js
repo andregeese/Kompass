@@ -20,71 +20,75 @@ const mailViewComponent = () => ({
     currentMailHtml:'',
     
     async init_mails() {
-        const res = apiCall('get_imap_folder', {}, 'GET');
-        this.SYNCFOLDER = res?.details?.imaps;
+        // 1. FIX: await hinzugefügt!
+        try {
+            const res = await apiCall('get_imap_folder', {}, 'GET');
+            this.SYNCFOLDER = res?.details?.imaps || [];
+        } catch (e) {
+            console.error("Fehler beim Laden der IMAP-Ordner:", e);
+        }
 
-        // 1. Hash aus der URL extrahieren und säubern
-        const rawHash = window.location.hash; // Gibt z.B. '#hash-ID' oder '#ID' zurück
-        const hashValue = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;
-        if (hashValue) {
-            this.currentMailHash = hashValue;
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetId = urlParams.get('id');
+        
+        if (!targetId) {
+            const rawHash = window.location.hash;
+            targetId = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;
         }
-        // 2. Infinite Scroll initialisieren
+
         this.initInfiniteScroll();
-        // 3. Mails initial laden (warten, bis die Liste da ist)
-        if (this.$data.isOnline) {
-            await this.loadMails(false);
-        }
-        // 4. Logik: Direkt auf Hash reagieren, falls vorhanden
-        if (hashValue) {
-            this.isSidebarOpen = false;
-            console.log("Hash gefunden, öffne Mail:", hashValue);
-            
-            // Erst lokal in den geladenen Mails suchen
-            let foundMail = this.mails.find(m => m.hash === hashValue);
-            
-            // Fallback: Wenn nicht auf Seite 1, direkt per API aus der DB holen
-            if (!foundMail) {
-                try {
-                    const dataMail = await apiCall('get_mail_by_hash', { hash: hashValue }, 'GET');
-                    if (dataMail) {
-                        foundMail = dataMail;
-                        // Optional: In die Liste schieben, damit sie im UI existiert
-                        this.mails.push(foundMail); 
+
+        // Standardmäßig Mails laden
+        await this.loadMails(false);
+
+        if (targetId) {
+            if (targetId.includes('@')) {
+                this.mailSearchQuery = targetId;
+                this.query = true;
+                await this.loadMails(false); 
+            } else {
+                this.currentMailHash = targetId;
+                this.isSidebarOpen = false;
+                
+                let foundMail = this.mails.find(m => m.hash === targetId);
+                
+                if (!foundMail) {
+                    try {
+                        const dataMail = await apiCall('get_mail_by_hash', { hash: targetId }, 'GET');
+                        if (dataMail?.success) {
+                            foundMail = dataMail.details?.mail;
+                            this.mails.push(foundMail); 
+                        }
+                    } catch (error) {
+                        console.error("Fehler beim Abrufen der Mail via API:", error);
                     }
+                }
+
+                if (foundMail) this.viewMail(foundMail);
+
+                try {
+                    const contactData = await apiCall('get_emails_by_id', { id: targetId }, 'GET');
+                    this.searchQueryContacts = contactData?.details?.contacts?.[0]?.displayname || '';
+                    if (typeof this.loadContacts === 'function') this.loadContacts(); 
                 } catch (error) {
-                    console.error("Fehler beim Abrufen der Mail via API:", error);
+                    console.error("Fehler beim Laden der Kontakte zum Hash:", error);
                 }
             }
-            // Mail anzeigen, wenn sie entweder lokal oder per API gefunden wurde
-            if (foundMail) {
-                this.viewMail(foundMail);
-            } else {
-                console.warn("Mail mit Hash konnte nicht gefunden werden.");
-            }
-            // Kontakt-Suche für diese Mail ausführen
-            try {
-                const contactData = await apiCall('get_emails_by_hash', { hash: hashValue }, 'GET');
-                this.searchQueryContacts = contactData?.details?.contacts?.[0]?.displayname || '';
-                this.loadContacts(); 
-            } catch (error) {
-                console.error("Fehler beim Laden der Kontakte zum Hash:", error);
-            }
-        } else {
-            // --- Such-Watcher nur aktivieren, wenn KEIN Hash aufgerufen wurde ---
-            this.$watch('mailSearchQuery', (val) => {
-                clearTimeout(this.searchTimeout);
-                this.searchTimeout = setTimeout(() => {
-                    this.loadMails(false);
-                    this.query = true;
-                }, 300);
-            });
+
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?view=mails';
+            window.history.replaceState({}, '', cleanUrl);
         }
-        // DOM-Tick abwarten für Refs
-        this.$nextTick(() => {
-            //console.log("Mail-Liste Ref:", this.$refs.mailList); 
+
+        // 2. FIX: Watcher JETZT global für alle Zustände aktiv!
+        this.$watch('mailSearchQuery', (val) => {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                this.query = (val && val.trim() !== '');
+                this.loadMails(false);
+            }, 300);
         });
     },
+
     get filteredMails() {
         if (!this.mailSearchQuery || !this.mailSearchQuery.trim()) {
             return this.mails;
@@ -100,56 +104,43 @@ const mailViewComponent = () => ({
     },
     // --- Unter deinen CORE AKTIONEN hinzufügen ---
     switchFolder(newFolder) {
-        // Wenn wir schon in dem Ordner sind, nichts tun
         if (this.currentFolder === newFolder) return;
         
-        // 1. Loader aktivieren, damit Alpine weiß, dass gleich was kommt
         this.loading = true;
         this.currentFolder = newFolder;
-        
-        // 2. Ansicht komplett leeren
         this.mails = [];
         this.page = 1;
         this.hasMore = true;
-        this.currentHash = null; 
-        this.currentMail = null;
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) { searchInput.value = ''; currentSearch = ''; }
-        // Aktiviere visuellen Klick-Zustand in der Navigation (Optional)
-        document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
-        const activeEl = document.getElementById(`folder-${this.currentFolder}`);
-        if (activeEl) activeEl.classList.add('active');
+        this.currentMailHtml = '';
+        this.mailSearchQuery = ''; // 4. FIX: Sauber über Zustand leeren, kein DOM-Gepfusche mehr!
         
-        // 3. WICHTIG: Erst im nächsten DOM-Zyklus laden, wenn die alte Liste weg ist!
         this.$nextTick(() => {
-            // Ein kleiner Timeout (z.B. 50ms) bricht die Blockade des Infinite-Scroll-Containers
             setTimeout(() => {
-                this.loading = false; // Sperre kurz lösen...
-                this.loadMails(false);     // ...und frisch abfeuern!
+                this.loading = false;
+                this.loadMails(false);
             }, 50);
         });
     },
     
-    async loadMails(append = false) 
-    {
-       if (this.loading || (append && !this.hasMore)) return;
+    async loadMails(append = false) {
+        if (this.loading || (append && !this.hasMore)) return;
         this.loading = true;
 
         if (!append) {
-            this.$data.page = 1;
+            this.page = 1;
             this.hasMore = true;
         }
 
         try {
-            // Einheitliches Parameter-Objekt!
             const params = {
                 folder: this.currentFolder,
-                page: this.$data.page,
-                limit: this.$data.limit,
-                search: this.mailSearchQuery || '' // Einfach mitgeben, der Processor ignoriert es bei 'list' oder nutzt es bei 'search'
+                page: this.page,
+                limit: this.limit,
+                search: this.mailSearchQuery || ''
             };
 
-            const action = (params.query) ? 'search_mail' : 'list_mails';
+            // FIX: action steuern wir über den Zustand von "this.query"
+            const action = this.query ? 'search_mail' : 'list_mails';
             const jResponse = await apiCall(action, params, 'GET');
 
             if (jResponse?.success && jResponse.details?.mails) {
@@ -158,9 +149,7 @@ const mailViewComponent = () => ({
                     : Object.values(jResponse.details.mails);
 
                 this.mails = append ? [...this.mails, ...fetchedMails] : fetchedMails;
-                
-                // Paging-Logik ist jetzt überall identisch
-                this.hasMore = (fetchedMails.length >= this.$data.limit);
+                this.hasMore = (fetchedMails.length >= this.limit);
                 if (this.hasMore) this.page++;
                 
                 localStorage.setItem('cached_mails', JSON.stringify(this.mails));
@@ -174,6 +163,7 @@ const mailViewComponent = () => ({
             this.loading = false;
         }
     },
+
     // Mail in DB einspeichern
     async fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
@@ -211,16 +201,17 @@ const mailViewComponent = () => ({
             console.error("Fehler beim AutoLink:", err);
         }
     },
-    async viewMail(mail) {
-        if (!mail?.hash) return;
+    async viewMail(mail) 
+    {
+        if (!mail?.id) return;
         this.$data.currentMail = mail;
         this.mailLoading = true; 
         
         try {
             // CSRF-geschützter API-Call anstatt Iframe-URL
-            const jResponse = await apiCall('stream_mail_html', { hash: mail.hash }, 'GET');
+            const jResponse = await apiCall('stream_mail_html', { id: mail.id }, 'GET');
             
-            if (jResponse && jResponse.success !== false) {
+            if (jResponse && jResponse?.success !== false) {
                 // Wenn die API das HTML direkt als String liefert:
                 this.currentMailHtml = jResponse.details?.mail; 
             } else {
@@ -233,16 +224,18 @@ const mailViewComponent = () => ({
             this.mailLoading = false;
         }
     },        
+
     async moveToDMS(mail) {
         if (!this.isOnline || !mail?.hash) return;
     
         try {
-            const jResponse = await apiCall('dms', {'id': mail.hash}, 'POST');
+            const jResponse = await apiCall('dms', {'id': mail.id}, 'POST');
             mail.paperless_id = true; // Markiert die Mail im Frontend als übertragen
         } catch (err) {
             console.error("Fehler beim Verschieben ins DMS:", err);
         }
     },
+
     async deleteMail(mail) 
     {
         confirmAction('Wie möchtest du diese Mail löschen?', [
@@ -256,9 +249,9 @@ const mailViewComponent = () => ({
             class: 'bg-amber-500 hover:bg-amber-600 text-white',
             onClick: async () => {
                 // Deine originale Lösch-Logik
-                const jResponse = await apiCall('delete_all_mails', { hash: mail.hash }, 'POST');
+                const jResponse = await apiCall('delete_all_mails', { id: mail.id }, 'POST');
                 if (jResponse?.success) {
-                    this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
+                    this.$data.mails = this.$data.mails.filter(m => m.id !== mail.id);
                 }
             }
         },
@@ -267,9 +260,9 @@ const mailViewComponent = () => ({
             class: 'bg-red-600 hover:bg-red-700 text-white',
             onClick: async () => {
                 // Deine originale Lösch-Logik
-                const jResponse = await apiCall('delete', { id: mail.hash }, 'POST');
+                const jResponse = await apiCall('delete', { id: mail.id }, 'POST');
                 if (jResponse?.success) {
-                    this.$data.mails = this.$data.mails.filter(m => m.hash !== mail.hash);
+                    this.$data.mails = this.$data.mails.filter(m => m.id !== mail.id);
                 }
             }
         }
@@ -281,7 +274,7 @@ const mailViewComponent = () => ({
         let syncSuccess = false;
         
         try {
-            const jResponse = await apiCall('sync', {folder:folderName}, 'POST');
+            const jResponse = await apiCall('sync_mails', {folder:folderName, maxNewMailsLimit:100}, 'POST');
             if (jResponse && jResponse.success) {
                 syncSuccess = true;
             }
@@ -295,6 +288,7 @@ const mailViewComponent = () => ({
             await this.loadMailsSilent();
         }
     },
+
     // Wartet, bis das Fenster komplett geladen ist, bevor die Loops starten
     startBackgroundSyncDelayed() {
         setTimeout(() => {
@@ -320,7 +314,8 @@ const mailViewComponent = () => ({
         const runFolderSyncLoop = async () => {
             if (this.$data.isOnline) {
                 const foldersToSync = this.SYNCFOLDER;
-                const LIMIT = 20; // Muss exakt mit deinem PHP $maxNewMailsLimit übereinstimmen
+                const LIMIT = 100; // Muss exakt mit deinem PHP $maxNewMailsLimit übereinstimmen
+
                 // Der Loop läuft entkoppelt im Hintergrund
                 (async () => {
                     for (const folder of foldersToSync) {
@@ -330,7 +325,7 @@ const mailViewComponent = () => ({
                         while (keepSyncing && safetyBuffer < 10) {
                             try {
                                 // Führe den Sync aus und warte auf das echte Ergebnis aus PHP
-                                const jResponse = await apiCall('sync', {folder:folder}, 'POST');
+                                const jResponse = await apiCall('sync_mails', {folder:folder, maxNewMailsLimit: LIMIT}, 'POST');
                                 
                                 // Wenn PHP erfolgreich war und neue Mails hinzugefügt hat
                                 if (jResponse && jResponse.success) {
@@ -366,44 +361,39 @@ const mailViewComponent = () => ({
         // Erster Durchlauf nach 5 Sekunden, um dem initialen Laden Vorrang zu geben
         setTimeout(runFolderSyncLoop, 5000);
     },
+
     /** lädt E-Mails in der Übersicht, beim Scrollen nach */
     async loadMailsSilent() {
-        if (this.$data.loading || this.silentLoading) return; // 🚀 FIX: $data genutzt
+        if (this.loading || this.silentLoading) return;
+        if (this.mailSearchQuery && this.mailSearchQuery.length > 0) return;
+        
+        // 5. FIX: Wenn der User tief gescrolled hat (page > 2), pausieren wir den Silent Sync,
+        // um Daten-Inkonsistenz zu vermeiden.
+        if (this.page > 2) return; 
+
         this.silentLoading = true;
-        if (this.mailSearchQuery && this.mailSearchQuery.length > 0) {
-            console.log("Hintergrund-Sync pausiert: Suche ist aktiv.");
-            return;
-        }
         try {
-            const params = { limit: 50 };
-            if (this.currentFolder) {
-                params.folder = this.currentFolder;
-            }
-            // 2. Aufruf über die neue API-Brücke
+            const params = { limit: this.limit, folder: this.currentFolder };
             const jResponse = await apiCall('list_mails', params, 'GET');
             
-            if (jResponse && jResponse.success && jResponse.details?.mails) {
-                // 🚀 FIX: Einheitlich $data.mails prüfen und setzen
-                if (JSON.stringify(this.$data.mails) !== JSON.stringify(jResponse.details.mails)) {
-                    this.$data.mails = jResponse.details.mails;
+            if (jResponse?.success && jResponse.details?.mails) {
+                if (JSON.stringify(this.mails) !== JSON.stringify(jResponse.details.mails)) {
+                    this.mails = jResponse.details.mails;
                 }
             }
         } catch (err) {
             console.error("Fehler beim Laden der Mails (silent):", err);
-        } {
+        } finally {
             this.silentLoading = false;
         }
     },
+
     initInfiniteScroll() {
         this.$nextTick(() => {
             const container = document.getElementById('mail-list');
             if (!container) return;
             
-            // Wir binden den Listener direkt an das Element
             container.onscroll = () => {
-                // Debug-Log: Erscheint das in der Konsole beim Scrollen?
-                //console.log("Scrolling...", container.scrollTop);
-                this.hasMore=true;
                 if (this.loading || !this.hasMore) return;
                 
                 const threshold = 150;
@@ -415,6 +405,7 @@ const mailViewComponent = () => ({
             };
         });
     },
+    
     mailLoaded() {
         if (this.currentMailUrl === 'about:blank') return;
         console.log("Mail-Iframe fertig geladen!");

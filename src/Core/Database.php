@@ -49,7 +49,7 @@ class Database
         $isDebug = (defined('APP_DEBUG') && APP_DEBUG === true);
 
         if (str_contains($sql, ':tenant_id')) {
-            $isGlobalTable = preg_match('/\b(users|tenants|global_config)\b/i', $sql);
+            $isGlobalTable = preg_match('/\b(users|tenants|global_config|error_logs|logs)\b/i', $sql);
             if (!$isGlobalTable) {
                 // Hier greift jetzt deine numerische ID aus der Session (z.B. 1)
                 $currentTenantId = $_SESSION['tenant_id'] ?? ($isDebug ? 1 : null);
@@ -60,6 +60,30 @@ class Database
                 $params['tenant_id'] = $currentTenantId;
             }
         }
+
+        if (str_contains($sql, ':crypto_key')) {
+            $tenantId = $_SESSION['tenant_id'] ?? null;
+            if (!$tenantId) {
+                error_log(__FUNCTION__ . ": ### Sicherheitsblockade: Keine tenant_id für CryptoKey vorhanden. ###");
+                throw new \Exception("Sicherheitsblockade: Verschlüsselung ohne aktive Tenant-Sitzung nicht erlaubt.");
+            }
+
+            // 3. Das globale Master-Geheimnis aus der Umgebung holen
+            // Falls deine DB-Klasse Zugriff auf deinen SystemProcessor-Service hat, nutze den.
+            // Alternativ greifen wir hier direkt auf $_ENV oder getenv() zu:
+            $systemProcess = new \App\Services\SystemProcessor();
+            $globalSecret = $systemProcess->getRequiredEnv('ENC_KEY');
+            
+            if (empty($globalSecret)) {
+                error_log(__FUNCTION__ . ": ### Konfigurationsfehler: ENC_KEY ist leer! ###");
+                throw new \Exception("Kritischer Systemfehler: Verschlüsselungsschlüssel nicht konfiguriert.");
+            }
+
+            // 4. Den einzigartigen Tenant-CryptoKey berechnen (64-Zeichen Hex-String)
+            $tenantCryptoKey = hash_hmac('sha256', (string)$tenantId, $globalSecret);
+            $params['crypto_key'] = 'CRYPTOKEY AUSGEBLENDET'; //$tenantCryptoKey;
+        }
+
         foreach ($params as $key => $value) {
             // Sicherstellen, dass wir auch Doppelpunkte im Key abfangen (:tenant_id vs tenant_id)
             $placeholder = ':' . ltrim($key, ':');
@@ -97,6 +121,8 @@ class Database
      */
     public function queryIt(string $query, array $params = [], bool $isTransactional = false, bool $returnInsertID = false, bool $debug = false)
     {
+        $this->enforceQueryStandards($query);
+
         $result = new \stdClass();
         $result->success = false; // Standard: Fehler
         $result->data = new \stdClass;
@@ -114,15 +140,21 @@ class Database
 
         try {
             $pdo = $this->getConnection();
+
             $this->injectTenantId($query, $params);
+            $this->injectCryptoKey($query, $params);
+
             // 1. LIMIT und OFFSET explizit im Array casten, BEVOR execute aufgerufen wird
             if (isset($params['limit']))  $params['limit']  = (int)$params['limit'];
             if (isset($params['offset'])) $params['offset'] = (int)$params['offset'];
+
             // 2. Prepare das Statement
             $stmt = $pdo->prepare($query);
+            
             // 1. Extrahiere alle Platzhalter aus dem SQL (z.B. :id, :tenant_id)
             preg_match_all('/:([a-zA-Z0-9_]+)/', $query, $matches);
             $requiredParams = array_unique($matches[1]);
+            
             // 2. Abgleich: Was fehlt?
             $missing = [];
             foreach ($requiredParams as $req) {
@@ -136,6 +168,7 @@ class Database
 
                 throw new \Exception("QUERY ABGEBROCHEN" . "DB FEHLER: Fehlende Parameter: " . implode(', ', $missing) . " im Query: $query"); // Abbruch, da Query sonst fehlschlägt
             }
+
             // --- DER WICHTIGE TEIL: Manuelles Binden für ALLE Parameter ---
             foreach ($params as $key => $value) {
                 $placeholder = ':' . $key;
@@ -155,9 +188,11 @@ class Database
 
 
         } catch (\PDOException $e) {
+
             error_log("SQL FEHLER [" . $e->getCode() . "]: " . $e->getMessage() . " | Query: " . $query);
             $result->error = $e->getMessage();
             $result->success = false;
+
             if ($e->getCode() == '23000') {
                 $result->error = "Eintrag vorhanden";
                 $result->debug = [
@@ -174,6 +209,7 @@ class Database
                 error_log($result->debug['caller'] . " - SQL: " . $result->debug['sql']);
             }
         } catch (\Throwable $e) {
+
             $this->getCallerInfo();
             $result->error = "Fehler in " . __FUNCTION__ . ": " . $e->getMessage();
             throw new \Exception($e->getMessage());
@@ -184,6 +220,27 @@ class Database
         }
         //tbd: ich möchte immer auf $result->success || $result->error im Frontend reagieren
         return (object)$result;
+    }
+
+    private function enforceQueryStandards(string $sql): void
+    {
+        // Wir trimmen das SQL und prüfen, ob es überhaupt ein SELECT-Statement ist
+        if (!preg_match('/^\s*SELECT\b/i', $sql)) {
+            return; // Kein SELECT (z.B. INSERT, UPDATE, DELETE) -> Überspringen
+        }
+
+        // 1. Prüfen, ob "SELECT *" (auch mit Tabellen-Alias wie "SELECT a.*") genutzt wird
+        // Der Regex matcht: "SELECT", gefolgt von Whitespaces, gefolgt von einem optionalen "a." und dem Sternchen
+        $hasSelectStar = preg_match('/\bSELECT\s+(?:\w+\.)?\*/i', $sql);
+
+        // 2. Prüfen, ob das Wort "LIMIT" im SQL-String vorkommt
+        $hasLimit = preg_match('/\bLIMIT\b/i', $sql);
+
+        if ($hasSelectStar) {
+            throw new \Exception(
+                "Sicherheitsblockade: 'SELECT *' ist komplett verboten. Bitte zähle die benötigten Spalten explizit auf. ($sql)"
+            );
+        }
     }
 
     public function beginTransaction()
@@ -220,6 +277,10 @@ class Database
             throw $e; // Fehler weiterreichen, damit du weißt, dass was passiert ist
         }
     }
+
+    /**
+     * Setzt tenant_id
+     */
     private function injectTenantId(string &$sql, array &$params): void
     {
         // 1. Prüfen, ob der Platzhalter überhaupt im SQL-String existiert
@@ -228,7 +289,7 @@ class Database
         }
 
         // Multi-Tenancy Logik
-        $isGlobalTable = preg_match('/\b(users|tenants|global_config)\b/i', $sql);
+        $isGlobalTable = preg_match('/\b(users|tenants|global_config|error_logs|logs)\b/i', $sql);
         if (!$isGlobalTable) {
             $tenantId = $_SESSION['tenant_id'] ?? null;
             if (!$tenantId) error_log(__FUNCTION__ . ": ### Sicherheitsblockade: Keine tenant_id. ###");
@@ -240,6 +301,40 @@ class Database
             }
         }
     }
+
+    private function injectCryptoKey(string &$sql, array &$params): void
+    {
+        // 1. Prüfen, ob der Platzhalter überhaupt im SQL-String existiert
+        if (!str_contains($sql, ':crypto_key')) {
+            return; // Nichts zu tun, sofort beenden
+        }
+
+        // 2. Tenant-ID aus der Session holen (analog zu deiner Tenant-Logik)
+        $tenantId = $_SESSION['tenant_id'] ?? null;
+        if (!$tenantId) {
+            error_log(__FUNCTION__ . ": ### Sicherheitsblockade: Keine tenant_id für CryptoKey vorhanden. ###");
+            throw new \Exception("Sicherheitsblockade: Verschlüsselung ohne aktive Tenant-Sitzung nicht erlaubt.");
+        }
+
+        // 3. Das globale Master-Geheimnis aus der Umgebung holen
+        // Falls deine DB-Klasse Zugriff auf deinen SystemProcessor-Service hat, nutze den.
+        // Alternativ greifen wir hier direkt auf $_ENV oder getenv() zu:
+        $systemProcess = new \App\Services\SystemProcessor();
+        $globalSecret = $systemProcess->getRequiredEnv('ENC_KEY');
+        
+        if (empty($globalSecret)) {
+            error_log(__FUNCTION__ . ": ### Konfigurationsfehler: ENC_KEY ist leer! ###");
+            throw new \Exception("Kritischer Systemfehler: Verschlüsselungsschlüssel nicht konfiguriert.");
+        }
+
+        // 4. Den einzigartigen Tenant-CryptoKey berechnen (64-Zeichen Hex-String)
+        $tenantCryptoKey = hash_hmac('sha256', (string)$tenantId, $globalSecret);
+
+        // 5. Automatisch an die Bind-Parameter übergeben
+        $params['crypto_key'] = $tenantCryptoKey;
+        
+    }
+
     public function getCallerInfo()
     {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);

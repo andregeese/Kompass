@@ -22,12 +22,10 @@ class SettingsController extends \App\Core\BaseController {
         $this->cleanBuffer();
     
         $secretKey = $this->systemProcess->tenantConfig->secret_key ?? null;
-        $settings = $this->settingProcess->getTenantSettings($this->tenantId, $secretKey);
+        $settings = $this->settingProcess->getTenantSettings();
         
-        return [
-            'success' => true,
-            'details' => ['settings' => $settings]
-        ];
+        return $this->process($this->settingProcess, 'getTenantSettings', 'settings', '');
+        
     }
 
     public function save() 
@@ -48,9 +46,8 @@ class SettingsController extends \App\Core\BaseController {
                 ? $_POST 
                 : (json_decode(file_get_contents('php://input'), true) ?? []);
             
-            $secretKey = $this->tenantConfig->secret_key ?? null;
             
-            $success = $this->settingProcess->saveTenantSettings($_SESSION['tenant_id'], $formData, $secretKey);
+            $success = $this->settingProcess->saveTenantSettings($formData);
             
             if (!$success) {
                 throw new \Exception("Fehler beim Aktualisieren der Einstellungen.");
@@ -58,7 +55,7 @@ class SettingsController extends \App\Core\BaseController {
             
             return [
                 'success' => true,
-                'details' => ['message' => 'Einstellungen erfolgreich aktualisiert.']
+                'message' => 'Einstellungen erfolgreich aktualisiert.'
             ];
          }catch(\Throwable $e){
             return [

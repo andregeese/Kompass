@@ -11,6 +11,7 @@ namespace App\Api;
 use App\Services\ContactProcessor; // Importiere den Prozessor
 use App\Services\PaperlessProcessor;
 use Exception;
+
 class ContactController extends \App\Core\BaseController {
     public function __construct($dashboard) {
         // Übergibt das Dashboard an den BaseController, 
@@ -45,17 +46,11 @@ class ContactController extends \App\Core\BaseController {
         $contacts = $this->contactProcess->getAllEmails();
         return ["emails" => $contacts];
     }
+
     public function getContactByEmailHash()
     {
          
-        $hash = $this->request['hash'] ?? null;
-        if (empty($hash)) {
-            return ['success' => false, 'error' => 'Kein Hash übergeben.'];
-        }
-        
-        $contacts = $this->contactProcess->getContactByEmailHash($hash);
-        
-        return ['contact_emails' => $contacts];
+        return $this->process( $this->contactProcess, 'getContactByEmailHash', 'contact_emails', '');
         
     }
     /**
@@ -63,15 +58,8 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getEmailsBySearch()
     {
-        $query = $this->request['query'];
-        if (empty($query)) {
-            throw new \Exception("Emailsuche ist leer");
-        }
         
-        $contacts = $this->contactProcess->getEmailsBySearch($query);
-        
-        return ['contact_emails' => $contacts];
-        
+        return $this->process($this->contactProcess, 'getEmailsBySearch', 'contact_emails', '');   
     }
     /**
      * Abfrage für Mails im Matching von Kontakten
@@ -110,14 +98,7 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getTimeLineContact()
     {
-        $hash = $this->request['hash'] ?? null;
-        
-        if (empty($hash)) {
-            throw new \Exception("Kein Hash übergeben");
-        }
-        $salt = $this->dashboard->getHashSalt();
-        $TL = $this->contactProcess->getTimelineData($hash, $salt);
-        return ["timeline" => $TL];
+        return $this->process($this->contactProcess, 'getTimelineData', 'timeline', '');
     }
     /**
      * Suche nach einer E-Mail-Adresse

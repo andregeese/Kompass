@@ -117,6 +117,10 @@
                 <option value="todo">📞 Wiedervorlage</option>
                 <option value="important">🔥 Wichtig</option>
             </select>
+            <div class="relative flex items-center">
+                <input type="date" x-model="newNote.due_date" 
+                        class="text-xs bg-slate-50 dark:bg-gray-750 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[130px]">
+            </div>
             <button @click="addNote()" 
                     :disabled="!newNote.content.trim()"
                     class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center space-x-1.5">

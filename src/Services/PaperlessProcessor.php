@@ -100,6 +100,119 @@ class PaperlessProcessor extends \App\Core\Database
 
     }
 
+    public function getPaperlessIdsByMailID(string $id): array
+    {
+        error_log(__FUNCTION__);
+        $salt = $this->dashboard->getHashSalt();
+        $sql = "SELECT 
+                GROUP_CONCAT(DISTINCT m.paperless_id) as dokumente,
+                GROUP_CONCAT(DISTINCT c.paperless_id) AS korrespondenten
+                -- CASE 
+                --     WHEN m.paperless_id IS NOT NULL THEN 'linked' 
+                --     ELSE 'standalone' 
+                -- END AS relation_type
+            FROM mails AS m
+            -- 1. Von Mail zu der E-Mail-Adresse, von der sie kam
+            INNER JOIN contact_emails ce ON m.sender_ceid = ce.id
+            -- 2. Von der E-Mail-Adresse zum Kontakt
+            INNER JOIN contacts c ON ce.contact_id = c.id
+            -- 3. Vom Kontakt zu den Paperless-Mappings
+            -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
+            WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND m.tenant_id=:tenant_id;";
+
+        $dbResult = $this->queryIt($sql, ['id' => $id]);
+        
+        // 1. Prüfen, ob überhaupt ein Ergebnis da ist
+        if (!empty($dbResult->data) && is_array($dbResult->data->fetched)) {
+            // Da GROUP_CONCAT nur eine Zeile liefert, nehmen wir den ersten Index [0]
+            $row = $dbResult->data->fetched[0];
+            // Filtert leere Strings (falls nur NULL vorhanden war) und gibt ein sauberes Array
+            $resAr['dokumente'] = array_filter(explode(',', $row['dokumente'] ?? ''));
+            $resAr['korrespondenten'] = array_filter(explode(',', $row['korrespondenten'] ?? ''));
+        } else {
+            $resAr['dokumente'] = [];
+            $resAr['korrespondenten'] = [];
+        }
+        #error_log(print_r($resAr, true));
+        // Wandle das Ergebnis-Array in ein flaches Array von IDs um
+        return $resAr;
+    }
+
+    public function getLastDocuments()
+    {
+        $fourWeeksAgo = date('Y-m-d', strtotime('-4 weeks'));
+        $params = [
+            'query'    => 'tag:unclassified', 
+            'ordering' => '-created',
+            'created__gte' => $fourWeeksAgo,
+            'page_size'    => 200 // Groß genug, um die 4 Wochen abzudecken
+        ];
+
+        $docResponse = $this->request('/api/documents/'.'?' . http_build_query($params));
+        $docData = json_decode($docResponse, true);
+        $documents = $docData['results'] ?? [];
+
+        if (empty($documents)) {
+            return []; // Keine Dokumente in den letzten 4 Wochen
+        }
+
+        // 3. Korrespondenten-IDs aus den Dokumenten extrahieren und zählen
+        $correspondentIds = [];
+        foreach ($documents as $doc) {
+            if (!empty($doc['correspondent'])) {
+                $correspondentIds[] = $doc['correspondent'];
+            }
+        }
+
+        // Zählt wie oft jede ID vorkommt (z.B. [ID 12 => 5, ID 4 => 2])
+        $countedIds = array_count_values($correspondentIds);
+        
+        // Sortieren: Höchste Anzahl zuerst
+        arsort($countedIds);
+        
+        // Die Top 5 IDs abschneiden
+        $top5Ids = array_slice($countedIds, 0, 5, true);
+
+        if (empty($top5Ids)) {
+            return [];
+        }
+
+        // 4. Alle Korrespondenten-Namen EINMALIG abrufen (statt 5 Einzel-Requests)
+        $corrResponse = $this->request('/api/correspondents/?page_size=1000');
+        $corrData = json_decode($corrResponse, true);
+        $allCorrespondents = $corrData['results'] ?? [];
+
+        // Eine Map bauen: [ID => Name]
+        $correspondentMap = [];
+        foreach ($allCorrespondents as $c) {
+            $correspondentMap[$c['id']] = $c['name'];
+        }
+
+        // 5. Endergebnis für dein Dashboard zusammenbauen
+        $finalTop5 = [];
+        foreach ($top5Ids as $id => $count) {
+            $finalTop5[] = [
+                'id'    => $id,
+                'name'  => $correspondentMap[$id] ?? 'Unbekannter Absender',
+                'count' => $count
+            ];
+        }
+
+        // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
+        $url = '/api/documents/' . '?' . http_build_query($params);
+        
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        }
+
+        $results = $paperlessData['results'] ?? [];
+
+        return $results;
+    }
+
     private function getCorrespondentsById(array $ids):array
     {
         if (empty($ids))
@@ -257,10 +370,10 @@ class PaperlessProcessor extends \App\Core\Database
      */
     public function getSenderByHash(string $hash): ?string 
     {
-        //$sql = "SELECT sender FROM mails WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
+        //$sql = "SELECT sender FROM mails WHERE tenant_id=:tenant_id AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) LIMIT 1";
         $sql = "SELECT sender FROM mails as m
                 LEFT JOIN contact_emails as ce ON ce.contact_id=m.sender_ceid
-                WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash) LIMIT 1";
+                WHERE tenant_id=:tenant_id AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) LIMIT 1";
         
         $rows = $this->queryIt($sql, [
             'salt' => $this->dashboard->getHashSalt(),
@@ -578,7 +691,7 @@ class PaperlessProcessor extends \App\Core\Database
     {
         $sql = "UPDATE mails 
                 SET status = 'archived', paperless_id = :p_id 
-                WHERE tenant_id=:tenant_id AND id_hash = UNHEX(:hash)";
+                WHERE tenant_id=:tenant_id AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)";
                 
         $this->queryIt($sql, [
             'p_id' => $paperlessId,

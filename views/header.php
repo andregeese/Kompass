@@ -11,10 +11,12 @@
 
 <header class="bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 gap-2">
     <!-- Links: Logo & Titel (Auf Mobile kompakt) -->
-    <div class="flex items-center space-x-2 md:space-x-3 shrink-0">
+    <a href="index.php?view=start" class="flex items-center space-x-2 md:space-x-3 shrink-0 hover:opacity-80 transition-opacity">
         <span class="text-xl">🚀</span>
-        <h1 class="text-sm md:text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-blue-400 hidden sm:block">Enterprise CRM</h1>
-    </div>
+        <h1 class="text-sm md:text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-blue-400 hidden sm:block">
+            Enterprise CRM
+        </h1>
+    </a>
     
     <!-- Mitte: Globale Echtzeit-Kontaktsuche (Jetzt immer sichtbar!) -->
     <div class="flex-1 max-w-md mx-2 md:mx-6 relative">

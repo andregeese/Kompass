@@ -61,9 +61,10 @@
                     <span x-text="loadingFolders ? 'Verbinde...' : 'Verbindung testen & Ordner laden'"></span>
                 </button>
             </div>
+
             <div class="mt-4" x-show="folders.length > 0">
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Sync-Ordner auswählen</div>
-                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 max-h-48 overflow-y-auto">
                     <template x-for="folder in folders" :key="folder">
                         <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-900 rounded-lg transition-all">
                             <input type="checkbox" 
@@ -75,7 +76,38 @@
                     </template>
                 </div>
             </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800" x-show="folders.length > 0">
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">System-Ordner zuweisen</div>
+                
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Ordner für gesendete Mails</label>
+                        <select x-model="form.sent_folder" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all appearance-none">
+                            <option value="">-- Keine Erkennung (Inaktiv) --</option>
+                            <template x-for="folder in folders" :key="folder">
+                                <option :value="folder" x-text="folder" :selected="form.sent_folder === folder"></option>
+                            </template>
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">Wichtig für die Erkennung von Empfängern (z.B. "Sent Messages").</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">DMS / Archiv Ordner (Optional)</label>
+                        <select x-model="form.dms_folder" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all appearance-none">
+                            <option value="">-- Kein DMS-Ordner vorhanden --</option>
+                            <template x-for="folder in folders" :key="folder">
+                                <option :value="folder" x-text="folder" :selected="form.dms_folder === folder"></option>
+                            </template>
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">Mails in diesem Ordner erhalten keinen "Ab ins DMS"-Button mehr.</p>
+                    </div>
+                </div>
+            </div>
         </div>
+        
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
             <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2 flex items-center gap-2">
                 <span>📄</span> Paperless-ngx Server
