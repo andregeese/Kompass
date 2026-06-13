@@ -280,7 +280,7 @@ class MailController extends \App\Core\BaseController
             $this->mailProcess, 
             'syncMails', 
             'sync_result', 
-            'iCloud-Synchronisation erfolgreich abgeschlossen'
+            '' //dumm wenn man nach jedem Sync etwas ausgibt, nervt den User
         );
         
     }

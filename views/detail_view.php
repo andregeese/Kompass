@@ -12,7 +12,7 @@
 <div x-data="detailView()" x-init="initDetail()" 
      @route-change.window="
         // 1. Setze visuelle Markierungen für den neuen Hash
-        selectedHash = $event.detail.hash;
+        selectedId = $event.detail.hash;
         
         // 2. Triggere das asynchrone Nachladen der API aus der detail.js
         if ($event.detail.hash && typeof checkCRMStatus === 'function') {

@@ -1,153 +1,50 @@
-[13-Jun-2026 10:21:39 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:39 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:39 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:39 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:39 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:12 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:12 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\PaperlessController
+[13-Jun-2026 11:04:12 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:12 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\PaperlessController
+[13-Jun-2026 11:04:12 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+(
+    [action] => paperless_search
+    [query] => LIDL
+)
+
+[13-Jun-2026 11:04:12 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:12 Europe/Berlin] search Key In DB: PAPERLESS_URL
+[13-Jun-2026 11:04:12 Europe/Berlin] search Key In DB: PAPERLESS_TOKEN
+[13-Jun-2026 11:04:13 Europe/Berlin] PaperlessURL:http://192.168.0.72:8030/api/documents/?query=LIDL&sort=-created&page=1&page_size=30
+[13-Jun-2026 11:04:16 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:16 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
+[13-Jun-2026 11:04:16 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:16 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
+[13-Jun-2026 11:04:16 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
     [action] => list_mails
     [limit] => 20
     [folder] => INBOX
 )
 
-[13-Jun-2026 10:21:39 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:39 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:21:40 Europe/Berlin] Mails geladen: 20 in Ordner INBOX
-[13-Jun-2026 10:21:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => list_mails
-    [folder] => DMSDone
-    [page] => 1
-    [limit] => 20
-    [search] => 
-)
-
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:21:40 Europe/Berlin] Mails geladen: 20 in Ordner DMSDone
-[13-Jun-2026 10:21:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => list_mails
-    [folder] => DMS
-    [page] => 1
-    [limit] => 20
-    [search] => 
-)
-
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:21:40 Europe/Berlin] Mails geladen: 20 in Ordner DMS
-[13-Jun-2026 10:21:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => list_mails
-    [folder] => INBOX
-    [page] => 1
-    [limit] => 20
-    [search] => 
-)
-
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:21:40 Europe/Berlin] Mails geladen: 20 in Ordner INBOX
-[13-Jun-2026 10:21:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:40 Europe/Berlin] Prozess: [23] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:21:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:21:40 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => Sent Messages
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:21:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:40 Europe/Berlin] Prozess: [19] Starte Sync für Ordner: Sent Messages
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:21:40 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:21:40 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:21:40 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:21:40 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}Sent Messages
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\SystemController
-[13-Jun-2026 10:21:41 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\SystemController
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:16 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:16 Europe/Berlin] ###listMails###
+[13-Jun-2026 11:04:16 Europe/Berlin] Mails geladen: 20 in Ordner INBOX
+[13-Jun-2026 11:04:19 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:19 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\SystemController
+[13-Jun-2026 11:04:19 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:19 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\SystemController
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
     [action] => get_imap_folder
 )
 
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:41 Europe/Berlin] getIMAPFolder
-[13-Jun-2026 10:21:41 Europe/Berlin] search Key In DB: SYNC_FOLDERS
-[13-Jun-2026 10:21:41 Europe/Berlin] IMAP FOLDERS: ["DMS","DMSDone","INBOX","Sent Messages"]
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\SystemController
-[13-Jun-2026 10:21:41 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\SystemController
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => get_imap_folder
-)
-
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:41 Europe/Berlin] getIMAPFolder
-[13-Jun-2026 10:21:41 Europe/Berlin] search Key In DB: SYNC_FOLDERS
-[13-Jun-2026 10:21:41 Europe/Berlin] IMAP FOLDERS: ["DMS","DMSDone","INBOX","Sent Messages"]
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:21:41 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => list_mails
-    [folder] => DMS
-    [page] => 1
-    [limit] => 20
-    [search] => 
-)
-
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:41 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:21:41 Europe/Berlin] Mails geladen: 20 in Ordner DMS
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\PushController
-[13-Jun-2026 10:21:41 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\PushController
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:20 Europe/Berlin] getIMAPFolder
+[13-Jun-2026 11:04:20 Europe/Berlin] search Key In DB: SYNC_FOLDERS
+[13-Jun-2026 11:04:20 Europe/Berlin] IMAP FOLDERS: ["DMS","DMSDone","INBOX","Sent Messages"]
+[13-Jun-2026 11:04:20 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:20 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:20 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\PushController
+[13-Jun-2026 11:04:20 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\PushController
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
     [endpoint] => https://fcm.googleapis.com/fcm/send/fUHKfPPro_U:APA91bFBFA7mn7m79rPkVFFzK5vY4EGdFZwP0LrA-rsTb9Leut-faqWlaXGt7yeRWvqIpEUlVAgoLzo_PWDIdzjCW6w-y9tD2S0Wl8l2LzYfxpBwJ2NYGvn_MsmXBx6ZocJE3fwgjWNH
     [expirationTime] => 
@@ -159,8 +56,8 @@
 
 )
 
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:41 Europe/Berlin] DB DEBUG: Array
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:20 Europe/Berlin] DB DEBUG: Array
 (
     [caller] => DB Query von: App\Services\PushService->saveSubscription
     [sql] => INSERT INTO push_subscriptions (user_id, subscription_json, created_at) 
@@ -168,565 +65,104 @@
                 ON DUPLICATE KEY UPDATE subscription_json = '{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/fUHKfPPro_U:APA91bFBFA7mn7m79rPkVFFzK5vY4EGdFZwP0LrA-rsTb9Leut-faqWlaXGt7yeRWvqIpEUlVAgoLzo_PWDIdzjCW6w-y9tD2S0Wl8l2LzYfxpBwJ2NYGvn_MsmXBx6ZocJE3fwgjWNH\",\"expirationTime\":null,\"keys\":{\"p256dh\":\"BEjAP8D_GB6kYdxtLcCCHfjZGUJkwPfYpRJq8cKwhfZyt0JcqUAl0LZbbGvVlErvTMuaKrxb_WwaKWR_1sFvFXU\",\"auth\":\"0sEROVP0hzXESKBFFv07MQ\"}}', created_at = NOW()
 )
 
-[13-Jun-2026 10:21:41 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:21:41 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\NotesController
-[13-Jun-2026 10:21:41 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\NotesController
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:20 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:20 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\NotesController
+[13-Jun-2026 11:04:20 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\NotesController
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
     [action] => get_notes
 )
 
-[13-Jun-2026 10:21:41 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:21:41 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (Sent Messages): 6847 | Letzte UID in DB: 5201 | Höchste UID Server: 7320
-[13-Jun-2026 10:21:41 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:21:41 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:21:41 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
-[13-Jun-2026 10:21:41 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:22:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:20 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\SystemController
+[13-Jun-2026 11:04:31 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\SystemController
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
-    [action] => list_mails
-    [folder] => INBOX
-    [page] => 1
-    [limit] => 20
-    [search] => 
+    [action] => get_imap_folder
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:22:40 Europe/Berlin] DB DEBUG: Array
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:31 Europe/Berlin] getIMAPFolder
+[13-Jun-2026 11:04:31 Europe/Berlin] search Key In DB: SYNC_FOLDERS
+[13-Jun-2026 11:04:31 Europe/Berlin] IMAP FOLDERS: ["DMS","DMSDone","INBOX","Sent Messages"]
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\ContactController
+[13-Jun-2026 11:04:31 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\ContactController
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
-    [caller] => DB Query von: App\Services\MailProcessor->getMailsPaginated
+    [action] => get_emails_by_hash
+    [hash] => ABC
+)
+
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:31 Europe/Berlin] DB DEBUG: Array
+(
+    [caller] => DB Query von: App\Services\ContactProcessor->getContactByEmailHash
     [sql] => SELECT 
-                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), '2e7429ec8d7009799e09349400a8483f2f6ec5f402498257e022becf346a42c3')) AS id,
-                    uid, m.recipient_ceid, subject_hash, m.paperless_id, imap_folder,
-                    date_received as date,
-                    is_read, is_flagged, is_answered,
-                    -- 1. SENDER (Absender) sauber zusammenbauen mit Fallback, falls kein Name da ist
-                    IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
-                    CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
-                    cm_snd.email) AS sender,
-                    cm_snd.email_hash AS emailhash, -- Für deine Gravatar-/Sidebar-Logik
-                    
-                    -- 2. RECIPIENT (Empfänger) exakt genau so auflösen
-                    IF(c_rcp.display_name IS NOT NULL AND c_rcp.display_name != '', 
-                    CONCAT(c_rcp.display_name, ' <', cm_rcp.email, '>'), 
-                    cm_rcp.email) AS recipient
-                FROM mails as m
-                LEFT JOIN mail_bodies as mb on mb.mail_id = m.id
-                -- Doppelte Join-Struktur: Einmal für den Sender...
-                LEFT JOIN contact_emails AS cm_snd ON cm_snd.id = m.sender_ceid
-                LEFT JOIN contacts AS c_snd ON c_snd.id = cm_snd.contact_id
-
-                -- ...und einmal exakt das Gleiche für den Empfänger
-                LEFT JOIN contact_emails AS cm_rcp ON cm_rcp.id = m.recipient_ceid
-                LEFT JOIN contacts AS c_rcp ON c_rcp.id = cm_rcp.contact_id
+                    c.id AS contact_id,
+                    c.is_active as is_active,
+                    c.display_name as displayname,
+                    c.type,
+                    ce.id AS ceid,
+                    ce.email
+                FROM contact_emails ce
+                LEFT JOIN contacts as c ON c.id=ce.contact_id
                 
-                WHERE m.tenant_id = 6
-                AND imap_folder = 'INBOX'
-                AND (status IN('active') OR status IS NULL) ORDER BY date_received DESC LIMIT 20 OFFSET 0
+                WHERE c.tenant_id = 6
+                  AND ce.email_hash='ABC'
+                -- Hier kannst du nach Bedarf filtern
+                ORDER BY c.display_name, ce.email
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] Mails geladen: 20 in Ordner INBOX
-[13-Jun-2026 10:22:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\PushController
+[13-Jun-2026 11:04:31 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\PushController
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
+    [endpoint] => https://fcm.googleapis.com/fcm/send/fUHKfPPro_U:APA91bFBFA7mn7m79rPkVFFzK5vY4EGdFZwP0LrA-rsTb9Leut-faqWlaXGt7yeRWvqIpEUlVAgoLzo_PWDIdzjCW6w-y9tD2S0Wl8l2LzYfxpBwJ2NYGvn_MsmXBx6ZocJE3fwgjWNH
+    [expirationTime] => 
+    [keys] => Array
+        (
+            [p256dh] => BEjAP8D_GB6kYdxtLcCCHfjZGUJkwPfYpRJq8cKwhfZyt0JcqUAl0LZbbGvVlErvTMuaKrxb_WwaKWR_1sFvFXU
+            [auth] => 0sEROVP0hzXESKBFFv07MQ
+        )
+
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] Prozess: [18] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:31 Europe/Berlin] DB DEBUG: Array
 (
-    [action] => list_mails
-    [folder] => DMSDone
-    [page] => 1
-    [limit] => 20
-    [search] => 
+    [caller] => DB Query von: App\Services\PushService->saveSubscription
+    [sql] => INSERT INTO push_subscriptions (user_id, subscription_json, created_at) 
+                VALUES (1, '{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/fUHKfPPro_U:APA91bFBFA7mn7m79rPkVFFzK5vY4EGdFZwP0LrA-rsTb9Leut-faqWlaXGt7yeRWvqIpEUlVAgoLzo_PWDIdzjCW6w-y9tD2S0Wl8l2LzYfxpBwJ2NYGvn_MsmXBx6ZocJE3fwgjWNH\",\"expirationTime\":null,\"keys\":{\"p256dh\":\"BEjAP8D_GB6kYdxtLcCCHfjZGUJkwPfYpRJq8cKwhfZyt0JcqUAl0LZbbGvVlErvTMuaKrxb_WwaKWR_1sFvFXU\",\"auth\":\"0sEROVP0hzXESKBFFv07MQ\"}}', NOW())
+                ON DUPLICATE KEY UPDATE subscription_json = '{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/fUHKfPPro_U:APA91bFBFA7mn7m79rPkVFFzK5vY4EGdFZwP0LrA-rsTb9Leut-faqWlaXGt7yeRWvqIpEUlVAgoLzo_PWDIdzjCW6w-y9tD2S0Wl8l2LzYfxpBwJ2NYGvn_MsmXBx6ZocJE3fwgjWNH\",\"expirationTime\":null,\"keys\":{\"p256dh\":\"BEjAP8D_GB6kYdxtLcCCHfjZGUJkwPfYpRJq8cKwhfZyt0JcqUAl0LZbbGvVlErvTMuaKrxb_WwaKWR_1sFvFXU\",\"auth\":\"0sEROVP0hzXESKBFFv07MQ\"}}', created_at = NOW()
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:40 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:22:40 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:22:40 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:22:40 Europe/Berlin] DB DEBUG: Array
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\ContactController
+[13-Jun-2026 11:04:31 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\ContactController
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
-    [caller] => DB Query von: App\Services\MailProcessor->getMailsPaginated
-    [sql] => SELECT 
-                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), '2e7429ec8d7009799e09349400a8483f2f6ec5f402498257e022becf346a42c3')) AS id,
-                    uid, m.recipient_ceid, subject_hash, m.paperless_id, imap_folder,
-                    date_received as date,
-                    is_read, is_flagged, is_answered,
-                    -- 1. SENDER (Absender) sauber zusammenbauen mit Fallback, falls kein Name da ist
-                    IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
-                    CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
-                    cm_snd.email) AS sender,
-                    cm_snd.email_hash AS emailhash, -- Für deine Gravatar-/Sidebar-Logik
-                    
-                    -- 2. RECIPIENT (Empfänger) exakt genau so auflösen
-                    IF(c_rcp.display_name IS NOT NULL AND c_rcp.display_name != '', 
-                    CONCAT(c_rcp.display_name, ' <', cm_rcp.email, '>'), 
-                    cm_rcp.email) AS recipient
-                FROM mails as m
-                LEFT JOIN mail_bodies as mb on mb.mail_id = m.id
-                -- Doppelte Join-Struktur: Einmal für den Sender...
-                LEFT JOIN contact_emails AS cm_snd ON cm_snd.id = m.sender_ceid
-                LEFT JOIN contacts AS c_snd ON c_snd.id = cm_snd.contact_id
-
-                -- ...und einmal exakt das Gleiche für den Empfänger
-                LEFT JOIN contact_emails AS cm_rcp ON cm_rcp.id = m.recipient_ceid
-                LEFT JOIN contacts AS c_rcp ON c_rcp.id = cm_rcp.contact_id
-                
-                WHERE m.tenant_id = 6
-                AND imap_folder = 'DMSDone'
-                AND (status IN('active') OR status IS NULL) ORDER BY date_received DESC LIMIT 20 OFFSET 0
+    [action] => list_contacts
+    [query] => 
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] Mails geladen: 20 in Ordner DMSDone
-[13-Jun-2026 10:22:40 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:40 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[13-Jun-2026 11:04:31 Europe/Berlin] API Global Catch: Kontakt nicht auffindbar (id / query nicht gesetzt)
+[13-Jun-2026 11:04:31 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[13-Jun-2026 11:04:31 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\NotesController
+[13-Jun-2026 11:04:31 Europe/Berlin] DASHBOARD TYPE: object
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\NotesController
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
 (
-    [action] => list_mails
-    [folder] => INBOX
-    [page] => 1
-    [limit] => 20
-    [search] => 
+    [action] => get_notes
 )
 
-[13-Jun-2026 10:22:40 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:40 Europe/Berlin] ###listMails###
-[13-Jun-2026 10:22:40 Europe/Berlin] DB DEBUG: Array
-(
-    [caller] => DB Query von: App\Services\MailProcessor->getMailsPaginated
-    [sql] => SELECT 
-                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), '2e7429ec8d7009799e09349400a8483f2f6ec5f402498257e022becf346a42c3')) AS id,
-                    uid, m.recipient_ceid, subject_hash, m.paperless_id, imap_folder,
-                    date_received as date,
-                    is_read, is_flagged, is_answered,
-                    -- 1. SENDER (Absender) sauber zusammenbauen mit Fallback, falls kein Name da ist
-                    IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
-                    CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
-                    cm_snd.email) AS sender,
-                    cm_snd.email_hash AS emailhash, -- Für deine Gravatar-/Sidebar-Logik
-                    
-                    -- 2. RECIPIENT (Empfänger) exakt genau so auflösen
-                    IF(c_rcp.display_name IS NOT NULL AND c_rcp.display_name != '', 
-                    CONCAT(c_rcp.display_name, ' <', cm_rcp.email, '>'), 
-                    cm_rcp.email) AS recipient
-                FROM mails as m
-                LEFT JOIN mail_bodies as mb on mb.mail_id = m.id
-                -- Doppelte Join-Struktur: Einmal für den Sender...
-                LEFT JOIN contact_emails AS cm_snd ON cm_snd.id = m.sender_ceid
-                LEFT JOIN contacts AS c_snd ON c_snd.id = cm_snd.contact_id
-
-                -- ...und einmal exakt das Gleiche für den Empfänger
-                LEFT JOIN contact_emails AS cm_rcp ON cm_rcp.id = m.recipient_ceid
-                LEFT JOIN contacts AS c_rcp ON c_rcp.id = cm_rcp.contact_id
-                
-                WHERE m.tenant_id = 6
-                AND imap_folder = 'INBOX'
-                AND (status IN('active') OR status IS NULL) ORDER BY date_received DESC LIMIT 20 OFFSET 0
-)
-
-[13-Jun-2026 10:22:40 Europe/Berlin] Mails geladen: 20 in Ordner INBOX
-[13-Jun-2026 10:22:42 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:22:42 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:22:42 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:22:42 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:42 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:42 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:42 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:42 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMSDone
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:22:42 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:42 Europe/Berlin] Prozess: [18] Starte Sync für Ordner: DMSDone
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:42 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:22:42 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:22:42 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMSDone
-[13-Jun-2026 10:22:44 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMSDone): 2038 | Letzte UID in DB: 4950 | Höchste UID Server: 4950
-[13-Jun-2026 10:22:44 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:22:44 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:22:44 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:22:44 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:22:44 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:22:44 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:22:44 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => INBOX
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:22:44 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:22:44 Europe/Berlin] Prozess: [18] Starte Sync für Ordner: INBOX
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:44 Europe/Berlin] {imap.mail.me.com:993/imap/ssl}
-[13-Jun-2026 10:22:44 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:22:44 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:22:44 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}INBOX
-[13-Jun-2026 10:22:45 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (INBOX): 6162 | Letzte UID in DB: 131005 | Höchste UID Server: 131407
-[13-Jun-2026 10:22:45 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
-[13-Jun-2026 10:23:47 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:23:47 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:23:47 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:23:47 Europe/Berlin] Prozess: [26] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:23:47 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:23:47 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:23:47 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:23:47 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => Sent Messages
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:23:47 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:23:47 Europe/Berlin] Prozess: [27] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:23:47 Europe/Berlin] Prozess: [18] Starte Sync für Ordner: Sent Messages
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:23:47 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:23:47 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:23:47 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:23:47 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}Sent Messages
-[13-Jun-2026 10:23:49 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:23:49 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:23:49 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (Sent Messages): 6847 | Letzte UID in DB: 5307 | Höchste UID Server: 7320
-[13-Jun-2026 10:23:49 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
-[13-Jun-2026 10:23:49 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:23:49 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:23:49 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:23:49 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMSDone
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:23:49 Europe/Berlin] Prozess: [27] Starte Sync für Ordner: DMSDone
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:49 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:23:49 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMSDone
-[13-Jun-2026 10:23:49 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:23:49 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:23:49 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:23:49 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:23:49 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:23:49 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMSDone
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:23:49 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:23:49 Europe/Berlin] Prozess: [26] Starte Sync für Ordner: DMSDone
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:49 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:23:49 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:23:49 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMSDone
-[13-Jun-2026 10:23:51 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMSDone): 2038 | Letzte UID in DB: 4950 | Höchste UID Server: 4950
-[13-Jun-2026 10:23:51 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:23:51 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:23:51 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMSDone): 2038 | Letzte UID in DB: 4950 | Höchste UID Server: 4950
-[13-Jun-2026 10:23:51 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:23:51 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:24:46 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:24:46 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => INBOX
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:24:46 Europe/Berlin] Prozess: [26] Starte Sync für Ordner: INBOX
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:24:46 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] {imap.mail.me.com:993/imap/ssl}
-[13-Jun-2026 10:24:46 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:24:46 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}INBOX
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => INBOX
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:24:46 Europe/Berlin] Prozess: [27] Starte Sync für Ordner: INBOX
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:24:46 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] {imap.mail.me.com:993/imap/ssl}
-[13-Jun-2026 10:24:46 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:24:46 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}INBOX
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [action] => search_mail
-    [folder] => INBOX
-    [page] => 1
-    [limit] => 20
-    [search] => leh
-)
-
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:24:46 Europe/Berlin] SQL FEHLER [42S22]: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ce.display_name' in 'field list' | Query: SELECT m.uid, HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, m.subject_hash as sHash, m.date_received, m.paperless_id, 
-                        ce.display_name as contact_name
-                FROM mails as m
-                LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
-                WHERE m.tenant_id = :tenant_id 
-                AND m.imap_folder = :folder
-                AND (
-                    ce.email LIKE :search 
-                    OR ce.display_name LIKE :search
-                )
-                ORDER BY m.date_received DESC;
-[13-Jun-2026 10:24:46 Europe/Berlin] DB Query von: App\Services\MailProcessor->searchMail - SQL: SELECT m.uid, HEX(AES_ENCRYPT(CAST(m.id AS CHAR), 'CRYPTOKEY AUSGEBLENDET')) AS id, m.subject_hash as sHash, m.date_received, m.paperless_id, 
-                        ce.display_name as contact_name
-                FROM mails as m
-                LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
-                WHERE m.tenant_id = 6 
-                AND m.imap_folder = 'INBOX'
-                AND (
-                    ce.email LIKE '%leh%' 
-                    OR ce.display_name LIKE '%leh%'
-                )
-                ORDER BY m.date_received DESC;
-[13-Jun-2026 10:24:46 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:24:46 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:24:46 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:24:46 Europe/Berlin] Prozess: [21] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:24:46 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:24:46 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:24:48 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:24:48 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:24:48 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:24:48 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (INBOX): 6162 | Letzte UID in DB: 131253 | Höchste UID Server: 131407
-[13-Jun-2026 10:24:48 Europe/Berlin] Sync: Verarbeite 62 neue Mails.
-[13-Jun-2026 10:24:48 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:24:48 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:24:48 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:24:48 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:24:48 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMSDone
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:24:48 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:24:48 Europe/Berlin] Prozess: [21] Starte Sync für Ordner: DMSDone
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:48 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:24:48 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:24:48 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMSDone
-[13-Jun-2026 10:24:48 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (INBOX): 6162 | Letzte UID in DB: 131253 | Höchste UID Server: 131407
-[13-Jun-2026 10:24:48 Europe/Berlin] Sync: Verarbeite 62 neue Mails.
-[13-Jun-2026 10:24:51 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMSDone): 2038 | Letzte UID in DB: 4950 | Höchste UID Server: 4950
-[13-Jun-2026 10:24:51 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:24:51 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:24:56 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:24:56 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:24:59 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:24:59 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:01 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:01 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:09 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:09 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:10 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:10 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:33 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:33 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:36 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:36 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:39 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:39 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:45 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:45 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:47 Europe/Berlin] Transaktion fehlgeschlagen: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:25:47 Europe/Berlin] Fehler bei Mail: App\Services\ContactProcessor::getContactEmailId(): Return value must be of type int|bool, null returned
-[13-Jun-2026 10:26:03 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:26:03 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => INBOX
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:26:03 Europe/Berlin] Prozess: [21] Starte Sync für Ordner: INBOX
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:26:03 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] {imap.mail.me.com:993/imap/ssl}
-[13-Jun-2026 10:26:03 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:26:03 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}INBOX
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => Sent Messages
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:26:03 Europe/Berlin] Prozess: [27] Starte Sync für Ordner: Sent Messages
-[13-Jun-2026 10:26:03 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
-[13-Jun-2026 10:26:03 Europe/Berlin] CONSTRUCTOR CHECK: Ich bin in App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] DASHBOARD TYPE: object
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Geladen von Klasse: App\Api\MailController
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request Payload ist: Array
-(
-    [folder] => DMS
-    [maxNewMailsLimit] => 100
-)
-
-[13-Jun-2026 10:26:03 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
-[13-Jun-2026 10:26:03 Europe/Berlin] Prozess: [17] Starte Sync für Ordner: DMS
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_HOST
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PORT
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_USER
-[13-Jun-2026 10:26:03 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}Sent Messages
-[13-Jun-2026 10:26:03 Europe/Berlin] search Key In DB: IMAP_PASSWORD
-[13-Jun-2026 10:26:03 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMS
-[13-Jun-2026 10:26:05 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (INBOX): 6162 | Letzte UID in DB: 131407 | Höchste UID Server: 131407
-[13-Jun-2026 10:26:05 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:26:05 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (Sent Messages): 6847 | Letzte UID in DB: 5407 | Höchste UID Server: 7320
-[13-Jun-2026 10:26:05 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
-[13-Jun-2026 10:26:05 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
-[13-Jun-2026 10:26:05 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMS): 150 | Letzte UID in DB: 5161 | Höchste UID Server: 5161
-[13-Jun-2026 10:26:05 Europe/Berlin] keine neuen Mails
-[13-Jun-2026 10:26:05 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
+[13-Jun-2026 11:04:31 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.

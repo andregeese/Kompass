@@ -22,7 +22,7 @@ export default function paperlessModule(core) {
         async linkToPaperless(docId) {
             if (!confirm(`Mit Dokument #${docId} verknüpfen?`)) return;
             const fd = new FormData();
-            fd.append('id', this.selectedHash);
+            fd.append('id', this.selectedId);
             fd.append('paperless_id', docId);
             const data = await safeFetch('api.php?action=paperless_match', { method: 'POST', body: fd });
             if (data?.success) {

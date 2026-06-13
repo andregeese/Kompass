@@ -444,111 +444,118 @@ class MailProcessor extends \App\Core\Database
 
         error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
         $highestUid = $lastUid;
-        foreach ($uidsToProcess as $uid) {
 
-            try {
-                //starte Transaktion
-                $this->transaction(function () use ($uid, $folder, $imapFolder, &$imapStream, $pid) {
-                    $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
-                    $ov = $overview[0];
+        $this->transaction(function () use ($uidsToProcess, $imapStream, $folder, &$added, &$highestUid) {
+            foreach ($uidsToProcess as $uid) {
+                try {
+                    //starte Transaktion
+                    
+                        $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
+                        $ov = $overview[0];
 
-                    if (!empty($overview));
-                    $messageId = $ov->message_id ?? 'no-id-' . $ov->uid;
-                    $salt = $this->dashboard->getHashSalt(); // Falls du das in der Dashboard-Klasse hast
-                    // 2. Erzeuge den Hash (Binär für die DB ist korrekt!)
-                    $idHash = hash('sha256', $messageId . $salt, true);
-                    if (empty($ov->from)) {
-                        $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
-                        $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
-                    }
-                    if (empty($ov->to)) {
-                        $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
-                        $ov->to = $header->toaddress ?? 'unknown@unknown.local';
-                    }
-                    // E-Mail-Datum konvertieren
-                    $formattedDate = $ov->date ? date('Y-m-d H:i:s', strtotime($ov->date)) : null;
+                        if (!empty($overview));
+                        
+                        if (empty($ov->from)) {
+                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                            $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                        }
+                        if (empty($ov->to)) {
+                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                            $ov->to = $header->toaddress ?? 'unknown@unknown.local';
+                        }
 
-                    $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
+                        // E-Mail-Datum konvertieren
+                        $formattedDate = $ov->date ? date('Y-m-d H:i:s', strtotime($ov->date)) : null;
 
-                    // Anwendung in deinem Loop
-                    $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
-                    $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
-                    $fromName  = $fromData['name'];
-                    $fromEmail = $fromData['email'];
-                    $toName    = $toData['name'];
-                    $toEmail   = $toData['email'];
-                    // Für die DB-Felder:
-                    $senderString    = "$fromName <$fromEmail>";
-                    $recipientString = "$toName <$toEmail>";
-                    $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
-                    $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
-                    $sceid = ($senderId > 0) ? (int)$senderId : null;
-                    $rceid = ($reciepId > 0) ? (int)$reciepId : null;
-                    $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
-                    // 2. Extrahiere die echte, unberührte "Subject:"-Zeile (inkl. Schutz vor mehrzeiligen Betreffs)
-                    $rawSubject = $ov->subject; // Fallback
-                    if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
-                        $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
-                    }
-                    // 3. Jetzt jagen wir den garantiert unberührten Mime-Header durch deine neue Dekodierung
-                    $cleanSubject = $this->decodeMimeHeader($rawSubject);
-                    // 4. Und ab in die Verschlüsselung damit!
-                    $subjectHash = $this->dashboard->encrypt($cleanSubject);
-                    # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
-                    /*$sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
+                        $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
 
-                    $this->queryIt(
-                        $sqlMaillog,
-                        [
-                            "uid"           => $uid,
-                            "folder"        => $folder,
-                            "imapFolder"    => $imapFolder
-                        ]
-                    );*/
+                        // Anwendung in deinem Loop
+                        $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
+                        $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
+                        $fromName  = $fromData['name'];
+                        $fromEmail = $fromData['email'];
+                        $toName    = $toData['name'];
+                        $toEmail   = $toData['email'];
 
-                    $exists = $this->mail_exists(bin2Hex($idHash), $uid, $folder);
-                    if (!$exists) {
-                        // 1. Mail anlegen und ID zurückholen
-                        $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                                    VALUES (:uid, :message_id, :subject_hash,  :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
-                                    ;";
-                        $params = [
-                            'uid'           => $ov->uid,
-                            'message_id'    => $ov->message_id ?? '',
-                            'subject_hash'  => $subjectHash,
-                            'date_received' => $formattedDate,
-                            'folder'        => $folder,
-                            'is_read'       => (int)$ov->seen,
-                            'is_flagged'    => (int)$ov->flagged,
-                            'is_answered'   => (int)$ov->answered,
-                            'sceid'         => (int)$sceid,
-                            'rceid'         => (int)$rceid,
-                        ];
-                        $paramsLog = $params;
-                        $paramsLog['subject_hash'] = "HASH";
-                        //$paramsLog['recipient'] = "NIX FÜR KI";
-                        //$paramsLog['sender'] = "NIX FÜR KI";
-                        $paramsLog['message_id'] = "NIX FÜR KI";
+                        // Für die DB-Felder:
+                        $senderString    = "$fromName <$fromEmail>";
+                        $recipientString = "$toName <$toEmail>";
+                        
+                        $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
+                        $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
+                        $sceid = ($senderId > 0) ? (int)$senderId : null;
+                        $rceid = ($reciepId > 0) ? (int)$reciepId : null;
+                        $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
+                        // 2. Extrahiere die echte, unberührte "Subject:"-Zeile (inkl. Schutz vor mehrzeiligen Betreffs)
+                        $rawSubject = $ov->subject; // Fallback
+                        if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
+                            $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                        }
+                        // 3. Jetzt jagen wir den garantiert unberührten Mime-Header durch deine neue Dekodierung
+                        $cleanSubject = $this->decodeMimeHeader($rawSubject);
+                        // 4. Und ab in die Verschlüsselung damit!
+                        $subjectHash = $this->dashboard->encrypt($cleanSubject);
+                        # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
+                        /*$sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
 
-                        $dbResult = $this->queryIt(
-                            $sqlInsert,
-                            $params,
-                            true,
-                            true,
-                            false
-                        );
-                        # error_log(" übegebene Parameter: " . print_r($paramsLog, true));
+                        $this->queryIt(
+                            $sqlMaillog,
+                            [
+                                "uid"           => $uid,
+                                "folder"        => $folder,
+                                "imapFolder"    => $imapFolder
+                            ]
+                        );*/
 
-                    } else {
-                        # error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
-                    }
-                });
-            } catch (\Throwable $e) {
-                error_log("Fehler bei Mail: " . $e->getMessage());
+                        $message_id = $ov->message_id ?? '';
+
+                        $exists = $this->mail_exists($uid, $message_id, $folder);
+                        if (!$exists) {
+                            // 1. Mail anlegen und ID zurückholen
+                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
+                                        VALUES (:uid, :message_id, :subject_hash,  :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
+                                        ;";
+                            $params = [
+                                'uid'           => $ov->uid,
+                                'message_id'    => $message_id,
+                                'subject_hash'  => $subjectHash,
+                                'date_received' => $formattedDate,
+                                'folder'        => $folder,
+                                'is_read'       => (int)$ov->seen,
+                                'is_flagged'    => (int)$ov->flagged,
+                                'is_answered'   => (int)$ov->answered,
+                                'sceid'         => (int)$sceid,
+                                'rceid'         => (int)$rceid,
+                            ];
+
+                            $paramsLog = $params;
+                            $paramsLog['subject_hash'] = "HASH";
+                            $paramsLog['uid'] = "NIX FÜR KI";
+                            //$paramsLog['sender'] = "NIX FÜR KI";
+                            $paramsLog['message_id'] = "NIX FÜR KI";
+
+                            $dbResult = $this->queryIt(
+                                $sqlInsert,
+                                $params,
+                                true,
+                                true,
+                                false
+                            );
+                            # error_log(" übegebene Parameter: " . print_r($paramsLog, true));
+
+                        } else {
+                            # error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
+                        }
+                    
+                } catch (\Throwable $e) {
+                    error_log("Fehler bei Mail: " . $e->getMessage());
+                }
+                $added++;
+                $highestUid = max($highestUid, (int)$uid);
             }
-            $added++;
-            $highestUid = max($highestUid, (int)$uid);
-        }
+        });
+            
+        
 
         // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen und PHP 8+ absichern
         if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
@@ -739,18 +746,18 @@ class MailProcessor extends \App\Core\Database
     /**
      * Prüft, ob eine E-Mail schon existiert oder nicht
      */
-    private function mail_exists($id, $uid, $folder)
+    private function mail_exists($uid, $message_id, $folder)
     {
         $debugSQL = "SELECT Count(0) as Anzahl from mails 
                       WHERE tenant_id=:tenant_id 
                         AND (
-                             (id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND imap_folder=:folder)
-                         OR (uid=:uid AND imap_folder=:folder)
-                        );";
+                            (uid=:uid AND imap_folder=:folder AND imap_folder=:folder)
+                            OR(message_id=:messageid AND imap_folder=:folder)) ;";
+        
         $params = [
-            'id' => $id,
-            'folder'  => $folder,
-            'uid'     => $uid
+            'folder'        => $folder,
+            'uid'           => $uid,
+            'message_id'    => $message_id
         ];
 
         $dbResult = $this->queryIt(
@@ -1494,8 +1501,8 @@ class MailProcessor extends \App\Core\Database
             'id'         => $row['id'],
             'uid'          => $row['uid'] ?? null,
             'subject'      => $cleanSubject,
-            //'sender'       => $cleanSender,
-            //'recipient'    => $cleanRecipient,
+            'sender'       => $row['sender'],
+            'recipient'    => $row['recipient'],
             'date'         => date('d.m.Y H:i', strtotime($row['date'])),
             'paperless_id' => $row['paperless_id'],
             'is_read'       => $row['is_read'],

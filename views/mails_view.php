@@ -54,7 +54,7 @@
                     <div @click="viewMail(mail); currentMail=mail; isSidebarOpen = false; $dispatch('toggle-sidebar-request', { tab: 'context' });" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
                         :class="{
-                                'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedHash === mail.hash,
+                                'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedId === mail.id,
                                 'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined,
                                 'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read
                             }">
@@ -63,7 +63,7 @@
                         <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-gray-400 mb-1 min-w-0">
                             <div class="flex items-center space-x-1 truncate mr-2">
                                 <span x-show="mail.is_answered" class="text-blue-500 font-bold">↩️</span>
-                                <span class="text-blue-500 dark:text-blue-400 truncate" :class="mail.is_read===0 ? 'font-black' : 'font-medium'" x-text="mail.display_name"></span>
+                                <span class="text-blue-500 dark:text-blue-400 truncate" :class="mail.is_read===0 ? 'font-black' : 'font-medium'" x-text="mail.sender"></span>
                             </div>
                             <div class="flex items-center space-x-1.5 shrink-0">
                                 <span x-show="mail.is_flagged" class="text-amber-500 text-[12px]">📌</span>

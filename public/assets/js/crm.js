@@ -358,7 +358,7 @@ window.crmEngine = function() {
         page: 1,
         limit: 20,
         hasMore: true,
-        selectedHash: null,
+        selectedId: null,
         mailSearchQuery: '',
         manualSearchQuery: '',
         currentMail: null,
