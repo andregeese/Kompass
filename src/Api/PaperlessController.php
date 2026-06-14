@@ -87,6 +87,21 @@ class PaperlessController extends \App\Core\BaseController {
         return ['correspondents' => $results];
     }
 
+    public function getTagsBySearch()
+    {
+        return $this->process($this->paperlessProcess, 'getTagsBySearch', 'tags', '');
+    }
+
+    public function getTagsByContact()
+    {
+        return $this->process($this->paperlessProcess, 'getTagsByContact', 'tags', '');
+    }
+
+    public function updateTagToContact()
+    {
+        return $this->process($this->paperlessProcess, 'updateTagToContact', 'tagContact','');
+    }
+
 
     /**
      * Verbindet Kontakt mit PaperlessKorrespondent

@@ -92,11 +92,12 @@ $routes = [
     'delete_all_mails'              => [App\Api\MailController::class, 'deleteAllMailsByHash'],
     'dms'                           => [App\Api\MailController::class, 'moveToDms'],
     'pdf'                           => [App\Api\MailController::class, 'handlePdf'],
-    'sync_mails'                          => [App\Api\MailController::class, 'syncMails'],
+    'sync_mails'                    => [App\Api\MailController::class, 'syncMails'],
     'track_folders'                 => [App\Api\MailController::class, 'trackFolders'],
     'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
+    'get_mail_data_for_note'        => [App\Api\MailController::class, 'getMailById'],
 
     //Appointment
     'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
@@ -107,8 +108,6 @@ $routes = [
     'get_parti'                     => [App\Api\AppointmentsController::class, 'getPartition'],
     'save_appointment'              => [App\Api\AppointmentsController::class, 'saveAppointment'],
     'update_appointment_contact'    => [App\Api\AppointmentsController::class, 'updateAppointment'],
-    //Sidebar
-
 
     // Paperless
     'get_last_documents'            => [App\Api\PaperlessController::class, 'getLastDocuments'],
@@ -120,13 +119,18 @@ $routes = [
     'link_mail_to_paperless'        => [App\Api\PaperlessController::class, 'linkMail'],
     'get_correspondet'              => [App\Api\PaperlessController::class, 'getCorrespondentById'],
     'get_correspondent_by_contact'  => [App\Api\PaperlessController::class, 'getCorrespondentByContact'],
+    'get_tags_by_search'            => [App\Api\PaperlessController::class, 'getTagsBySearch'],
+    'get_tags_by_contact'           => [App\Api\PaperlessController::class, 'getTagsByContact'],
+    'update_tag_to_contact'         => [App\Api\PaperlessController::class, 'updateTagToContact'],
+    
     'search_correspondents'         => [App\Api\PaperlessController::class, 'searchCorrespondents'],
+    'search_tags'                   => [App\Api\PaperlessController::class, 'searchTags'],
     'get_correspondets'             => [App\Api\PaperlessController::class, 'getCorrespondents'],
     'link_contact_item'             => [App\Api\PaperlessController::class, 'linkContact'],
     'update_paperless_to_contact'   => [App\Api\PaperlessController::class, 'linkContact'],
 
     // Contacts
-    'search_contact'                => [App\Api\ContactController::class, 'getContactByHashMail'],
+    'search_contact'                => [App\Api\ContactController::class, 'getContactByIdMail'],
     'search_mail_address'           => [App\Api\ContactController::class, 'searchMailAddress'],
     'insert_contact'                => [App\Api\ContactController::class, 'insert'],
     'save_contact_manual'           => [App\Api\ContactController::class, 'saveSmallContact'],
@@ -141,6 +145,7 @@ $routes = [
     'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],
     'get_graph'                     => [App\Api\ContactController::class, 'getContacts'],
     'update_mail_to_contact'        => [App\Api\ContactController::class, 'updateContactEmailToContact'],
+    
 
     // System
     'system_status'                 => [App\Api\SystemController::class, 'status'],

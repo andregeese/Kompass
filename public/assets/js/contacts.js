@@ -15,21 +15,27 @@ const contactsViewComponent = () => ({
     emailQuery: '',
     emailResults: [],     // Gefundene E-Mails zum Kontakt
     loadingEmails: false,
+
+    //Tags
+    loadingTags: false,
+    tagQuery: '',
+    tagResults: [],
     
     paperlessQuery: '',
     paperlessResults: [], // Ergebnisse von Paperless
     loadingPaperless: false,
     matchResults: [],
+
     loading: false,
     loadingMatch: false,
     isMatchPanelOpen: false,
     isEditing: false,
-    activeContact: { displayname: '', type: 'person', emails: [], linked_correspondents: []},
+    activeContact: { displayname: '', type: 'person', emails: [], linked_correspondents: [], tags: []},
     simulation: null,
 
     async initContacts() {
         const urlParams = new URLSearchParams(window.location.search);
-        const hashValue = urlParams.get('hash'); //mail_hash
+        const hashValue = urlParams.get('hash'); //id_hash
         
         //Wenn ein Hash mitkommt suche den Kontakt dirket!
         if (hashValue) {
@@ -70,18 +76,7 @@ const contactsViewComponent = () => ({
             return 0;
         });
     },
-    /*toggleEmail(contact) {
-        if (!this.activeContact.emails) this.activeContact.emails = [];
-        
-        const contactId = Number(contact.ceid);
-        const existingIndex = this.activeContact.emails.findIndex(e => Number(e.ceid) === contactId);
-        
-        if (existingIndex === -1) {
-            this.activeContact.emails.push({ ceid: contactId, email: contact.email });
-        } else {
-            this.activeContact.emails.splice(existingIndex, 1);
-        }
-    },*/
+
     // --- Kontakt-Logik ---
     async loadContacts() 
     {
@@ -100,7 +95,6 @@ const contactsViewComponent = () => ({
             const data = await apiCall('save_contact', this.activeContact, 'POST');
 
             if (data.success) {
-                Object.assign(contact, res.data || contact);
                 this.closeMatchModal();
                 this.loadContacts();
             }
@@ -115,6 +109,7 @@ const contactsViewComponent = () => ({
             displayname: '', 
             type: 'person', 
             emails: [],
+            tags: [],
             linked_correspondents: [],
             paperless_id: null,
             paperless_name: null 
@@ -123,12 +118,13 @@ const contactsViewComponent = () => ({
         this.paperlessResults = [];
         this.emailQuery = '';
         this.matchResults = [];
+        this.tagQuery = '';
+        this.tagResults = [];
         this.isMatchPanelOpen = true;
     },
 
     // --- Modal & Verknüpfungs-Logik ---
     openMatchModal(contact) {
-        console.log(contact.paperless_ids);
         // Tiefe Kopie, damit Änderungen nicht sofort im Grid landen, bevor man speichert
         this.activeContact = JSON.parse(JSON.stringify(contact));
         
@@ -142,8 +138,26 @@ const contactsViewComponent = () => ({
         if (this.activeContact.id) {
             this.fetchEmailsForContact(this.activeContact.id);
             this.fetchCorresForContact(this.activeContact.id);
-            
+            this.fetchTagsForContact(this.activeContact.id);
         }
+    },
+
+    closeMatchModal() {
+        this.isMatchPanelOpen = false;
+
+        this.emailQuery = '';
+        this.paperlessQuery = '';
+        this.tagQuery = ''; // KORREKTUR: Reset
+
+        this.matchResults = [];
+        this.paperlessResults = [];
+        this.tagResults = []; // KORREKTUR: Reset
+
+        this.loadingMatch = false;
+        this.loadingPaperless = false;
+        this.loadingTags = false; // KORREKTUR: Reset
+
+        this.activeContact = null;
     },
 
     // --- Paperless UI Logik ---
@@ -218,21 +232,6 @@ const contactsViewComponent = () => ({
         }
     },
 
-    closeMatchModal() {
-        this.isMatchPanelOpen = false;
-
-        this.emailQuery = '';
-        this.paperlessQuery = '';
-
-        this.matchResults = [];
-        this.paperlessResults = [];
-
-        this.loadingMatch = false;
-        this.loadingPaperless = false;
-
-        this.activeContact = null;
-    },
-
     async fetchPaperlessNameById() {
         const data = await apiCall('get_correspondet', {c:this.activeContact.id}, 'GET');
         console.log(data);
@@ -248,16 +247,6 @@ const contactsViewComponent = () => ({
         //this.loadingMatch = false;
     },
 
-    async fetchEmailsForContact(id) {
-        this.loadingMatch = true;
-        const data = await apiCall('get_emails_by_contact', {query:id},'GET');
-        if (data?.success) {
-            this.activeContact.emails = data.details.contacts || [];
-            this.matchResults = [...this.activeContact.emails];
-        }
-        this.loadingMatch = false;
-    },
-
     async saveContact() 
     {
         const data = await apiCall('save_contact', this.activeContact, 'POST');
@@ -268,21 +257,6 @@ const contactsViewComponent = () => ({
         } else {
             showNotify(data);
         }
-    },
-    /**
-     * @deprecated
-     * Paperless-Verknüpfung
-     */
-    async linkToMatch(contactId, itemId) 
-    {
-        const data = await apiCall('link_contact_item', { contactId: contactId, correspondentId: itemId }, 'POST');
-        
-        if (data?.success) {
-            console.log("YEAH, Kontakt verknüpft!");
-        }
-        
-        // UI aktualisieren: Panel schließen
-        //this.closeMatchModal();
     },
 
     /**
@@ -320,9 +294,8 @@ const contactsViewComponent = () => ({
             this.loadingEmails = false;
         }
     },
-
-
-     async performMatchSearch() {
+    
+    async performMatchSearch() {
         if (this.emailQuery.length < 2) {
             // Zeige nur die bereits verknüpften E-Mails an
             this.matchResults = [...this.activeContact.emails];
@@ -378,6 +351,71 @@ const contactsViewComponent = () => ({
             cid: this.activeContact.id, 
             action: isLinked ? 'unlink' : 'link'
         }, 'POST' );
+    },
+
+    //TAGS
+    async fetchTagsForContact(id) {
+        const data = await apiCall('get_tags_by_contact', {cid:id}, 'GET');
+        if (data?.success) {
+            this.activeContact.tags = data.details.activeTags || [];
+            this.tagResults = [...this.activeContact.tags];
+        }
+    },
+
+    async performTagSearch() {
+        if (!this.activeContact) return;
+        if (this.tagQuery.trim().length < 2) {
+            this.tagResults = [...(this.activeContact.tags ?? [])];
+            return;
+        }
+        
+        this.loadingTags = true;
+        try {
+            const data = await apiCall('get_tags_by_search', {query: this.tagQuery}, 'GET');
+            const rawResults = data.details?.tags || [];
+            
+            // Mappt id, name und color für das UI
+            const normalizedResults = rawResults.map(item => ({
+                id: item.id,
+                name: item.name,
+                color: item.color || '#a8a29e'
+            }));
+            
+            const existingTags = Array.isArray(this.activeContact.tags) ? this.activeContact.tags : [];
+            const combined = [...existingTags, ...normalizedResults];
+            
+            // Einzigartig machen nach Tag-ID (nicht mehr ceid!)
+            this.tagResults = Array.from(new Map(combined.map(item => [Number(item.id), item])).values());
+        } catch (err) {
+            console.error("Tag-Suche fehlgeschlagen:", err);
+        } finally {
+            this.loadingTags = false;
+        }
+    },
+
+    isTagLinked(tagId) {
+        if (!this.activeContact?.tags) return false;
+        return this.activeContact.tags.some(t => Number(t.id) === Number(tagId));
+    },
+    
+    async toggleTag(tagObj) {
+        const isLinked = this.isTagLinked(tagObj.id);
+
+        if (isLinked) {
+            this.activeContact.tags = this.activeContact.tags.filter(t => Number(t.id) !== Number(tagObj.id));
+        } else {
+            this.activeContact.tags.push(tagObj);
+        }
+        
+        try {
+            await apiCall('update_tag_to_contact', {
+                tagId: tagObj.id, 
+                cid: this.activeContact.id, 
+                action: isLinked ? 'unlink' : 'link'
+            }, 'POST');
+        } catch (e) {
+            console.error("Tag-Zuweisung auf Server fehlgeschlagen", e);
+        }
     },
     
     // --- D3 Netzwerk-Logik ---
@@ -562,7 +600,7 @@ const contactsViewComponent = () => ({
 });
 
 
-// Sicherheits-Registrierung am Ende von mail.js
+// Sicherheits-Registrierung am Ende von .js
 if (window.Alpine) {
     // Falls Alpine bereits voll geladen ist
     window.Alpine.data('contactsView', contactsViewComponent);

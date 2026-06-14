@@ -89,7 +89,6 @@ const rightSidebarComponent = () => ({
     fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
         
-        // Das kommt direkt vom Mail-Sender (z.B. "VR-Bank Freudenberg-Niederfischbach eG <info@vr-bank-fn.de>")
         const rawSender = mail.sender || mail.from || ''; 
         
         let parsedName = '';
@@ -105,6 +104,7 @@ const rightSidebarComponent = () => ({
             parsedEmail = rawSender.trim();
             parsedName = parsedEmail.split('@')[0]; // Nimmt den Teil vor dem @ als Namens-Vorschlag
         }
+
         // Jetzt die bereinigten Werte in deine Sidebar-Felder jagen
         this.formData.email = parsedEmail;
         this.formData.name = parsedName;
@@ -113,6 +113,7 @@ const rightSidebarComponent = () => ({
         //this.searchDMS();
         //this.loadPaperlessTree(mail);
         this.getTimelineofContact();
+
         if (mail.id) {
             this.checkCRMStatus(mail.id);
         }
@@ -318,14 +319,14 @@ const rightSidebarComponent = () => ({
     /* Prüft, ob der Absender bereits im CRM existiert oder ein DMS-Vorschlag vorliegt
     @param hash = mail.id gehasht
     */
-    async checkCRMStatus(hash) 
+    async checkCRMStatus(id) 
     {
         console.log("checkCRMStatus");
         this.crmLoading = true;
         this.dmsLoading = true;
         try {
             // 1. Erst CRM Status prüfen, um an die Mailadresse zu kommen
-            const data = await apiCall('search_contact', {hash:hash}, 'GET');
+            const data = await apiCall('search_contact', {id:id}, 'GET');
             
             if (data?.success && data?.details?.contact) {
                 const c = data.details.contact[0];

@@ -118,7 +118,6 @@
                             class="w-full text-sm p-2 mb-3 rounded-lg border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 focus:border-blue-500 outline-none">
 
                         <div class="flex flex-wrap gap-2">
-                            <p x-text="JSON.strigify(paperlessResults)"></p>
                             <template x-for="corr in paperlessResults" :key="corr.id">
                                 <button type="button"
                                     @click="togglePaperless(corr)"
@@ -137,6 +136,40 @@
 
                         <div x-show="paperlessResults.length === 0 && paperlessQuery.length < 2" class="text-xs text-slate-400 italic mt-1">
                             Tippe oben, um Korrespondenten zu suchen.
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 dark:border-gray-700 mt-4">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between items-center">
+                            <span>Paperless Tags</span>
+                            <span x-show="loadingTags" class="text-blue-500 italic lowercase">suche...</span>
+                        </label>
+
+                        <input type="text" x-model="tagQuery" @input.debounce.500ms="performTagSearch()"
+                            placeholder="Tag suchen..."
+                            class="w-full text-sm p-2 mb-3 rounded-lg border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 focus:border-blue-500 outline-none">
+
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="tag in tagResults" :key="tag.id">
+                                <button type="button"
+                                    @click="toggleTag(tag)"
+                                    :class="isTagLinked(tag.id) 
+                                        ? 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400' 
+                                        : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-gray-900 dark:border-gray-700 dark:text-slate-400'"
+                                    class="flex-shrink-0 inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-medium border transition-all hover:scale-[1.02]">
+
+                                    <span :style="'background-color: ' + tag.color" class="w-2 h-2 rounded-full mr-1.5 flex-shrink-0 border border-black/10"></span>
+
+                                    <span x-text="tag.name" class="whitespace-nowrap truncate max-w-[120px]"></span>
+
+                                    <span class="ml-1.5 opacity-50 font-bold" 
+                                        x-text="isTagLinked(tag.id) ? '✕' : '+'"></span>
+                                </button>
+                            </template>
+                        </div>
+
+                        <div x-show="tagResults.length === 0 && tagQuery.length < 2" class="text-xs text-slate-400 italic mt-1">
+                            Tippe oben, um Tags zu suchen.
                         </div>
                     </div>
 

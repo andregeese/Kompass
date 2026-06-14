@@ -82,15 +82,15 @@ class ContactController extends \App\Core\BaseController {
     
     }
     
-    public function getContactByHashMail() 
+    public function getContactByIdMail() 
     {
-        $hash = $this->request['hash'] ?? '';
         
-        if (empty($hash)) {
-            throw new \Exception("Kein E-Mail-Hash übergeben");            
-        }
-        
-        $email = $this->contactProcess->getContactByMail($hash); 
+        return $this->process(
+            $this->contactProcess,
+            'getContactByMail',
+            'contact',
+            ''
+        ); 
         return ['contact' => $email];
     }
     /**
@@ -100,37 +100,21 @@ class ContactController extends \App\Core\BaseController {
     {
         return $this->process($this->contactProcess, 'getTimelineData', 'timeline', '');
     }
+
     /**
      * Suche nach einer E-Mail-Adresse
      */
     public function searchMailAddress()
     {
-        $query = $this->request->get('query');
-        
-        // 2. Validierung: Suchbegriff darf nicht komplett leer sein
-        if (empty($query)) {
-            throw new \Exception("Kein Suchbegriff übergeben.");
-        }
-        // 3. Aufruf des Processors mit den nun existierenden Variablen
-        $mailDetails = $this->contactProcess->searchMailAddress($query); 
-        
-        if (!$mailDetails) {
-            if (empty($mailDetails)) {
-                return [
-                    "mails" => [],
-                    "ui" => [
-                        'notify'  => true,
-                        'title'   => 'Suche',
-                        'message' => 'Keine E-Mails gefunden.',
-                        'type'    => 'info'
-                    ]
-                ];
-            }
-        }
-        return [
-            "mails" => $mailDetails
-        ];
+        return $this->process(
+            $this->contactProcess,
+            'searchMailAddress',
+            'mails',
+            ''
+        );
     }
+
+
     /**
      * @unused / @deprecated
      * Verknüpft Mail mit Konakt

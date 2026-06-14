@@ -103,10 +103,10 @@ class PaperlessProcessor extends \App\Core\Database
     public function getPaperlessIdsByMailID(string $id): array
     {
         error_log(__FUNCTION__);
-        $salt = $this->dashboard->getHashSalt();
+        
         $sql = "SELECT 
                 GROUP_CONCAT(DISTINCT m.paperless_id) as dokumente,
-                GROUP_CONCAT(DISTINCT c.paperless_id) AS korrespondenten
+                GROUP_CONCAT(DISTINCT cpm.correspondent_id) AS korrespondenten
                 -- CASE 
                 --     WHEN m.paperless_id IS NOT NULL THEN 'linked' 
                 --     ELSE 'standalone' 
@@ -117,10 +117,10 @@ class PaperlessProcessor extends \App\Core\Database
             -- 2. Von der E-Mail-Adresse zum Kontakt
             INNER JOIN contacts c ON ce.contact_id = c.id
             -- 3. Vom Kontakt zu den Paperless-Mappings
-            -- LEFT JOIN contact_paperless_mappings cpm ON c.id = cpm.contact_id
+            LEFT JOIN contact_paperless_map cpm ON c.id = cpm.contact_id
             WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND m.tenant_id=:tenant_id;";
 
-        $dbResult = $this->queryIt($sql, ['id' => $id]);
+        $dbResult = $this->queryIt($sql, ['id' => $id], false, false, true);
         
         // 1. Prüfen, ob überhaupt ein Ergebnis da ist
         if (!empty($dbResult->data) && is_array($dbResult->data->fetched)) {
@@ -630,7 +630,9 @@ class PaperlessProcessor extends \App\Core\Database
         $idString = is_array($correspondentId) 
         ? implode(',', array_map('intval', $correspondentId)) 
         : intval($correspondentId);
-        $url = "/api/documents/?correspondent__id__in=" . $idString . "&page_size=10";
+
+        $url = "/api/documents/?correspondent__id__in=" . $idString . "&page_size=500&tag=132";
+
         //$url = "/api/documents/?correspondent__id__in=" . intval($correspondentId) . "&page_size=10";
         $RAWResponse = $this->request($url);
         $result = json_decode($RAWResponse, true);
@@ -681,6 +683,8 @@ class PaperlessProcessor extends \App\Core\Database
         $responseData = json_decode($jsonResponse, true);
         return (int)($responseData['document_id'] ?? $responseData['id'] ?? 0);
     }
+
+
     /**
      * Verknüpft eine Mail mit einem Paperless-Dokument und setzt den Status auf archived.
      * @param string $hash Der SHA-256 Hash der Mail-ID + Salt
@@ -699,6 +703,98 @@ class PaperlessProcessor extends \App\Core\Database
             'hash' => $hash
         ]);
     }
+
+    public function getTagsBySearch(string $query)
+    {
+        $params = [
+            'name__icontains'   => $query, 
+            'ordering'          => 'name',
+            'page_size'         => 20
+            //'fields'            => 'id,name' // Groß genug, um die 4 Wochen abzudecken
+        ];
+
+        $tagResponse = $this->request('/api/tags/?' . http_build_query($params));
+        $result = json_decode($tagResponse, true);
+
+        return $result['results'];
+    }
+
+    /**
+     * Holt alle Tags aus der DB
+     */
+    public function getTagsByContact($cid)
+    {
+        $sql = "SELECT tag_id 
+                  FROM contact_paperless_map 
+                 WHERE tenant_id=:tenant_id 
+                   AND contact_id=:cid;";
+        $params = [
+            'cid' => $cid
+        ];
+
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+        if (!$dbResult->success){
+            throw new Exception("Fehler beim Abrufen der Tags");
+        }
+    
+
+        $corrIds = array_column($dbResult->data->fetched, 'correspondent_id');
+
+        // 2. Falls keine IDs gefunden wurden, direkt abbrechen (spart API-Call)
+        if (empty($corrIds)) {
+            return [];
+        }
+
+        //jetzt den namen von correspondent in api finden
+        $b = $this->getTagsById($corrIds);
+
+        return $b;
+
+    }
+
+    //holt den Namen des Tag/der Tags aus Paperless
+    private function getTagsById(string | array $ids)
+    {
+        if (empty($ids))
+        {
+            return [];
+        }
+        $idString = implode(',', $ids);
+        
+        $params = [
+            'id__in'   => $idString
+        ];
+        // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
+        $url = '/api/tags/?' . http_build_query($params);
+        
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        }
+        $results = $paperlessData['results'] ?? [];
+
+        // Paperless liefert die Liste im 'results'-Key
+        $results = $paperlessData['results'] ?? ["LEER"];
+        $formatted = [];
+        foreach ($results as $key => $item) 
+        {
+            if (empty($item['id'])) continue;
+            if (!isset($item['id']) || !isset($item['name'])) {
+                continue;
+            }
+            $formatted[] = [
+                'id'    => (int)$item['id'],
+                'name'  => (string)$item['name']
+            ];
+        }
+        
+        return $formatted;
+    }
+
+
     /**
      * tbd: Sicherstellen, dass es DER Kontakt ist!
      * security-patch notwendig
@@ -731,8 +827,31 @@ class PaperlessProcessor extends \App\Core\Database
         return $this->queryIt($sql, $params);
     }
 
+    public function updateTagToContact(int $cid, int $tagId, string $action)
+    {
+        $params = [
+            'cid'      => $cid,
+            'tagid'    => $tagId
+        ];
+
+        $sql = "DELETE 
+                  FROM contact_paperless_map 
+                 WHERE 
+                    contact_id=:cid
+                  AND tag_id=:tagid
+                  AND tenant_id=:tenant_id";
+
+        if (strtolower($action) == "link"){
+            $sql = "INSERT INTO contact_paperless_map (contact_id, tag_id, tenant_id) 
+                         VALUES (:cid, :tagid, :tenant_id);";
+        }
+        
+        return $this->queryIt($sql, $params);
+    }
+
 
     /**
+     * @deprecated
      * erstellt den MailTree von Paperless und Mails
      */
     public function getMailTree($hash, $correspondentid= null)

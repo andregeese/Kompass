@@ -72,6 +72,16 @@ class MailController extends \App\Core\BaseController
         });
         return $data;
     }
+
+    public function getMailById()
+    {
+        return $this->process(
+            $this->mailProcess,
+            'getMailById',
+            'mail',
+            ''
+        );
+    }
     /**
      * Suche nach einer Mail
      */

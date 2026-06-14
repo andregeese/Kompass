@@ -115,16 +115,20 @@ class MailProcessor extends \App\Core\Database
     public function getMailById($id)
     {
         error_log("## " . __FUNCTION__ . " ##");
-        $sql = "SELECT m.uid, m.date_received, m.sender_ceid, m.recipient_ceid, m.status, m.imap_folder
+        $sql = "SELECT m.uid, m.date_received, m.sender_ceid, m.recipient_ceid, m.status, m.imap_folder, ce.email, c.display_name
                   FROM mails m
-                 WHERE tenant_id=:tenant_id
-                    AND id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
-                    AND (status NOT IN('deleted') OR status IS NULL) 
-                    LIMIT 1";
+                INNER JOIN contact_emails as ce ON ce.id = m.sender_ceid
+                INNER JOIN contacts as c ON c.id = ce.contact_id
+                 WHERE m.tenant_id=:tenant_id
+                    AND m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
+                    AND (m.status NOT IN('deleted') OR m.status IS NULL) 
+                    LIMIT 1;";
 
         $dbResult = $this->queryIt(
             $sql,
-            ['id' => $id],
+            [
+                'id' => $id
+            ],
             false,
             false,
             true
@@ -402,16 +406,19 @@ class MailProcessor extends \App\Core\Database
      */
     public function syncMails(int $maxNewMailsLimit, string $folder): array
     {
-        //@set_time_limit(120);
+        @set_time_limit(240);
         $pid = getmypid();
         error_log("Prozess: [$pid] Starte Sync für Ordner: $folder");
         $added = 0;
+        $lastUid = 0;
+
         //$result = ['success' => false, 'added' => 0, 'error' => null];
-        $imapFolder = $this->getFullFolderPath($folder);
+
         $imapStream = $this->connectIMAP($folder);
         // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
         $checkPoint = $this->getSyncCheckpoint($folder);
+
         $updateCount = 0;
 
         if (!empty($checkPoint->data) && !empty($checkPoint->data->fetched))
@@ -431,133 +438,111 @@ class MailProcessor extends \App\Core\Database
         sort($newUids);
         $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
 
-        if (empty($uidsToProcess)) {
-            error_log("keine neuen Mails");
-            // FIX: Auch hier die Verbindung sauber schließen, bevor wir vorzeitig abbrechen!
-            if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
-                @imap_close($imapStream);
-            }
-            
-            return [];
-            
-        }
-
         error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
         $highestUid = $lastUid;
 
-        $this->transaction(function () use ($uidsToProcess, $imapStream, $folder, &$added, &$highestUid) {
-            foreach ($uidsToProcess as $uid) {
-                try {
-                    //starte Transaktion
-                    
-                        $overview = imap_fetch_overview($imapStream, (string)$uid, FT_UID);
-                        $ov = $overview[0];
+        // 🚀 SCHRITT 1: IMAP-Batch-Fetch ausserhalb der Transaktion!
+        // Wir bauen einen String wie "12345,12346,12347"
+        $uidSequence = implode(',', $uidsToProcess);
+        $overviews = !empty($uidsToProcess) ? imap_fetch_overview($imapStream, $uidSequence, FT_UID) : [];
 
-                        if (!empty($overview));
-                        
-                        if (empty($ov->from)) {
-                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
-                            $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
-                        }
-                        if (empty($ov->to)) {
-                            $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
-                            $ov->to = $header->toaddress ?? 'unknown@unknown.local';
-                        }
-
-                        // E-Mail-Datum konvertieren
-                        $formattedDate = $ov->date ? date('Y-m-d H:i:s', strtotime($ov->date)) : null;
-
-                        $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
-
-                        // Anwendung in deinem Loop
-                        $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
-                        $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
-                        $fromName  = $fromData['name'];
-                        $fromEmail = $fromData['email'];
-                        $toName    = $toData['name'];
-                        $toEmail   = $toData['email'];
-
-                        // Für die DB-Felder:
-                        $senderString    = "$fromName <$fromEmail>";
-                        $recipientString = "$toName <$toEmail>";
-                        
-                        $senderId = $contactProcess->insertContact($fromName, $fromEmail, 'person');
-                        $reciepId = $contactProcess->insertContact($toName, $toEmail, 'person');
-                        $sceid = ($senderId > 0) ? (int)$senderId : null;
-                        $rceid = ($reciepId > 0) ? (int)$reciepId : null;
-                        $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
-                        // 2. Extrahiere die echte, unberührte "Subject:"-Zeile (inkl. Schutz vor mehrzeiligen Betreffs)
-                        $rawSubject = $ov->subject; // Fallback
-                        if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
-                            $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
-                        }
-                        // 3. Jetzt jagen wir den garantiert unberührten Mime-Header durch deine neue Dekodierung
-                        $cleanSubject = $this->decodeMimeHeader($rawSubject);
-                        // 4. Und ab in die Verschlüsselung damit!
-                        $subjectHash = $this->dashboard->encrypt($cleanSubject);
-                        # error_log("$pid: speicher ($uid) in DB mit $folder in $imapFolder");
-                        /*$sqlMaillog = "INSERT INTO mail_log (uid, folder, imap_folder) VALUES(:uid, :folder, :imapFolder)";
-
-                        $this->queryIt(
-                            $sqlMaillog,
-                            [
-                                "uid"           => $uid,
-                                "folder"        => $folder,
-                                "imapFolder"    => $imapFolder
-                            ]
-                        );*/
-
-                        $message_id = $ov->message_id ?? '';
-
-                        $exists = $this->mail_exists($uid, $message_id, $folder);
-                        if (!$exists) {
-                            // 1. Mail anlegen und ID zurückholen
-                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                                        VALUES (:uid, :message_id, :subject_hash,  :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)
-                                        ;";
-                            $params = [
-                                'uid'           => $ov->uid,
-                                'message_id'    => $message_id,
-                                'subject_hash'  => $subjectHash,
-                                'date_received' => $formattedDate,
-                                'folder'        => $folder,
-                                'is_read'       => (int)$ov->seen,
-                                'is_flagged'    => (int)$ov->flagged,
-                                'is_answered'   => (int)$ov->answered,
-                                'sceid'         => (int)$sceid,
-                                'rceid'         => (int)$rceid,
-                            ];
-
-                            $paramsLog = $params;
-                            $paramsLog['subject_hash'] = "HASH";
-                            $paramsLog['uid'] = "NIX FÜR KI";
-                            //$paramsLog['sender'] = "NIX FÜR KI";
-                            $paramsLog['message_id'] = "NIX FÜR KI";
-
-                            $dbResult = $this->queryIt(
-                                $sqlInsert,
-                                $params,
-                                true,
-                                true,
-                                false
-                            );
-                            # error_log(" übegebene Parameter: " . print_r($paramsLog, true));
-
-                        } else {
-                            # error_log("MAIL EXISTIERT BEREITS ($uid, $folder, $imapFolder)");
-                        }
-                    
-                } catch (\Throwable $e) {
-                    error_log("Fehler bei Mail: " . $e->getMessage());
-                }
-                $added++;
-                $highestUid = max($highestUid, (int)$uid);
+        // Wir indizieren die Overviews nach UID für den schnellen Zugriff
+        $overviewMap = [];
+        foreach ($overviews as $ov) {
+            if (isset($ov->uid)) {
+                $overviewMap[(int)$ov->uid] = $ov;
             }
-        });
-            
-        
+        }
 
-        // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen und PHP 8+ absichern
+        // Hier sammeln wir die fertigen Daten für die Datenbank
+        $mailsToWrite = [];
+
+        foreach ($uidsToProcess as $uid) {
+            if (!isset($overviewMap[$uid])) continue;
+            $ov = $overviewMap[$uid];
+
+            try {
+                // Fallback-Header holen (Das bleibt leider ein Einzel-Request, falls nötig)
+                if (empty($ov->from) || empty($ov->to)) {
+                    $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                    $ov->from = $ov->from ?: ($header->fromaddress ?? 'unknown@unknown.local');
+                    $ov->to = $ov->to ?: ($header->toaddress ?? 'unknown@unknown.local');
+                }
+
+                $formattedDate = $ov->date ? date('Y-m-d H:i:s', strtotime($ov->date)) : null;
+                $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
+                $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
+
+                $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
+                $rawSubject = $ov->subject ?? ''; 
+                if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
+                    $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                }
+                
+                $cleanSubject = $this->decodeMimeHeader($rawSubject);
+                $subjectHash = $this->dashboard->encrypt($cleanSubject);
+                $message_id = $ov->message_id ?? '';
+
+                // Wir packen die vorbereiteten Daten einfach in unser lokales Array
+                $mailsToWrite[] = [
+                    'uid'           => (int)$uid,
+                    'message_id'    => $message_id,
+                    'subject_hash'  => $subjectHash,
+                    'date_received' => $formattedDate,
+                    'from_name'     => $fromData['name'],
+                    'from_email'    => $fromData['email'],
+                    'to_name'       => $toData['name'],
+                    'to_email'      => $toData['email'],
+                    'is_read'       => (int)($ov->seen ?? 0),
+                    'is_flagged'    => (int)($ov->flagged ?? 0),
+                    'is_answered'   => (int)($ov->answered ?? 0),
+                ];
+
+            } catch (\Throwable $e) {
+                error_log("Fehler bei der Datenvorbereitung für UID $uid: " . $e->getMessage());
+            }
+        }
+
+        // 🚀 SCHRITT 2: Reiner, ultraschneller Datenbank-Schreibprozess innerhalb der Transaktion
+        if (!empty($mailsToWrite)) {
+            $this->transaction(function () use ($mailsToWrite, $folder, &$added, &$highestUid) {
+                $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
+
+                foreach ($mailsToWrite as $mail) {
+                    try {
+                        $exists = $this->mail_exists($mail['uid'], $mail['message_id'], $folder);
+                        if (!$exists) {
+                            // Kontakte anlegen (Nutzt hoffentlich auch interne Caches, damit es fix geht!)
+                            $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
+                            $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
+                            
+                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
+                                        VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)";
+                            
+                            $this->queryIt($sqlInsert, [
+                                'uid'           => $mail['uid'],
+                                'message_id'    => $mail['message_id'],
+                                'subject_hash'  => $mail['subject_hash'],
+                                'date_received' => $mail['date_received'],
+                                'folder'        => $folder,
+                                'is_read'       => $mail['is_read'],
+                                'is_flagged'    => $mail['is_flagged'],
+                                'is_answered'   => $mail['is_answered'],
+                                'sceid'         => ($senderId > 0) ? (int)$senderId : null,
+                                'rceid'         => ($reciepId > 0) ? (int)$reciepId : null,
+                            ], true, true, false);
+                            
+                            $added++;
+                        }
+                        $highestUid = max($highestUid, $mail['uid']);
+                    } catch (\Throwable $dbEx) {
+                        error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());
+                    }
+                }
+            });
+        }
+
+        // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen
         if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
             try {
                 @imap_close($imapStream);
@@ -569,11 +554,12 @@ class MailProcessor extends \App\Core\Database
             $this->saveSyncCheckpoint($folder, $highestUid);
         }
 
-        //$updateCount = $this->deltaSync($folder, 100);
+        error_log("Prozess: [$pid] End Sync Ordner: $folder");
+        $updateCount = $this->deltaSync($folder, 100);
 
         return [
             "added"     => $added,
-            "update"    => 0
+            "update"    => $updateCount
         ];
     }
 
@@ -582,111 +568,110 @@ class MailProcessor extends \App\Core\Database
      * Synchronisiert Statusänderungen für bereits existierende Mails
      * Konzentriert sich nur auf die letzten N Mails, um Performance zu sparen.
      */
-    public function deltaSync(string $folder, int $limit = 100): array
+    public function deltaSync(string $folder, int $limit = 100): int|null
     {
         $imapStream = $this->connectIMAP($folder);
-        if (!$imapStream) return [];
+        if (!$imapStream) return null;
 
-        // 1. Sicherheit: Prüfen, ob UIDs überhaupt existieren
         $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
         if ($allUids === false) {
             @imap_close($imapStream);
-            return ['updated' => 0];
+            return 0;
         }
 
-        // 2. Performance: Hole alle relevanten DB-Daten für den Slice in EINER Query
         $checkUids = array_slice($allUids, -$limit);
         $namedPlaceholders = [];
         $params = ['folder' => $folder];
 
-        // 2. Dynamisch benannte Keys für die IN-Klausel erzeugen
         foreach ($checkUids as $index => $uid) {
             $paramKey = 'uid_' . $index; 
-            $namedPlaceholders[] = ':' . $paramKey; // Für das SQL (z.B. :uid_0)
-            $params[$paramKey] = $uid;              // Für das Parameter-Array (z.B. ['uid_0' => 1234])
+            $namedPlaceholders[] = ':' . $paramKey;
+            $params[$paramKey] = $uid;             
         }
         
         $inClause = implode(', ', $namedPlaceholders);
 
         $sqlFetch = "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, uid, is_read, is_flagged, is_answered 
-                       FROM mails as m
-                      WHERE uid IN ($inClause) 
+                    FROM mails as m
+                    WHERE uid IN ($inClause) 
                         AND status='active' 
                         AND tenant_id = :tenant_id 
                         AND imap_folder = :folder;";
 
-        // Wir holen alle existierenden Mails aus diesem Slice als Array (Key = UID)
-        $dbMails = $this->queryIt($sqlFetch, $params, false, false, true);
+        $dbMailsResult = $this->queryIt($sqlFetch, $params, false, false, true);
+        
+        // 🚀 FIX: Sicherer Zugriff auf ->data->fetched analog zum unteren Code-Teil
         $dbMap = [];
-        foreach ($dbMails as $m) $dbMap[$m->uid] = $m;
+        if ($dbMailsResult && $dbMailsResult->success && !empty($dbMailsResult->data->fetched)) {
+            foreach ($dbMailsResult->data->fetched as $m) {
+                $dbMap[$m->uid] = $m;
+            }
+        }
 
         $updatedCount = 0;
-        foreach ($checkUids as $uid) {
-            if (!isset($dbMap[$uid])) continue; // Mail existiert noch nicht in DB (wird evtl. durch FullSync geladen)
+        
+        // 🚀 FIX: $dbMap wurde dem `use`-Block hinzugefügt, damit es inside der Transaktion existiert!
+        $this->transaction(function () use ($checkUids, $imapStream, $folder, $allUids, $dbMap, &$updatedCount) {
 
-            $ov = imap_fetch_overview($imapStream, (string)$uid, FT_UID)[0] ?? null;
-            if (!$ov) continue;
+            foreach ($checkUids as $uid) {
+                if (!isset($dbMap[$uid])) continue; 
 
-            $dbMail = $dbMap[$uid];
-            if ($dbMail->is_read != $ov->seen || $dbMail->is_flagged != $ov->flagged || $dbMail->is_answered != $ov->answered) {
+                $ov = imap_fetch_overview($imapStream, (string)$uid, FT_UID)[0] ?? null;
+                if (!$ov) continue;
 
-                // KORREKTUR: SQL auf benannte Platzhalter umgestellt und Array assoziativ übergeben
-                $this->queryIt(
-                    "UPDATE mails 
-                    SET is_read = :is_read, is_flagged = :is_flagged, is_answered = :is_answered 
-                    WHERE id = :id  AND tenant_id=:tenant:_id",
-                    [
-                        'is_read'     => (int)$ov->seen,
-                        'is_flagged'  => (int)$ov->flagged,
-                        'is_answered' => (int)$ov->answered,
-                        'id'          => $dbMail->id
-                    ]
-                    
-                );
-                $updatedCount++;
-            }
-        }
+                $dbMail = $dbMap[$uid];
+                if ($dbMail->is_read != $ov->seen || $dbMail->is_flagged != $ov->flagged || $dbMail->is_answered != $ov->answered) {
 
-        // 1. SELECT ausführen (Platzhalter sind so korrekt)
-        $sql = "SELECT uid FROM mails WHERE imap_folder = :folder AND tenant_id = :tenant_id";
-        $rawResult = $this->queryIt($sql, ['folder' => $folder], false);
-
-        // KORREKTUR: Sauber auf die fetched-Daten des queryIt-Objekts zugreifen
-        $dbUidList = [];
-        if ($rawResult && $rawResult->success && !empty($rawResult->data->fetched)) {
-            $dbUidList = array_map('intval', array_column($rawResult->data->fetched, 'uid'));
-        }
-
-        // 3. Cleanup: UIDs vergleichen
-        $toDelete = array_diff($dbUidList, array_map('intval', $allUids));
-
-        // KORREKTUR: Wenn UIDs gelöscht werden müssen, bauen wir wieder benannte Parameter für das IN-Statement
-        if (!empty($toDelete)) {
-            $namedPlaceholders = [];
-            $params = [
-                'folder' => $folder
-            ];
-
-            // Wir indizieren die UIDs für die Platzhalter (:uid_0, :uid_1, ...)
-            foreach (array_values($toDelete) as $index => $uid) {
-                $paramKey = 'uid_' . $index;
-                $namedPlaceholders[] = ':' . $paramKey;
-                $params[$paramKey] = (int)$uid;
+                    // 🚀 FIX: Doppelpunkt bei :tenant_id korrigiert
+                    $this->queryIt(
+                        "UPDATE mails 
+                        SET is_read = :is_read, is_flagged = :is_flagged, is_answered = :is_answered 
+                        WHERE id = :id AND tenant_id = :tenant_id",
+                        [
+                            'is_read'     => (int)$ov->seen,
+                            'is_flagged'  => (int)$ov->flagged,
+                            'is_answered' => (int)$ov->answered,
+                            'id'          => $dbMail->id
+                        ]
+                    );
+                    $updatedCount++;
+                }
             }
 
-            $inClause = implode(', ', $namedPlaceholders);
-            
-            // SQL mit dem dynamischen IN-Clause und dem Ordner-Platzhalter
-            $sqlUpdate = "UPDATE mails 
-                        SET status = 'moved' 
-                        WHERE uid IN ($inClause) AND imap_folder = :folder AND tenant_id=:tenant_id;";
+            // HINWEIS: Dieser Block zieht im Live-Betrieb viel Performance (siehe oben)
+            $sql = "SELECT uid FROM mails WHERE imap_folder = :folder AND tenant_id = :tenant_id";
+            $rawResult = $this->queryIt($sql, ['folder' => $folder], false);
 
-            // Übergabe des sauberen, assoziativen Parameter-Arrays
-            $this->queryIt($sqlUpdate, $params);
-        }
+            $dbUidList = [];
+            if ($rawResult && $rawResult->success && !empty($rawResult->data->fetched)) {
+                $dbUidList = array_map('intval', array_column($rawResult->data->fetched, 'uid'));
+            }
+
+            $toDelete = array_diff($dbUidList, array_map('intval', $allUids));
+
+            if (!empty($toDelete)) {
+                $namedPlaceholders = [];
+                $params = ['folder' => $folder];
+
+                foreach (array_values($toDelete) as $index => $uid) {
+                    $paramKey = 'uid_' . $index;
+                    $namedPlaceholders[] = ':' . $paramKey;
+                    $params[$paramKey] = (int)$uid;
+                }
+
+                $inClause = implode(', ', $namedPlaceholders);
+                
+                $sqlUpdate = "UPDATE mails 
+                            SET status = 'moved' 
+                            WHERE uid IN ($inClause) AND imap_folder = :folder AND tenant_id = :tenant_id;";
+
+                $this->queryIt($sqlUpdate, $params);
+            }
+        });
 
         @imap_close($imapStream);
-        return ['updated' => $updatedCount];
+
+        return $updatedCount;
     }
 
     /**
@@ -750,14 +735,13 @@ class MailProcessor extends \App\Core\Database
     {
         $debugSQL = "SELECT Count(0) as Anzahl from mails 
                       WHERE tenant_id=:tenant_id 
-                        AND (
-                            (uid=:uid AND imap_folder=:folder AND imap_folder=:folder)
-                            OR(message_id=:messageid AND imap_folder=:folder)) ;";
+                        AND imap_folder=:folder
+                        AND (uid=:uid OR message_id=:messageid) ;";
         
         $params = [
             'folder'        => $folder,
             'uid'           => $uid,
-            'message_id'    => $message_id
+            'messageid'    => $message_id
         ];
 
         $dbResult = $this->queryIt(
@@ -768,16 +752,12 @@ class MailProcessor extends \App\Core\Database
             false
         );
 
-        $exists = ($dbResult->success &&
+        return ($dbResult &&
+            $dbResult->success &&
             !empty($dbResult->data->fetched) &&
-            $dbResult->data->fetched[0]['Anzahl'] > 0)
-            ? true
-            : false;
-
-        # error_log($dbResult->data->fetched[0]['Anzahl'] . ": " . $exists);
-       
-        return $exists;
+            $dbResult->data->fetched[0]['Anzahl'] > 0);
     }
+
     /**
      * Diese Funktion decodiert MimeHeader
      */
@@ -922,7 +902,7 @@ class MailProcessor extends \App\Core\Database
     /**
      * Emails per Hash einer Mail ermitteln
      */
-    public function getMailsByAddress($id)
+    public function getMailsByAddress($hash)
     {
         $sql = "SELECT m.uid,
                     HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, 
@@ -948,7 +928,7 @@ class MailProcessor extends \App\Core\Database
         $dbResult = $this->queryIt(
             $sql,
             [
-                'id' => $id,
+                'hash' => $hash,
             ],
             false,
             false,

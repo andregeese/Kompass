@@ -205,16 +205,30 @@ window.addEventListener('select-mail-hash', (event) => {
  * Der zentrale Verteiler für alle Website-weiten Aktionen
  */
 function dispatchAction(action, context, triggerElement) {
-    // 1. Debug-Info für Entwickler
+    console.log(`🚀 Action [${action}] aufgerufen. Kontext:`, context, triggerElement);  
+    console.log(triggerElement)  // 1. Debug-Info für Entwickler
     if (typeof debug !== 'undefined' && debug) {
         console.log(`%c[Dispatcher] Triggered: ${action}`, "color: #3b82f6; font-weight: bold;", context);
     }
 
     // 2. Action-Registry
     const actions = {
-        'mail_view':        (ctx) => window.loadMailByHash?.(ctx.hash),
+        'mail_view':        (ctx) => window.loadMailByHash?.(ctx.id),
         'note_add':         (ctx) => openNoteModal(ctx.uid, ctx.folder),
         'mail_archive':     (ctx) => archiveMail(ctx.uid, triggerElement),
+        
+        'open_modal_notes': (ctx) => {
+            const params = new URLSearchParams();
+            params.set('view', 'notes');
+            
+            // Daten aus dem 'item'-Kontext extrahieren
+            if (ctx.id) params.set('id', ctx.id);
+
+            console.log(ctx);
+            
+            // Seite mit den neuen Parametern neu laden / aufrufen
+            window.location.search = params.toString();
+        },
         'open_modal':       (ctx) => {
             // Falls ein spezifisches Event genannt wird, nutzen wir das, sonst den alten Default
             const eventName = ctx.targetEvent || 'open-item-modal';

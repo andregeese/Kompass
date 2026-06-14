@@ -58,7 +58,7 @@
             <div class="flex flex-nowrap gap-1 w-full overflow-x-auto pb-1.5 mask-inline-edge scrollbar-none">
                 <template x-for="email in recentEmails" :key="email.id">
                     <button type="button" 
-                            x-show="!emailSearch || email.display_name.toLowerCase().includes(emailSearch.toLowerCase()) || email.email.toLowerCase().includes(emailSearch.toLowerCase())"
+                            x-show="!emailSearch || email.display_name.toLowerCase().includes(emailSearch.toLowerCase()) || email.mail.toLowerCase().includes(emailSearch.toLowerCase())"
                             @click="toggleEmailSelection(email)"
                             :class="newNote.ceid === email.id 
                                 ? 'bg-emerald-50 border-emerald-300 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/10' 
@@ -73,7 +73,7 @@
                     </button>
                 </template>
             </div>
-            <template x-if="newNote.contact_email">
+            <template x-if="newNote.mail">
                 <div class="p-2.5 bg-slate-50/60 dark:bg-gray-850/40 rounded-xl border border-slate-200/60 dark:border-gray-750 space-y-1.5 animate-fadeIn">
                     
                     <div class="flex items-center justify-between text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-0.5">
@@ -81,7 +81,7 @@
                         <span class="font-mono text-right truncate max-w-[40%]" x-text="newNote.contact_email"></span>
                     </div>
                     <div class="space-y-1 max-h-[125px] overflow-y-auto pr-0.5">
-                        <template x-for="mail in contactMails.slice(0, 3)" :key="mail.uid">
+                        <template x-for="mail in contactMails.slice(0, 3)" :key="mail.id || mail.uid || index">
                             <button type="button"
                                     @click="newNote.uid === mail.uid ? newNote.uid = '' : newNote.uid = mail.uid"
                                     :class="newNote.uid === mail.uid 
@@ -118,7 +118,7 @@
                 <option value="important">🔥 Wichtig</option>
             </select>
             <div class="relative flex items-center">
-                <input type="date" x-model="newNote.due_date" 
+                <input type="datetime-local" x-model="newNote.due_date" 
                         class="text-xs bg-slate-50 dark:bg-gray-750 text-slate-600 dark:text-gray-300 border border-slate-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[130px]">
             </div>
             <button @click="addNote()" 
@@ -163,10 +163,10 @@
                                 <template x-if="note.email">
                                     <div class="flex items-center gap-1 bg-blue-50/60 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-100/40 dark:border-blue-900/20">
                                         <span>📧</span>
-                                        <span class="truncate max-w-[180px]" x-text="note.email"></span>
+                                        <span class="truncate max-w-[180px]" x-text="note.contact_email"></span>
                                     </div>
                                 </template>
-                                <template x-if="note.uid || note.mail_uid">
+                                <template x-if="note.uid">
                                     <div class="flex items-center gap-1 font-mono bg-slate-100 dark:bg-gray-750 text-slate-600 dark:text-gray-400 px-1.5 py-0.5 rounded-md">
                                         <span>ID:</span>
                                         <span class="font-bold" x-text="note.uid || note.mail_uid"></span>

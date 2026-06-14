@@ -263,16 +263,27 @@ class Database
     {
         $this->getConnection()->rollBack();
     }
+
     public function transaction(callable $callback)
     {
         $pdo = $this->getConnection();
-        $pdo->beginTransaction();
+        $isNested = $pdo->inTransaction();
+
+        if (!$isNested) {
+            $pdo->beginTransaction();
+        }
+        
         try {
             $result = $callback(); // Führt deinen Business-Code aus
-            $pdo->commit();
+            if (!$isNested) {
+                $pdo->commit();
+            }
+
             return $result;
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            if (!$isNested) {
+                $pdo->rollBack();
+            }
             error_log("Transaktion fehlgeschlagen: " . $e->getMessage());
             throw $e; // Fehler weiterreichen, damit du weißt, dass was passiert ist
         }

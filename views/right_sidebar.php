@@ -214,7 +214,7 @@
                                                                     class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
                                                                 📅
                                                             </button>
-                                                            <button @click.stop="dispatchAction('open_modal', { ...item, action_type: 'note' })" 
+                                                            <button @click.stop="dispatchAction('open_modal_notes', { ...item, action_type: 'note' }, item)" 
                                                                     title="Notiz hinzufügen" 
                                                                     class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
                                                                 📝

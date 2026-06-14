@@ -183,7 +183,7 @@ class AppointmentsProcessor extends BaseProcessor
                    AND `start_time` >= now()
                    AND `end_time` <= now()+ INTERVAL 7 DAY";
 
-        return $this->queryIt($sql, [], false, false, true);
+        return $this->queryIt($sql, [], false, false, false);
     }
 
     private function getPrincipalPath()

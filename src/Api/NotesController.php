@@ -19,6 +19,8 @@ class NotesController extends \App\Core\BaseController
     }
     public function saveNote()
     {
+        return $this->process($this->notesProcess, 'saveNote', 'note', 'Erfolgreich gespeichert');
+        
         // 1. Prüfung direkt im Controller (Sicherstellen, dass das Request-Objekt da ist)
         if (!isset($this->request)) {
             throw new \Exception("Request-Objekt im Controller nicht initialisiert.");
@@ -36,7 +38,8 @@ class NotesController extends \App\Core\BaseController
                 'folder'   => $this->request->get('folder'),
                 'category' => $this->request->get('category'),
                 'status'   => $this->request->get('status'),
-                'ceid'     => $this->request->get('ceid')
+                'ceid'     => $this->request->get('ceid'),
+                'due_date'
             ];
         }
        

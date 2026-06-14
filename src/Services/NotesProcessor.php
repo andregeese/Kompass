@@ -93,9 +93,10 @@ class NotesProcessor extends \App\Core\Database
 
     public function saveNote(array $memoData)
     {
-        error_log(print_r($memoData, true));
-        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, ceid) 
-                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, :ceid)";
+        error_log('saveNote: ' . print_r($memoData, true));
+
+        $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, ceid, due_date) 
+                VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, CAST(AES_DECRYPT(UNHEX(:ceid), :crypto_key) AS UNSIGNED), :duedate)";
         $params = [
             'mailUid'     => !empty($memoData['uid']) ? $memoData['uid'] : null,
             'mailFolder'  => !empty($memoData['folder']) ? $memoData['folder'] : null,
@@ -103,12 +104,16 @@ class NotesProcessor extends \App\Core\Database
             'content'     => $memoData['content'],
             'status'      => $memoData['status'] ?? 'active', // 💡 Mappt jetzt sauber auf :status
             'lokal_id'    => $memoData['id'],
-            'ceid'       => !empty($memoData['ceid']) ? $memoData['ceid'] : null
+            'ceid'        => !empty($memoData['ceid']) ? $memoData['ceid'] : null,
+            'duedate'     => !empty($memoData['due_date']) ? date('Y-m-d H:i:s', strtotime($memoData['due_date'])) : null
         ];
-        $dbResult = $this->queryIt($sql, $params, true, true, false);
+
+        return $this->queryIt($sql, $params, false, false, true);
+       
         if (!$dbResult->success){
             throw new \Exception("Notiz nicht gespeichert");
         }
+
         return $dbResult->data;
     }
     /**
@@ -143,7 +148,7 @@ class NotesProcessor extends \App\Core\Database
                    AND due_date<=now()
                    AND status ='active';";
 
-        return $this->queryIt($sql, [], false, false, true);
+        return $this->queryIt($sql, [], false, false, false);
         
 
     }

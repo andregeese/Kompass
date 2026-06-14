@@ -24,14 +24,49 @@ const notesViewComponent = () => ({
         contact_email: '',
         contact_name: ''
     },
-    init() {
+    async init() {
         this.loadNotes();
-        //this.getRecentMails();
-        // Fokus setzen bei "?action=create"
+        // 🎯 URL-Parameter direkt im JS abfangen
         const params = new URLSearchParams(window.location.search);
-        if (params.get('action') === 'create') {
+        console.log(params);
+        // Prüfen, ob relevante Parameter für eine neue Notiz übergeben wurden
+        if (params.has('id')) {
+            console.log('📥 Verknüpfte Mail-Daten in URL erkannt. Befülle Formular...');
+            let currentNote = await apiCall('get_mail_data_for_note', {id:params.get('id')}, 'GET');
+            if (currentNote.success && currentNote.details?.mail){
+                // Alpine-Zustand mit den URL-Werten füttern
+                this.newNote.uid = currentNote.details.mail.uid || '';
+                this.newNote.folder = currentNote.details.mail.imap_folder || '';
+                
+                this.newNote.contact_email = currentNote.details.mail.email || '';
+                this.newNote.contact_name = currentNote.details.mail.display_name || '';
+
+                this.emailSearch = currentNote.details.mail.email;
+
+            }else{
+                console.warn("Kein DS zur Mail gefunden!");
+            }
+
+            
+            // Falls ein E-Mail-Hash mitgeliefert wurde, direkt den Verlauf laden
+            const emailHash = params.get('id');
+            if (emailHash) {
+                await this.fetchMailHistory(emailHash);
+            }
+
+            // Textarea automatisch fokussieren
+            this.$nextTick(() => this.$refs.quickNoteArea?.focus());
+
+            // ✨ URL im Browser säubern (Aus ?view=notes&uid=... wird reines ?view=notes)
+            // Verhindert Duplikate oder Fehler beim manuellen Neuladen der Seite
+            const cleanUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?view=notes';
+            window.history.pushState({}, '', cleanUrl);
+
+        } else if (params.get('action') === 'create') {
+            // Klassischer Fall ohne Parameter, nur Fokus
             this.$nextTick(() => this.$refs.quickNoteArea?.focus());
         }
+
         // LAUSCHER: Wenn das Gerät wieder online geht, sofort Sync triggern!
         window.addEventListener('online', () => {
             console.log('📶 Verbindung wieder da! Triggere Background-Sync...');
@@ -76,12 +111,15 @@ const notesViewComponent = () => ({
             // 1. Erstmal komplett leeren
             this.notes = [];
             if (jResponse?.details?.notes) {
+                const rawNotesArray = Object.values(jResponse.details.notes);
+
                 // Daten-Bereinigung: Filtert unvollständige Objekte heraus 
                 // und stellt sicher, dass jedes Objekt ein echtes Inhaltsfeld hat
-                const cleanServerNotes = jResponse.details.notes.filter(note => {
+                const cleanServerNotes = rawNotesArray.filter(note => {
                     return note && typeof note === 'object' && (note.content !== undefined || note.created_at !== undefined);
                 });
                 const currentQueue = JSON.parse(localStorage.getItem('queue_notes') || '[]');
+                console.log(currentQueue, cleanServerNotes);
                 
                 // Zuweisung an Alpine
                 this.notes = [...currentQueue, ...cleanServerNotes];
@@ -110,7 +148,6 @@ const notesViewComponent = () => ({
     },
     async toggleEmailSelection(email) 
     {
-        
         // 1. Wenn bereits ausgewählt -> Abwählen (Toggle-Off)
         if (this.newNote.ceid === email.id) {
             this.newNote.ceid = '';
@@ -120,11 +157,13 @@ const notesViewComponent = () => ({
             this.contactMails = [];
             return;
         }
+
         // 2. Zustand setzen (Das triggert das Einfärben und die UI-Anzeige!)
         this.newNote.ceid = email.id;
         this.newNote.contact_email = email.email;
         this.newNote.contact_name = email.display_name;
         this.newNote.uid = ''; // Vorherige Mail-ID-Auswahl leeren
+
         // 3. Verlaufs-Mails im Hintergrund nachladen
         try {
             const data = await apiCall('get_mails_by_mailadress', { hash: email.email_hash }, 'GET');
@@ -156,7 +195,8 @@ const notesViewComponent = () => ({
             category: this.newNote.category,
             status: 'active',
             mail: this.newNote.contact_email || null,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            due_date: this.newNote.due_date ? new Date(this.newNote.due_date).toISOString() : null
         };
         // FALL 1: Gerät ist komplett offline -> Direkt in den Offline-Speicher & UI sichern
         if (!navigator.onLine) {
@@ -166,7 +206,7 @@ const notesViewComponent = () => ({
         }
         // FALL 2: Gerät ist online -> Erst Server-Versuch (Kein voreiliges Caching!)
         try {
-            const response = await apiCall('save_note', memoData, 'POST');
+            const response = await apiCall('save_note', {'memoData': memoData}, 'POST');
             
             if (response?.success) {
                 // Server-Erfolg: Temporäre ID mit echter DB-ID überschreiben
