@@ -81,7 +81,7 @@ class Database
 
             // 4. Den einzigartigen Tenant-CryptoKey berechnen (64-Zeichen Hex-String)
             $tenantCryptoKey = hash_hmac('sha256', (string)$tenantId, $globalSecret);
-            $params['crypto_key'] = 'CRYPTOKEY AUSGEBLENDET'; //$tenantCryptoKey;
+            $params['crypto_key'] = $tenantCryptoKey;//'CRYPTOKEY AUSGEBLENDET'; //$tenantCryptoKey;
         }
 
         foreach ($params as $key => $value) {
@@ -131,12 +131,12 @@ class Database
         $result->error = null;
         $result->debug = null;
         // Debugging vorher
-        //if ($debug=true) {
-        $result->debug = [
-            "caller" => $this->getCallerInfo(),
-            "sql"    => $this->getDebugSql($query, $params)
-        ];
-        //}
+        if ($debug) {
+            $result->debug = [
+                "caller" => $this->getCallerInfo(),
+                "sql"    => $this->getDebugSql($query, $params)
+            ];
+        }
 
         try {
             $pdo = $this->getConnection();
@@ -216,7 +216,7 @@ class Database
         }
 
         if ($debug) {
-            error_log("DB DEBUG: " . print_r($result->debug, true));
+            error_log("DB DEBUG: " . print_r($result, true));
         }
         //tbd: ich möchte immer auf $result->success || $result->error im Frontend reagieren
         return (object)$result;

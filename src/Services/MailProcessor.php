@@ -137,9 +137,12 @@ class MailProcessor extends \App\Core\Database
             false
         );
 
+        error_log(print_r($dbResult, true));
+
         if($dbResult->success && !empty($dbResult->data))
         {
             $row = $dbResult->data->fetched[0];
+            //error_log(print_r($row, true));
             $row['subject'] = $this->dashboard->decrypt($row['sHash']);
         }
 
@@ -464,9 +467,21 @@ class MailProcessor extends \App\Core\Database
         // Hier sammeln wir die fertigen Daten für die Datenbank
         $mailsToWrite = [];
 
-        foreach ($uidsToProcess as $uid) {
+        error_log("mails in Cache laden");
+        foreach ($uidsToProcess as $uid) 
+        {
             if (!isset($overviewMap[$uid])) continue;
             $ov = $overviewMap[$uid];
+
+            $needsFullHeader = (
+                empty($ov->from) || 
+                empty($ov->to) || 
+                str_contains($ov->subject, '=?') || 
+                strlen($ov->subject) >= 250 // Annahme: Abgeschnitten
+            );
+            $rawSubject = $ov->subject;
+            
+            # error_log("\t $uid in Cache geladen");
 
             try {
                 // Fallback-Header holen (Das bleibt leider ein Einzel-Request, falls nötig)
@@ -480,10 +495,19 @@ class MailProcessor extends \App\Core\Database
                 $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
                 $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
 
-                $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
-                $rawSubject = $ov->subject ?? ''; 
-                if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
-                    $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                if ($needsFullHeader) {
+                    // Erst HIER den teuren Netzwerk-Call machen
+                    $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
+                    if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
+                        $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                    }
+                    
+                    // Ggf. Header-Fallback
+                    if (empty($ov->from)) {
+                        $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                        $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                        $ov->to = $header->toaddress ?? 'unknown@unknown.local';
+                    }
                 }
                 
                 $cleanSubject = $this->decodeMimeHeader($rawSubject);
@@ -509,20 +533,79 @@ class MailProcessor extends \App\Core\Database
                 error_log("Fehler bei der Datenvorbereitung für UID $uid: " . $e->getMessage());
             }
         }
+        error_log("mails im Cache");
+
+
+        $ceCache = [];
+        $sql = "SELECT email, id FROM contact_emails WHERE tenant_id=:tenant_id;";
+        $dbRes = $this->queryIt($sql, [], false, false, false);
+
+        if ($dbRes->success && is_array($dbRes->data->fetched))
+        {
+            //error_log(print_r($dbRes->data->fetched, true));
+            foreach ($dbRes->data->fetched as $row)
+            {
+                $ceCache[$row["email"]] = (int)$row["id"];
+            }
+        }
+
+        $mailsInDB = [];
+        $sql = "SELECT uid, id FROM mails WHERE tenant_id=:tenant_id;";
+        $dbRes = $this->queryIt($sql, [], false, false, false);
+        if ($dbRes->success && is_array($dbRes->data->fetched))
+        {
+            //error_log(print_r($dbRes->data->fetched, true));
+            foreach ($dbRes->data->fetched as $row)
+            {
+                $mailsInDB[$row["uid"]] = (int)$row["id"];
+            }
+        }
+
 
         // 🚀 SCHRITT 2: Reiner, ultraschneller Datenbank-Schreibprozess innerhalb der Transaktion
-        if (!empty($mailsToWrite)) {
-            $this->transaction(function () use ($mailsToWrite, $folder, &$added, &$highestUid) {
+        if (!empty($mailsToWrite)) 
+        {
+            //$this->transaction(function () use ($mailsToWrite, $folder, &$added, &$highestUid, &$ceCache, &$mailsInDB) 
+            //{
                 $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
 
-                foreach ($mailsToWrite as $mail) {
+                foreach ($mailsToWrite as $mail) 
+                {
                     try {
-                        $exists = $this->mail_exists($mail['uid'], $mail['message_id'], $folder);
-                        if (!$exists) {
+                        $i = $mailsInDB[$mail['uid']] ?? null;
+                        if (!empty($i)){
+                            error_log("-- mail (" . $mail['uid'] . ") in DB! $i --");
+                            continue;
+                        }
+
+                        //$exists = $this->mail_exists($mail['uid'], $mail['message_id'], $folder);
+                        //if (!$exists) {
                             // Kontakte anlegen (Nutzt hoffentlich auch interne Caches, damit es fix geht!)
-                            $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
-                            $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
+
+                            $senderId = (int)$ceCache[$mail['from_email']] ?? null;
+                            error_log("senderId 1.: $senderId");
+
+                            if (empty($senderId) || $senderId === 0){
+                                $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
+                                $ceCache[$mail['from_email']] = (int)$senderId;
+                                error_log("senderId 2.: $senderId");
+                            }
                             
+                            $reciepId = (int)$ceCache[$mail['to_email']] ?? null;
+                            error_log("reciepId 1.: $reciepId");
+
+                            if (empty($reciepId) || $reciepId === 0 ){
+                                $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
+                                $ceCache[$mail['to_email']] = (int)$reciepId;
+                                error_log("reciepId 2.: $reciepId");
+                            }
+                            
+                            if ($reciepId<=0 || $senderId<=0)
+                            {
+                                error_log("Keine Zahl bei $reciepId oder $senderId!! " . print_r($mail['uid'], true));
+                                continue;    
+                            }
+
                             $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
                                         VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)";
                             
@@ -535,18 +618,18 @@ class MailProcessor extends \App\Core\Database
                                 'is_read'       => $mail['is_read'],
                                 'is_flagged'    => $mail['is_flagged'],
                                 'is_answered'   => $mail['is_answered'],
-                                'sceid'         => ($senderId > 0) ? (int)$senderId : null,
-                                'rceid'         => ($reciepId > 0) ? (int)$reciepId : null,
+                                'sceid'         => (int)$senderId,
+                                'rceid'         => (int)$reciepId
                             ], true, true, false);
                             
                             $added++;
-                        }
+                        //}
                         $highestUid = max($highestUid, $mail['uid']);
                     } catch (\Throwable $dbEx) {
                         error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());
                     }
                 }
-            });
+            //});
         }
 
         // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen
@@ -562,7 +645,7 @@ class MailProcessor extends \App\Core\Database
         }
 
         error_log("Prozess: [$pid] End Sync Ordner: $folder");
-        $updateCount = $this->deltaSync($folder, 100);
+        //$updateCount = $this->deltaSync($folder, 100);
 
         return [
             "added"     => $added,
@@ -1120,6 +1203,7 @@ class MailProcessor extends \App\Core\Database
      */
     public function getMailBody($id): string
     {
+        error_log("getMailBody: " . $id);
         $mail = $this->getMailById($id);
         if (!$mail) return 'Inhalt nicht gefunden.';
 

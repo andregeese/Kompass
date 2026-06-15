@@ -218,7 +218,7 @@ const contactsViewComponent = () => ({
                 const map = new Map();
                 
                 // Erst die verknüpften in die Map
-                this.activeContact.linked_correspondents.forEach(item => map.set(item.id), item);
+                this.activeContact.linked_correspondents.forEach(item => { map.set(item.id), item});
                 
                 // Dann die neuen Ergebnisse drüber (oder dazu)
                 newResults.forEach(item => map.set(item.id, item));

@@ -64,6 +64,7 @@ const mailViewComponent = () => ({
     },
 
     async openMail(mail) {
+        console.log("openMail", mail);
         this.currentMail = mail;
         this.currentMailHash = mail.id;
         this.isSidebarOpen = false; // Entspricht deinem Click-Handler
@@ -181,6 +182,7 @@ const mailViewComponent = () => ({
         
         try {
             // CSRF-geschützter API-Call anstatt Iframe-URL
+            console.log("lade Email", mail.id);
             const jResponse = await apiCall('stream_mail_html', { id: mail.id }, 'GET');
             
             if (jResponse && jResponse?.success !== false) {

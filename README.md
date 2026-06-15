@@ -132,3 +132,12 @@ HEX(AES_ENCRYPT(CAST(a.id as CHAR), :crypto_key)) as id,
 
 crypto_key ist ein schüssel der direkt injektiert wird in der SQL!
 
+
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE table contact_emails;
+TRUNCATE table contacts;
+TRUNCATE table mails;
+TRUNCATE table imap_sync_checkpoint;
+TRUNCATE table contact_paperless_map;
+TRUNCATE table notes;
+SET FOREIGN_KEY_CHECKS = 1;

@@ -38,43 +38,73 @@ class ContactProcessor extends \App\Core\Database
      * @param int $paperless_id Paperless-Verknüpfung
      * @return int|bool Die neue Contact-ID bei Erfolg, sonst false
      */
-    public function insertContact(string $name, string $email, string $type): int|bool
+    public function insertContact(string $name, string $email, string $type)
     {
         $name = trim($name);
         $email = strtolower(trim($email));
         $tenantId = $_SESSION['tenant_id'] ?? null;
+
         if (empty($name) || empty($email) || empty($tenantId)) {
             error_log("Kontakt konnte nicht angelegt werden: Daten fehlen.");
             return false;
         }
+
         $salt = $this->dashboard->getHashSalt();
         // 1. ZUERST schauen, ob es die E-Mail schon gibt (Tenant-bezogen!)
-        $contactEmailId = $this->getContactEmailId($email, $tenantId);
+        $contactEmailId = $this->getContactEmailIdInternal($email);
+        error_log("Kontakt-Email gefunden $contactEmailId");
+
         if ($contactEmailId) {
-            return (int)$contactEmailId;
+            return $contactEmailId;
         }
+
         // 2. Wenn nein: Kontakt suchen oder anlegen
-        $contactId = $this->getContactId($name, $email, $type);
+        $contactId = $this->getContactIdInternal($name, $email, $type);
+        error_log("Kontakt gefunden $contactId");
 
         if (!$contactId) {
+            error_log("Kontakt anlegen");
             // Kontakt neu anlegen
             $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, is_active) VALUES (:name, :type, :tenant_id, 1);";
-            $dbResult = $this->queryIt($sqlContact, ['name' => $name, 'type' => $type, 'tenant_id' => $tenantId], true, true, false);
+            $dbResult = $this->queryIt(
+                $sqlContact, 
+                [
+                    'name' => $name, 
+                    'type' => $type
+                ], 
+                false, 
+                true, 
+                false
+            );
 
             if (!$dbResult->success) return false;
             $contactId = $dbResult->data->lastId;
+            error_log("Kontakt angelegt: $contactId");
         }
         // 3. E-Mail Eintrag erzwingen (da wir hier gelandet sind, existiert sie noch nicht für diesen Tenant)
+        error_log("$contactId -> $email => anlegen");
         return $this->insertContactEmail($contactId, $email, $salt);
     }
 
     /**
      * Sucht in der DB nach einem Kontakt mit genau diesem Namen, E-Mail und Typ.
+     * Rückgabe der ID ist verschlüsselt
+     * @param string $name Name
+     * @param string $email E-Mail-Adresse
+     * @param string $type Person oder Company
+     * @return ID Hash AES_ENCRYPTED
      */
-    private function getContactId($name, $email, $type): int|bool
+    private function getContactId($name, $email, $type, $bInternal=false)
     {
-        #error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
-        $sql = "SELECT HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as id 
+        error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
+        
+        if (!$bInternal){
+            $sql = "SELECT id";
+        }else{
+            $sql = "SELECT HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as id";
+        }
+
+        $sql = $sql. "
                   FROM contacts as c
                  WHERE tenant_id = :tenant_id 
                    AND display_name = :name 
@@ -95,7 +125,38 @@ class ContactProcessor extends \App\Core\Database
 
         // 🚀 FIX 1: Sauber die ID extrahieren, statt das ganze Objekt zurückzugeben
         if ($dbResult && $dbResult->success && !empty($dbResult->data->fetched)) {
-            return (int)$dbResult->data->fetched[0]['id'];
+            return $dbResult->data->fetched[0]['id'];
+        }
+        
+        return false;
+    }
+
+    private function getContactIdInternal($name, $email, $type):int|bool
+    {
+        error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
+        
+        $sql = "SELECT id
+                FROM contacts as c
+                WHERE tenant_id = :tenant_id 
+                AND display_name = :name 
+                AND type = :type 
+                LIMIT 1;";
+        $params = [
+            "tenant_id" => $_SESSION['tenant_id'] ?? null,
+            "name" => $name,
+            "type" => $type
+        ];
+        $dbResult = $this->queryIt(
+            $sql,
+            $params,
+            false,
+            false,
+            false
+        );
+
+        // 🚀 FIX 1: Sauber die ID extrahieren, statt das ganze Objekt zurückzugeben
+        if ($dbResult && $dbResult->success && !empty($dbResult->data->fetched)) {
+            return $dbResult->data->fetched[0]['id'];
         }
         
         return false;
@@ -123,12 +184,25 @@ class ContactProcessor extends \App\Core\Database
         return $dbResult;
     }
 
-    private function getContactEmailId(string $email): int|bool
+    private function getContactEmailIdInternal(string $email): ?int
+    {
+        $sql = "SELECT id FROM contact_emails WHERE email = :email AND tenant_id = :tenant_id LIMIT 1";
+        $res = $this->queryIt($sql, ['email' => $email]);
+        return ($res->success && !empty($res->data->fetched)) ? (int)$res->data->fetched[0]['id'] : null;
+    }
+
+    private function getContactEmailId(string $email, $internal=false)
     {
         // Sicherheitscheck: Ohne TenantId ist die Suche in einer Multi-Tenant Umgebung ungültig
         //if (empty($tenantId)) return false;
-        $sql = "SELECT HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as id
-                  FROM contact_emails ce
+
+        if (!$internal){
+            $sql = "SELECT HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as id";
+        }else{
+            $sql = "SELECT id";
+        }
+
+        $sql = $sql." FROM contact_emails ce
                  WHERE ce.tenant_id = :tenant_id 
                    AND ce.email = :email 
                  LIMIT 1;";
@@ -137,7 +211,7 @@ class ContactProcessor extends \App\Core\Database
 
         // 🚀 FIX 2: Erst prüfen, ob überhaupt Daten gefunden wurden, um Fatal Errors zu vermeiden
         if ($dbResult && $dbResult->success && !empty($dbResult->data->fetched)) {
-            return (int)$dbResult->data->fetched[0]['id'];
+            return $dbResult->data->fetched[0]['id'];
         }
         
         return false;
@@ -146,7 +220,7 @@ class ContactProcessor extends \App\Core\Database
 
     private function insertContactEmail($contactId, $email, $salt)
     {
-        
+        error_log("Kontakt Email setzen Email='$email', ContactId='$contactId'");
         $tenantId = $_SESSION['tenant_id'] ?? null;
         if (
             $tenantId === null
@@ -157,7 +231,7 @@ class ContactProcessor extends \App\Core\Database
             return false;
         }
 
-        $ceId = $this->getContactEmailId($email);
+        $ceId = $this->getContactEmailIdInternal($email);
 
         if (!$ceId) {
 
@@ -169,11 +243,10 @@ class ContactProcessor extends \App\Core\Database
                 [
                     'cid' => $contactId,
                     'email' => $email,
-                    'hash' => hash('sha256', $email . $salt),
-                    'tenant_id' => $tenantId
+                    'hash' => hash('sha256', $email . $salt)
                 ],
                 false,
-                false,
+                true,
                 false
             );
 
@@ -184,7 +257,6 @@ class ContactProcessor extends \App\Core\Database
                 error_log("Kontakt-E-Mail konnte nicht angelegt werden: " . $email);
                 return false;
             }
-
         }
 
         return $ceId;
@@ -641,7 +713,6 @@ class ContactProcessor extends \App\Core\Database
                     HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) AS contact_id,
                     c.display_name,
                     c.type,
-                    -- c.paperless_id,
                     GROUP_CONCAT(ce.email SEPARATOR ', ') AS additional_emails
                 FROM mails AS m
                 -- 1. Verbindung zur E-Mail-Tabelle über die sender_ceid
@@ -650,7 +721,7 @@ class ContactProcessor extends \App\Core\Database
                 INNER JOIN contacts AS c ON ce.contact_id = c.id
                 WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                 AND m.tenant_id = 6
-                GROUP BY c.id, c.display_name, c.type, -- c.paperless_id;";
+                GROUP BY c.id, c.display_name, c.type;";
         $dbResult = $this->queryIt(
             $sql,
             ["id" => $id],

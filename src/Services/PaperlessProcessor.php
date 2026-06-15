@@ -82,14 +82,14 @@ class PaperlessProcessor extends \App\Core\Database
             'cid' => $cid
         ];
 
-        $dbResult = $this->queryIt($sql, $params, false, false, false);
+        $dbResult = $this->queryIt($sql, $params, false, false, true);
 
         if (!$dbResult->success){
             throw new Exception("Fehler beim Abrufen der Korrespondenten");
         }
     
 
-        $corrIds = array_column($dbResult->data->fetched, 'correspondent_id');
+        $corrIds = array_filter(array_column($dbResult->data->fetched, 'correspondent_id'));
 
         // 2. Falls keine IDs gefunden wurden, direkt abbrechen (spart API-Call)
         if (empty($corrIds)) {
@@ -218,10 +218,12 @@ class PaperlessProcessor extends \App\Core\Database
 
     private function getCorrespondentsById(array $ids):array
     {
+        error_log("getCorresbyId " . print_r($ids, true));
         if (empty($ids))
         {
             return [];
         }
+
         $idString = implode(',', $ids);
         
         $params = [
@@ -308,7 +310,12 @@ class PaperlessProcessor extends \App\Core\Database
     /**
      * Holt den Kontakt direkt
      */
-    public function searchForCorrespondentById(int $id):array {
+    public function searchForCorrespondentById(int $id):array 
+    {
+        if (empty($id))
+        {
+            return [];
+        }
         
         $url = '/api/correspondents/' . $id . '/';
         
@@ -741,7 +748,7 @@ class PaperlessProcessor extends \App\Core\Database
             throw new Exception("Fehler beim Abrufen der Tags");
         }
 
-        $tagIds = array_column($dbResult->data->fetched, 'tag_id');
+        $tagIds =  array_filter(array_column($dbResult->data->fetched, 'tag_id'));
     
         // 2. Falls keine IDs gefunden wurden, direkt abbrechen (spart API-Call)
         if (empty($tagIds)) {
@@ -809,7 +816,7 @@ class PaperlessProcessor extends \App\Core\Database
      * @param $contact_id Kontakt
      * @param $paperless_id Paperless
      */
-    public function linkContact(int $contactId, int $corrId, string $action)
+    public function linkContact(string $contactId, int $corrId, string $action)
     {
         $params = [
             'cid'      => $contactId,
@@ -819,13 +826,13 @@ class PaperlessProcessor extends \App\Core\Database
         $sql = "DELETE 
                   FROM contact_paperless_map 
                  WHERE 
-                    contact_id=:cid
+                    contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED)
                   AND correspondent_id=:corrId
                   AND tenant_id=:tenant_id";
 
         if (strtolower($action) == "link"){
             $sql = "INSERT INTO contact_paperless_map (contact_id, correspondent_id, tenant_id) 
-                         VALUES (:cid, :corrId, :tenant_id);";
+                         VALUES (CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED), :corrId, :tenant_id);";
         }
         
         //$sql = "UPDATE contacts SET paperless_id =:paperless WHERE tenant_id=:tenant_id AND id= :cid;";
@@ -845,12 +852,12 @@ class PaperlessProcessor extends \App\Core\Database
                   FROM contact_paperless_map 
                  WHERE 
                     contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED)
-                  AND tag_id=CAST(AES_DECRYPT(UNHEX(:tagid), :crypto_key) AS UNSIGNED)
+                  AND tag_id=:tagid
                   AND tenant_id=:tenant_id";
 
         if (strtolower($action) == "link"){
             $sql = "INSERT INTO contact_paperless_map (contact_id, tag_id, tenant_id) 
-                         VALUES (CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED), CAST(AES_DECRYPT(UNHEX(:tagid), :crypto_key) AS UNSIGNED), :tenant_id);";
+                         VALUES (CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED), :tagid, :tenant_id);";
         }
         
         return $this->queryIt($sql, $params);
