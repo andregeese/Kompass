@@ -49,6 +49,17 @@ class SystemController extends \App\Core\BaseController
         }
         exit;
     }
+
+    public function globalSearch()
+    {
+        return $this->process(
+            $this->systemProcess,
+            'globalSearch',
+            'gSearch',
+            ''
+        );
+    }
+
     /**
      * Repariert verwaiste E-Mail-Zuordnungen für den aktuellen Tenant.
      * Nutzt die universelle queryIt()-Methode der Elternklasse.

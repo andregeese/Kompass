@@ -559,7 +559,7 @@ class ContactProcessor extends \App\Core\Database
         // 1. MAILS QUELLE
         // ==========================================
 
-        $mail = new MailProcessor($this->dashboard);
+        $mail = $this->getService('mailProcess', \App\Services\MailProcessor::class);
         $mailItems = $mail->getMailItems($id);
 
         //error_log(print_r($mailItems, true));
@@ -777,7 +777,7 @@ class ContactProcessor extends \App\Core\Database
     /**
      * Gibt ein einheitliches ITEM für die Timeline zurück
      */
-    private function formatItemTL(string $type, $id, ?string $dateString, ?string $title, ?string $detail, ?string $link, ?string $hash = null): array
+    public function formatItemTL(string $type, $id, ?string $dateString, ?string $title, ?string $detail, ?string $link, ?string $hash = null): array
     {
 
         $eventDate = new \DateTime($dateString ?: 'now');

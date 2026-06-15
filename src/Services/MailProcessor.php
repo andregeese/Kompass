@@ -945,14 +945,14 @@ class MailProcessor extends \App\Core\Database
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
         $sql = "SELECT m.uid, HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, m.subject_hash as sHash, m.date_received, m.paperless_id, 
-                        ce.display_name as contact_name
+                        c.display_name as contact_name
                 FROM mails as m
                 LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
                 WHERE m.tenant_id = :tenant_id 
                 AND m.imap_folder = :folder
                 AND (
                     ce.email LIKE :search 
-                    OR ce.display_name LIKE :search
+                    OR c.display_name LIKE :search
                 )
                 ORDER BY m.date_received DESC;";
 
@@ -1282,7 +1282,7 @@ class MailProcessor extends \App\Core\Database
         error_log(__FUNCTION__);
 
         $sql = "SELECT CASE 
-                        WHEN m.recipient_ceid = ce.id THEN 'mail_send'
+                        WHEN m.recipient_ceid = ce.id THEN 'mail-send'
                         ELSE 'mail'
                     END AS type,
                     HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
@@ -1517,7 +1517,7 @@ class MailProcessor extends \App\Core\Database
             $sql .= " AND (";
             $searchNormalized = $this->normalizeString($search);
             $hashedSearch = substr(hash('sha256', $searchNormalized . $salt), 0, 12);
-            $sql .= "LOWER(sender) LIKE :like_q OR LOWER(recipient) LIKE :like_q OR mb.body_search_index LIKE :hash_q";
+            $sql .= "LOWER(cm_snd.email) LIKE :like_q OR LOWER(cm_rcp.email) LIKE :like_q OR mb.body_search_index LIKE :hash_q";
             $params['like_q'] = '%' . mb_strtolower($search, 'UTF-8') . '%';
             $params['hash_q'] = '%' . $hashedSearch . '%';
 

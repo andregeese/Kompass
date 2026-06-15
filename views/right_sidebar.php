@@ -128,30 +128,39 @@
                                             <span x-text="'🔹 ' + monthGroup.name"></span>
                                             <span class="text-[9px] text-slate-400 transition-transform duration-200" :class="(monthGroup.is_open ?? false) ? 'rotate-90' : ''">▶</span>
                                         </button>
+                                        <!-- Das Herz des Systems -->
                                         <div x-show="monthGroup.is_open ?? false" class="pl-2 ml-1 border-l border-slate-200 dark:border-gray-700 space-y-2 pt-1 pb-2">
-                
                                             <template x-for="(item, index) in monthGroup.items" :key="item.id || index">
                                                 <div class="relative group pl-4 py-1.5 flex items-center hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                                                     @click.stop="dispatchAction(`${item.type}_view`, { hash: item.id }, $el)">
                                                     
                                                     <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
                                                     <div class="absolute left-[-3px] top-2.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-slate-300 dark:bg-gray-600 group-hover:bg-emerald-500 transition-colors"></div>
+                                                    
                                                     <div class="flex items-center gap-3 w-full text-[11px]">
-                                                        
-                                                        <span class="text-[10px] w-6 shrink-0" 
+                                                        <span class="w-4 shrink-0 flex justify-center" 
                                                             :class="{
                                                                 'text-emerald-600': item.critical === 'green',
                                                                 'text-rose-600': item.critical === 'red',
                                                                 'text-slate-500': !item.critical
                                                             }">
-                                                            <span x-show="item.type === 'mail'">✉️</span>
-                                                            <span x-show="item.type === 'mail_send'">📤</span>
-                                                            <span x-show="item.type === 'appointment'">📅</span>
-                                                            <span x-show="item.type === 'document'">📝</span>
-                                                            <span x-show="item.type === 'paperless'">📄</span>
-                                                            <span x-show="item.type === 'note'">📋</span>
+                                                            <span class="text-[10px] w-6 shrink-0 text-slate-500">
+                                                                <svg class="w-3 h-3">
+                                                                    <use :href="'public/assets/sprite.svg#icon-' + {
+                                                                        'mail': 'mail',
+                                                                        'mail-send': 'mail-send',
+                                                                        'contact': 'contact',
+                                                                        'document': 'document',
+                                                                        'paperless': 'document',
+                                                                        'note': 'note',
+                                                                        'appointment': 'appointment'
+                                                                    }[item.type]"></use>
+                                                                </svg>
                                                             </span>
+                                                        </span>
+
                                                         <span x-show="item.is_flagged" class="text-[10px] shrink-0 animate-pulse" title="Markiert">📌</span>
+                                                        
                                                         <span class="flex-1 font-medium truncate transition-colors"
                                                             :class="{
                                                                 'text-emerald-600 dark:text-emerald-400': item.critical === 'green',
@@ -162,25 +171,18 @@
                                                             x-text="(item.title || 'Unbenannt').substring(0, 30) + (item.title?.length > 30 ? '...' : '')"
                                                             :title="item.title">
                                                         </span>
+
                                                         <div class="opacity-0 group-hover:opacity-100 flex items-center space-x-1 transition-opacity duration-150 shrink-0 bg-slate-50 dark:bg-gray-800/90 pl-1 rounded">
-                                                            <button @click.stop="dispatchAction('open_modal', { ...item, action_type: 'appointment' })" 
-                                                                    title="Termin erstellen" 
-                                                                    class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
-                                                                📅
-                                                            </button>
-                                                            <button @click.stop="dispatchAction('open_modal_notes', { ...item, action_type: 'note' }, item)" 
-                                                                    title="Notiz hinzufügen" 
-                                                                    class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">
-                                                                📝
-                                                            </button>
+                                                            <button @click.stop="dispatchAction('open_modal', { ...item, action_type: 'appointment' })" class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">📅</button>
+                                                            <button @click.stop="dispatchAction('open_modal_notes', { ...item, action_type: 'note' }, item)" class="p-0.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded transition text-[10px]">📝</button>
                                                         </div>
+
                                                         <span class="font-mono text-[10px] shrink-0 transition-colors" 
                                                             :class="(new Date(item.date_raw) > new Date()) ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-400'"
                                                             x-text="item.date">
                                                         </span>
                                                     </div>
                                                 </div>
-                                                
                                             </template>
                                         </div>
                                     </div>

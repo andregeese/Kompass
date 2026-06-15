@@ -75,6 +75,7 @@ $routes = [
     // Auth
     'login'                         => [App\Api\AuthController::class, 'login'],
     'register'                      => [App\Api\AuthController::class, 'register'],
+    'global_search'                 => [App\Api\SystemController::class, 'globalSearch'],
 
     // Settings
     'get_settings'                  => [App\Api\SettingsController::class, 'get'],

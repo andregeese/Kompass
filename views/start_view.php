@@ -54,7 +54,7 @@
 
             <div class="space-y-2 max-h-[32vh] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-800">
                 <template x-for="cluster in acceleratorClusters" :key="cluster.sender">
-                    <div @click="$dispatch('navigate', { view: 'mails', id: cluster.sender })"
+                    <div @click.stop="dispatchAction('search_mails', { query: cluster.sender })"
                          class="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all gap-4 cursor-pointer group">
                         
                         <div class="min-w-0 flex-1">

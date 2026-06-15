@@ -53,6 +53,14 @@ const mailViewComponent = () => ({
             }
         }
 
+        //Suche ansteuern
+        const query = params.get('query'); // FIX: targetId sauber für den gesamten Verlauf definieren
+        if (query)
+        {
+            this.mailSearchQuery = query;
+            this.searchQuery = query;
+        }
+
         // 2. FIX: Watcher JETZT global für alle Zustände aktiv!
         this.$watch('mailSearchQuery', (val) => {
             clearTimeout(this.searchTimeout);
@@ -99,7 +107,7 @@ const mailViewComponent = () => ({
         this.page = 1;
         this.hasMore = true;
         this.currentMailHtml = '';
-        this.mailSearchQuery = ''; // 4. FIX: Sauber über Zustand leeren, kein DOM-Gepfusche mehr!
+        //this.mailSearchQuery = ''; // 4. FIX: Sauber über Zustand leeren, kein DOM-Gepfusche mehr!
         
         this.$nextTick(() => {
             setTimeout(() => {

@@ -300,6 +300,28 @@ function dispatchAction(action, context, triggerElement) {
             params.set('view', 'document');
             params.set('hash', targetHash);
             window.open(`${window.CRM_PAPERLESS}/documents/${params.get('hash')}/details`, '_blank');
+        },
+        'search_mails': (ctx) => {
+            const targetHash = ctx.query;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAlreadyInMailsView = urlParams.get('view') === 'mails';
+
+            if (isAlreadyInMailsView) {
+                // Alpine-Komponente direkt im DOM ansprechen, ohne die Seite neu zu laden
+                const contactEl = document.querySelector('[x-data^="mailView"]');
+                if (contactEl && contactEl.__x_data) {
+                    // Über den Alpine-Schnittstellen-Proxy die Funktion aufrufen
+                    contactEl.__x_data.openMailDirectlyByHash(targetHash);
+                    return;
+                }
+            }
+
+            // Fallback / Aufruf aus einer anderen View (z.B. Dashboard): Seite mit Query-Parametern ansteuern
+            const params = new URLSearchParams();
+            params.set('view', 'mails');
+            params.set('query', targetHash);
+            window.location.search = params.toString();
         }
     };
 
@@ -506,11 +528,11 @@ window.crmEngine = function() {
                 this.loading = true;
                 try {
                     // Da du oben nach "Quast" suchst, übergeben wir den String hier direkt an deinen API-Pfad
-                    const jResponse = await apiCall('search_contact', {hash: trimmed}, 'GET');
+                    const jResponse = await apiCall('global_search', {query: trimmed}, 'GET');
                     
                     if (jResponse?.success) {
                         // Hier nimmst du die zurückgegebenen Treffer (die Liste mit dem herkunft-Flag) auf
-                        this.results = jResponse.details.contacts || jResponse.details || [];
+                        this.results = jResponse.details.gSearch || jResponse.details || [];
                     }
                 } catch (err) {
                     console.error("Suchfehler im Backend:", err);

@@ -309,4 +309,70 @@ class SystemProcessor extends \App\Core\Database
         }
         throw new \Exception("APP_KEY in .env Datei nicht definiert.");
     }
+
+    public function globalSearch(string $query)
+    {
+        $allResults = [];
+        $paperlessProcess = $this->getService('paperlessProcess', \App\Services\PaperlessProcessor::class);
+        $pResult = $paperlessProcess->search($query,'');
+
+        
+        foreach ($pResult as $doc) {
+            $allResults[] = [
+                'type'    => 'document',
+                'id'      => $doc['id'],
+                'title'   => $doc['title'],
+                'snippet' => 'Erstellt am: ' . $doc['created'],
+                'score'   => $doc['score'] // Der berechnete Score aus deiner Logik
+            ];
+        }
+        
+
+        $formattedQuery = '%' . $query . '%';
+        $params = ['query' => $formattedQuery];
+
+        // 1. Parallel abfragen (oder nacheinander, ist bei 5 Tabellen egal)
+        $queries = [
+            'contact' => "SELECT id, display_name as title, '' as snippet FROM contacts WHERE display_name LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            'mail'    => "SELECT m.id, m.message_id as title, mb.body_search_index as snippet FROM mails m LEFT JOIN mail_bodies mb ON mb.mail_id = m.id WHERE mb.body_search_index LIKE :query AND m.tenant_id = :tenant_id LIMIT 10",
+            'note'    => "SELECT id, category as title, content as snippet FROM notes WHERE content LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            // NEU: Appointments & Paperless
+            'appointment' => "SELECT id, summary as title, location as snippet FROM appointments WHERE summary LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            'paperless'   => "SELECT id, title, '' as snippet FROM paperless_documents WHERE title LIKE :query AND tenant_id = :tenant_id LIMIT 10"
+        ];
+
+        
+        foreach ($queries as $type => $sql) {
+            $res = $this->queryIt($sql, $params, false, false, false);
+            if ($res->success) {
+                foreach ($res->data->fetched as $item) {
+                    // Hier formatieren wir direkt in das von dir benötigte Format
+                    $allResults[] = array_merge((array)$item, ['type' => $type]);
+                }
+            }
+        }
+
+        // 2. Ranking/Mapping (Hier die prozentuale Gewichtung)
+        return $this->rankResults($allResults, $query);
+    }
+
+    private function rankResults(array $results, string $query): array
+    {
+        foreach ($results as &$item) {
+            $score = 0;
+            // Exakte Übereinstimmung am Anfang = 100 Punkte
+            if (stripos($item['title'], $query) === 0) $score += 100;
+            // Enthalten im Titel = 50 Punkte
+            elseif (stripos($item['title'], $query) !== false) $score += 50;
+            // Enthalten im Snippet = 20 Punkte
+            elseif (isset($item['snippet']) && stripos($item['snippet'], $query) !== false) $score += 20;
+
+            $item['score'] = $score;
+        }
+
+        // Sortieren nach Score absteigend
+        usort($results, fn($a, $b) => $b['score'] <=> $a['score']);
+        
+        return array_slice($results, 0, 20); // Top 20
+    }
 }
