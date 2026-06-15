@@ -19,7 +19,7 @@ class NotesController extends \App\Core\BaseController
     }
     public function saveNote()
     {
-        return $this->process($this->notesProcess, 'saveNote', 'note', 'Erfolgreich gespeichert');
+        return $this->process($this->notesProcess, 'saveNote', 'note', 'Notiz erfolgreich gespeichert');
         
         // 1. Prüfung direkt im Controller (Sicherstellen, dass das Request-Objekt da ist)
         if (!isset($this->request)) {

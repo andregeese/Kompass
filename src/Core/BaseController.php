@@ -21,14 +21,11 @@ abstract class BaseController
     public function __construct($dashboard)
     {
         // Debug-Lines zum Lösen des Rätsels:
-        error_log("CONSTRUCTOR CHECK: Ich bin in " . get_class($this));
-        error_log("DASHBOARD TYPE: " . gettype($dashboard));
-        
-        error_log("BASECONTROLLER: Geladen von Klasse: " . get_class($this));
+        //error_log("BASECONTROLLER: Geladen von Klasse: " . get_class($this));
         $this->dashboard = $dashboard;
 
         $this->request = $this->buildRequestObject();
-        error_log("BASECONTROLLER: Request Payload ist: " . print_r($this->request->all(), true));
+        //error_log("BASECONTROLLER: Request Payload ist: " . print_r($this->request->all(), true));
         if (is_object($this->dashboard)) {
             $this->dashboard->request = $this->request;
             error_log("BASECONTROLLER: Request an Dashboard übergeben.");

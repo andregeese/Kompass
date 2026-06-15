@@ -115,7 +115,10 @@ class MailProcessor extends \App\Core\Database
     public function getMailById($id)
     {
         error_log("## " . __FUNCTION__ . " ##");
-        $sql = "SELECT m.uid, m.date_received, m.sender_ceid, m.recipient_ceid, m.status, m.imap_folder, ce.email, c.display_name
+        $sql = "SELECT HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
+                       c.display_name as sender,
+                       m.subject_hash as sHash,
+                       m.uid, m.date_received, m.sender_ceid, m.recipient_ceid, m.status, m.imap_folder, ce.email, c.display_name
                   FROM mails m
                 INNER JOIN contact_emails as ce ON ce.id = m.sender_ceid
                 INNER JOIN contacts as c ON c.id = ce.contact_id
@@ -131,13 +134,17 @@ class MailProcessor extends \App\Core\Database
             ],
             false,
             false,
-            true
+            false
         );
 
-        error_log(print_r($dbResult, true));
+        if($dbResult->success && !empty($dbResult->data))
+        {
+            $row = $dbResult->data->fetched[0];
+            $row['subject'] = $this->dashboard->decrypt($row['sHash']);
+        }
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
-            ?  $dbResult->data->fetched[0]
+            ?  $row
             : null;
     }
     /**
@@ -598,7 +605,7 @@ class MailProcessor extends \App\Core\Database
                         AND tenant_id = :tenant_id 
                         AND imap_folder = :folder;";
 
-        $dbMailsResult = $this->queryIt($sqlFetch, $params, false, false, true);
+        $dbMailsResult = $this->queryIt($sqlFetch, $params, false, false, false);
         
         // 🚀 FIX: Sicherer Zugriff auf ->data->fetched analog zum unteren Code-Teil
         $dbMap = [];
@@ -1076,8 +1083,8 @@ class MailProcessor extends \App\Core\Database
         $sql = "SELECT mb.body_encrypted 
             FROM mail_bodies AS mb 
             INNER JOIN mails AS m ON m.id = mb.mail_id 
-            WHERE id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
-            AND m.tenant_id = :tenant_id;";
+            WHERE m.tenant_id = :tenant_id
+            AND m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
 
         $dbResult = $this->queryIt($sql, [
             'id' => $id
@@ -1222,7 +1229,7 @@ class MailProcessor extends \App\Core\Database
             ],
             false,
             false,
-            true
+            false
         );
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?

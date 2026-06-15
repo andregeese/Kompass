@@ -83,7 +83,7 @@ $routes = [
     'save_push_subscription'        => [App\Api\PushController::class, 'subscribe'],
 
     // Mails
-    'get_mail_by_hash'              => [App\Api\MailController::class, 'getMailByHash'],
+    'get_mail_by_id'                => [App\Api\MailController::class, 'getMailById'],
     'get_mails_by_mailadress'       => [App\Api\MailController::class, 'getMailsByAddress'],
     'get_accelerate_cluster'        => [App\Api\MailController::class, 'getAccelorateClusters'],
     'list_mails'                    => [App\Api\MailController::class, 'listMails'],
@@ -139,7 +139,7 @@ $routes = [
     'auto_link_contact'             => [App\Api\ContactController::class, 'autoLinkContact'],
     'get_contact_timeline'          => [App\Api\ContactController::class, 'getTimeLineContact'],
     'get_all_emails'                => [App\Api\ContactController::class, 'getAllEmails'],
-    'get_emails_by_hash'            => [App\Api\ContactController::class, 'getContactByEmailHash'],
+    'get_contact_by_hash'           => [App\Api\ContactController::class, 'getContactByHash'],
     'get_emails_by_contact'         => [App\Api\ContactController::class, 'getEmailsByContact'],
     'get_emails_by_search'          => [App\Api\ContactController::class, 'getEmailsBySearch'],
     'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],

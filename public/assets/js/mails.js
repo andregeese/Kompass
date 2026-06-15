@@ -28,55 +28,29 @@ const mailViewComponent = () => ({
             console.error("Fehler beim Laden der IMAP-Ordner:", e);
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        let targetId = urlParams.get('id');
-        
-        if (!targetId) {
-            const rawHash = window.location.hash;
-            targetId = rawHash ? rawHash.replace('#hash-', '').replace('#', '') : null;
-        }
-
         this.initInfiniteScroll();
 
         // Standardmäßig Mails laden
-        await this.loadMails(false);
+        this.loadMails(false);
+
+        // 🎯 URL-Parameter direkt im JS abfangen
+        const params = new URLSearchParams(window.location.search);
+        const targetId = params.get('id'); // FIX: targetId sauber für den gesamten Verlauf definieren
 
         if (targetId) {
-            if (targetId.includes('@')) {
-                this.mailSearchQuery = targetId;
-                this.query = true;
-                await this.loadMails(false); 
-            } else {
-                this.currentMailHash = targetId;
-                this.isSidebarOpen = false;
-                
-                let foundMail = this.mails.find(m => m.hash === targetId);
-                
-                if (!foundMail) {
-                    try {
-                        const dataMail = await apiCall('get_mail_by_hash', { hash: targetId }, 'GET');
-                        if (dataMail?.success) {
-                            foundMail = dataMail.details?.mail;
-                            this.mails.push(foundMail); 
-                        }
-                    } catch (error) {
-                        console.error("Fehler beim Abrufen der Mail via API:", error);
-                    }
-                }
-
-                if (foundMail) this.viewMail(foundMail);
-
-                try {
-                    const contactData = await apiCall('get_emails_by_id', { id: targetId }, 'GET');
-                    this.searchQueryContacts = contactData?.details?.contacts?.[0]?.displayname || '';
-                    if (typeof this.loadContacts === 'function') this.loadContacts(); 
-                } catch (error) {
-                    console.error("Fehler beim Laden der Kontakte zum Hash:", error);
-                }
+            // Mail in Liste suchen
+            let foundMail = this.mails.find(m => m.hash === targetId || m.id == targetId);
+            
+            // Wenn nicht gefunden, per API laden
+            if (!foundMail) {
+                const data = await apiCall('get_mail_by_id', { id: targetId }, 'GET');
+                if (data?.success) foundMail = data.details.mail;
             }
 
-            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?view=mails';
-            window.history.replaceState({}, '', cleanUrl);
+            // Wenn wir eine Mail haben, öffnen wir sie exakt wie bei einem Klick
+            if (foundMail) {
+                await this.openMail(foundMail);
+            }
         }
 
         // 2. FIX: Watcher JETZT global für alle Zustände aktiv!
@@ -87,6 +61,18 @@ const mailViewComponent = () => ({
                 this.loadMails(false);
             }, 300);
         });
+    },
+
+    async openMail(mail) {
+        this.currentMail = mail;
+        this.currentMailHash = mail.id;
+        this.isSidebarOpen = false; // Entspricht deinem Click-Handler
+        
+        // UI-Events auslösen
+        this.$dispatch('toggle-sidebar-request', { tab: 'context' });
+        
+        // Mail-Inhalt laden
+        await this.viewMail(mail);
     },
 
     get filteredMails() {
@@ -186,21 +172,7 @@ const mailViewComponent = () => ({
         //hast ist die ID gehasht
         //this.autoLinkContact(parsedName, parsedEmail, hash);
     },
-    // wird von viewMails aufgerufen, um mail in db zu speichen
-    async autoLinkContact(name, email, hash) 
-    {
-        
-        try {
-            const response = await apiCall('auto_link_contact', {name: name, email: email, hash: hash }, 'POST');
-            // Nach dem Linken aktualisierst du die Sidebar
-            if (!response.success) {
-                showNotify("Verknüpfung des Kontakts fehlgeschlagen!");
-            }
-        } catch (err) {
-            showNotify("Verknüpfung des Kontakts (AutoLink) fehlgeschlagen!");
-            console.error("Fehler beim AutoLink:", err);
-        }
-    },
+    
     async viewMail(mail) 
     {
         if (!mail?.id) return;

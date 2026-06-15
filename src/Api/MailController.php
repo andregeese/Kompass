@@ -131,49 +131,8 @@ class MailController extends \App\Core\BaseController
             'getMailsByAddress',
             'mails'
         );
-
-
-        // 2. Validierung: Suchbegriff darf nicht komplett leer sein
-        if (empty($query)) {
-            throw new \Exception("Kein Suchbegriff übergeben.");
-        }
-        // 3. Aufruf des Processors mit den nun existierenden Variablen
-        $dbResult = $this->mailProcess->getMailsByAddress($query);
-
-        if (!$dbResult) {
-            if (empty($mailDetails)) {
-                return [
-                    "mails" => [],
-                    "ui" => [
-                        'notify'  => true,
-                        'title'   => 'Suche',
-                        'message' => 'Keine E-Mails gefunden.',
-                        'type'    => 'info'
-                    ]
-                ];
-            }
-        }
-
-        $this->handleResult($dbResult, "Kontakt wurde aktualisiert.");
     }
-    public function getMailByHash()
-    {
-        $hash = $this->request['hash'] ?? null;
-        if (empty($hash)) {
-            throw new \Exception("Kein Mail-Id-Hash übergeben.");
-        }
-        $mailDetails = $this->mailProcess->getMailByHash($hash);
 
-        if (!$mailDetails) {
-            throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
-        }
-        return [
-            'subject'      => $this->dashboard->decrypt($mailDetails['subject_hash']),
-            'date'         => $mailDetails['date_received'],
-            'sender'       => $mailDetails['sender'],
-            'paperless_id' => $mailDetails['paperless_id']
-        ];
-    }
     /**
      * Zeige die E-Mail an
      */
@@ -183,7 +142,7 @@ class MailController extends \App\Core\BaseController
         if (empty($hash)) {
             throw new \Exception("Kein Mail-Id-Hash übergeben.");
         }
-        $mailDetails = $this->mailProcess->getMailByHash($hash);
+        $mailDetails = $this->mailProcess->getMailById($hash);
 
         if (!$mailDetails) {
             throw new \Exception("Mail existiert nicht in der lokalen Datenbank.");
@@ -261,7 +220,7 @@ class MailController extends \App\Core\BaseController
     public function handlePdf()
     {
         $hash = $_POST['id'] ?? '';
-        $mail = $this->mailProcess->getMailByHash($hash);
+        $mail = $this->mailProcess->getMailById($hash);
         $success = false;
         if (method_exists($this->mailProcess, 'moveToDMS')) {
             $this->mailProcess->moveToDMS($hash);

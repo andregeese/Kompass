@@ -93,7 +93,6 @@ class NotesProcessor extends \App\Core\Database
 
     public function saveNote(array $memoData)
     {
-        error_log('saveNote: ' . print_r($memoData, true));
 
         $sql = "INSERT INTO notes (tenant_id, mail_uid, mail_folder, category, content, status, lokal_id, ceid, due_date) 
                 VALUES (:tenant_id, :mailUid, :mailFolder, :category, :content, :status, :lokal_id, CAST(AES_DECRYPT(UNHEX(:ceid), :crypto_key) AS UNSIGNED), :duedate)";
@@ -108,7 +107,7 @@ class NotesProcessor extends \App\Core\Database
             'duedate'     => !empty($memoData['due_date']) ? date('Y-m-d H:i:s', strtotime($memoData['due_date'])) : null
         ];
 
-        return $this->queryIt($sql, $params, false, false, true);
+        return $this->queryIt($sql, $params, false, false, false);
        
         if (!$dbResult->success){
             throw new \Exception("Notiz nicht gespeichert");

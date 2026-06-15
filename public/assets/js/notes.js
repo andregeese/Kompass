@@ -15,6 +15,7 @@ const notesViewComponent = () => ({
     contactMails: [],
     loadingEmails: null,
     emailSearch: '',
+    memoData: {},
     newNote: {
         content: '',
         uid: new URLSearchParams(window.location.search).get('uid') || '',
@@ -229,6 +230,7 @@ const notesViewComponent = () => ({
             this.processOfflineFallback(memoData);
         }
     },
+
     processOfflineFallback(memoData) {
         // In die UI-Liste schieben, damit die Notiz für den User sichtbar bleibt
         this.notes.unshift(memoData);

@@ -51,7 +51,7 @@
                     Gesamt: <span x-text="mails.length"></span> Mails
                 </div>
                 <template x-for="mail in mails" :key="mail.id">
-                    <div @click="viewMail(mail); currentMail=mail; isSidebarOpen = false; $dispatch('toggle-sidebar-request', { tab: 'context' });" 
+                    <div @click="openMail(mail)" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
                         :class="{
                                 'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedId === mail.id,

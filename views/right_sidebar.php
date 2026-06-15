@@ -49,7 +49,7 @@
             <div x-show="activeTab === 'context'" class="space-y-4">
                 <!--Kontakte -->
                 <div class="space-y-3">
-                    <div @click="showManualForm = !showManualForm" 
+                    <div @click.stop="dispatchAction('contact_view', {hash:contactState?.contact.id}, null)" 
                          class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all select-none shadow-sm">
                         <div class="flex items-center space-x-2 min-w-0">
                             <span class="flex h-2 w-2 rounded-full shrink-0" :class="contactState?.success ? 'bg-emerald-500' : 'bg-amber-500'"></span>
@@ -58,52 +58,6 @@
                         <div class="flex items-center space-x-1.5 shrink-0 text-slate-400">
                             <span class="text-[10px] font-medium" x-text="contactState?.contact?.type === 'company' ? '🏢 Firma' : '👤 Privat'"></span>
                             <span class="text-[9px] transition-transform duration-200" :class="showManualForm ? 'rotate-180' : ''">▼</span>
-                        </div>
-                    </div>
-                    <div x-show="showManualForm" x-transition class="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-4 space-y-3 shadow-sm">
-                        <div class="space-y-2.5">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
-                                    Kontakt
-                                </label>
-                                <!-- Eingabefeld mit Debounce bei der Suche -->
-                                <input 
-                                    type="text" 
-                                    list="paperless-contacts-list"
-                                    placeholder="Tippen zum Suchen..."
-                                    x-model="formData.name"
-                                    @input.debounce.300ms="searchPaperlessContacts($el.value)"
-                                    class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 dark:text-gray-200"
-                                >
-                                <div class="relative mt-2">
-                                    <ul class="absolute z-50 w-full bg-white dark:bg-gray-800 border border-slate-200 shadow-lg rounded-lg max-h-40 overflow-y-auto"
-                                        x-show="paperlessContacts.length > 0">
-                                        <template x-for="item in paperlessContacts" :key="item.id">
-                                            <li @click="
-                                                    formData.name = item.name;            // WICHTIG: Name für das Input-Feld aktualisieren
-                                                    formData.paperless_id = item.id;      // Achte darauf, ob deine API 'id' oder 'paperless_id' liefert!
-                                                    paperlessContacts = [];
-                                                " 
-                                                class="...">    
-                                                <span x-text="item.name"></span>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">E-Mail-Adresse</label>
-                                <input type="email" x-model="formData.email" class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-1">Name / Firma</label>
-                                <input type="text" x-model="formData.name" class="w-full text-xs px-3 py-1.5 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500">
-                            </div>
-                            <button @click="saveContact();" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm">Kontakt Speichern</button>
-                            <a :href="'?view=contacts&id=' + contactState?.contact?.id" x-show="contactState?.contact?.id"
-                                class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs py-2 rounded-lg transition shadow-sm flex items-center justify-center space-x-1">
-                                <span>✏️</span> <span>Im CRM bearbeiten</span>
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -178,7 +132,7 @@
                 
                                             <template x-for="(item, index) in monthGroup.items" :key="item.id || index">
                                                 <div class="relative group pl-4 py-1.5 flex items-center hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
-                                                    @click.stop="dispatchAction('open_modal', item)">
+                                                    @click.stop="dispatchAction(`${item.type}_view`, { hash: item.id }, $el)">
                                                     
                                                     <div class="absolute left-0 top-0 bottom-0 w-px bg-slate-200 dark:bg-gray-700"></div>
                                                     <div class="absolute left-[-3px] top-2.5 w-2 h-2 rounded-full border-2 border-white dark:border-gray-900 bg-slate-300 dark:bg-gray-600 group-hover:bg-emerald-500 transition-colors"></div>

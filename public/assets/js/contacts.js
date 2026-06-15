@@ -33,13 +33,14 @@ const contactsViewComponent = () => ({
     activeContact: { displayname: '', type: 'person', emails: [], linked_correspondents: [], tags: []},
     simulation: null,
 
-    async initContacts() {
+    async initContacts() 
+    {
         const urlParams = new URLSearchParams(window.location.search);
         const hashValue = urlParams.get('hash'); //id_hash
         
         //Wenn ein Hash mitkommt suche den Kontakt dirket!
         if (hashValue) {
-            const data = await apiCall('get_emails_by_hash', {hash:hashValue},'GET');
+            const data = await apiCall('get_contact_by_hash', {hash:hashValue},'GET');
             // 1. Wert setzen
             this.searchQueryContacts = data?.details?.contacts?.[0]?.displayname || '';
             
@@ -54,7 +55,7 @@ const contactsViewComponent = () => ({
         // Bestehender Watcher bleibt wie er ist
         this.$watch('searchQueryContacts', () => {
             clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => this.loadContacts(), 300);
+            this.searchTimeout = setTimeout(() => this.loadContacts(), 400);
         });
     },
      // FEHLENDER GETTER: Alpine braucht diesen, um das x-for im Template zu füllen
@@ -66,10 +67,10 @@ const contactsViewComponent = () => ({
         const results = (this.matchResults && Array.isArray(this.matchResults)) ? this.matchResults : [];
         return [...results].sort((a, b) => {
             // Sicherer Vergleich
-            const aId = Number(a.id);
-            const bId = Number(b.id);
-            const isASelected = this.activeContact?.emails?.some(e => Number(e.id) === aId) || false;
-            const isBSelected = this.activeContact?.emails?.some(e => Number(e.id) === bId) || false;
+            const aId = a.id;
+            const bId = b.id;
+            const isASelected = this.activeContact?.emails?.some(e => e.id === aId) || false;
+            const isBSelected = this.activeContact?.emails?.some(e => e.id === bId) || false;
             
             if (isASelected && !isBSelected) return -1;
             if (!isASelected && isBSelected) return 1;
@@ -163,7 +164,7 @@ const contactsViewComponent = () => ({
     // --- Paperless UI Logik ---
     isPaperlessLinked(corrId) {
         // Prüft, ob der Correspondent bereits in der Liste ist
-        return this.activeContact.linked_correspondents.some(c => Number(c.id) === Number(corrId));
+        return this.activeContact.linked_correspondents.some(c => c.id === corrId);
     },
     
     async togglePaperless(corrObj) {
@@ -172,7 +173,7 @@ const contactsViewComponent = () => ({
         // 1. Lokale UI sofort aktualisieren mit Array-Kopie (erzwingt Alpine Re-Render)
         if (isLinked) {
             this.activeContact.linked_correspondents = this.activeContact.linked_correspondents.filter(
-                c => Number(c.id) !== Number(corrObj.id)
+                c => c.id !== corrObj.id
             );
         } else {
             // Sicherstellen, dass das Objekt korrekt hinzugefügt wird
@@ -217,10 +218,10 @@ const contactsViewComponent = () => ({
                 const map = new Map();
                 
                 // Erst die verknüpften in die Map
-                this.activeContact.linked_correspondents.forEach(item => map.set(Number(item.id), item));
+                this.activeContact.linked_correspondents.forEach(item => map.set(item.id), item);
                 
                 // Dann die neuen Ergebnisse drüber (oder dazu)
-                newResults.forEach(item => map.set(Number(item.id), item));
+                newResults.forEach(item => map.set(item.id, item));
                 
                 // Zurück in das Array
                 this.paperlessResults = Array.from(map.values());
@@ -273,7 +274,7 @@ const contactsViewComponent = () => ({
             const isSearch = this.emailQuery.length >= 2;
 
             const action = isSearch ? 'get_emails_by_search' : 'get_emails_by_contact';
-            const params = isSearch ? { query: this.emailQuery } : { query: contactId };
+            const params = isSearch ? { query: this.emailQuery } : { hash: contactId };
             const method = isSearch ? 'POST' : 'GET';
             // 2. Ein sauberer Aufruf
             const data = await apiCall(action, params, method);
@@ -334,14 +335,14 @@ const contactsViewComponent = () => ({
     isEmailLinked(ceid) {
         console.log("isEmailLinked: " + ceid);
         console.log(this.activeContact.emails);
-        return this.activeContact.emails.some(e => Number(e.ceid) === Number(ceid));
+        return this.activeContact.emails.some(e => e.ceid === ceid);
     },
     
     toggleEmail(emailObj) {
         const isLinked = this.isEmailLinked(emailObj.ceid);
 
         if (isLinked) {
-            this.activeContact.emails = this.activeContact.emails.filter(e => Number(e.ceid) !== Number(emailObj.ceid));
+            this.activeContact.emails = this.activeContact.emails.filter(e => e.ceid !== emailObj.ceid);
         } else {
             this.activeContact.emails.push(emailObj);
         }
@@ -357,7 +358,7 @@ const contactsViewComponent = () => ({
     async fetchTagsForContact(id) {
         const data = await apiCall('get_tags_by_contact', {cid:id}, 'GET');
         if (data?.success) {
-            this.activeContact.tags = data.details.activeTags || [];
+            this.activeContact.tags = data.details.tags || [];
             this.tagResults = [...this.activeContact.tags];
         }
     },
@@ -385,7 +386,7 @@ const contactsViewComponent = () => ({
             const combined = [...existingTags, ...normalizedResults];
             
             // Einzigartig machen nach Tag-ID (nicht mehr ceid!)
-            this.tagResults = Array.from(new Map(combined.map(item => [Number(item.id), item])).values());
+            this.tagResults = Array.from(new Map(combined.map(item => [item.id, item])).values());
         } catch (err) {
             console.error("Tag-Suche fehlgeschlagen:", err);
         } finally {
@@ -395,14 +396,14 @@ const contactsViewComponent = () => ({
 
     isTagLinked(tagId) {
         if (!this.activeContact?.tags) return false;
-        return this.activeContact.tags.some(t => Number(t.id) === Number(tagId));
+        return this.activeContact.tags.some(t => t.id === tagId);
     },
     
     async toggleTag(tagObj) {
         const isLinked = this.isTagLinked(tagObj.id);
 
         if (isLinked) {
-            this.activeContact.tags = this.activeContact.tags.filter(t => Number(t.id) !== Number(tagObj.id));
+            this.activeContact.tags = this.activeContact.tags.filter(t => t.id !== tagObj.id);
         } else {
             this.activeContact.tags.push(tagObj);
         }

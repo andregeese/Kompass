@@ -34,7 +34,7 @@ class ContactController extends \App\Core\BaseController {
             $contacts = $this->contactProcess->getContactById($id);
         }else{
             error_log("BY Query");
-            $contacts = $this->contactProcess->getContactList($query);
+            $contacts = $this->contactProcess->getContactListByQuery($query);
         }
 
         return ['contacts' => $contacts];        
@@ -47,10 +47,10 @@ class ContactController extends \App\Core\BaseController {
         return ["emails" => $contacts];
     }
 
-    public function getContactByEmailHash()
+    public function getContactByHash()
     {
          
-        return $this->process( $this->contactProcess, 'getContactByEmailHash', 'contact_emails', '');
+        return $this->process( $this->contactProcess, 'getContactByHash', 'contacts', '');
         
     }
     /**
@@ -66,19 +66,7 @@ class ContactController extends \App\Core\BaseController {
      */
     public function getEmailsByContact()
     {
-        $query = $this->request['query'] ?? null;
-        if (empty($query)) {
-            throw new \Exception('Keine Query übergeben.');
-        }
-        
-        if (is_numeric($query))
-        {
-            $contacts = $this->contactProcess->getContactListByContactID($query);
-        }else{
-            $contacts = $this->contactProcess->getContactList($query);
-        }
-        
-        return ['contacts' => $contacts];
+        return $this->process($this->contactProcess, 'getContactListByContactID', 'contacts');
     
     }
     
@@ -87,18 +75,22 @@ class ContactController extends \App\Core\BaseController {
         
         return $this->process(
             $this->contactProcess,
-            'getContactByMail',
+            'getContactByIdMail',
             'contact',
             ''
         ); 
-        return ['contact' => $email];
     }
     /**
      * Holt alle Mails und Paperless verknüpfungen
      */
     public function getTimeLineContact()
     {
-        return $this->process($this->contactProcess, 'getTimelineData', 'timeline', '');
+        return $this->process(
+            $this->contactProcess, 
+            'getTimelineData', 
+            'timeline', 
+            ''
+        );
     }
 
     /**
@@ -121,25 +113,9 @@ class ContactController extends \App\Core\BaseController {
      */
     public function autoLinkContact() 
     {
-        return ["das darf nicht mehr gehen!"];
-        try {
-            $rawInput = file_get_contents('php://input');
-            $data = json_decode($rawInput, true);
-            if ($data === null) {
-                return [
-                    'success' => false,
-                    'details' => "autoLink hat keine Daten"
-                ];
-            }
-            // 2. JETZT mit $data aufrufen, nicht leer!
-            $result = $this->contactProcess->autoLinkContact($data); 
-            return [
-                'success' => true,
-                'details' => $result
-            ];
-        } catch (\Throwable $e) {   
-            $this->dashboard->sendResponse(false, "", "Fehler in " . __FUNCTION__. ":" . __LINE__ . ": ". $e->getMessage());
-        }
+        error_log("!!!" .  _FILE__ . ":"  .__FUNCTION__ .  "das darf nicht mehr gehen!");
+        return false;
+        
     }
     
     /**
@@ -213,29 +189,14 @@ class ContactController extends \App\Core\BaseController {
     /**
      * 
      */
-
     public function updateContactEmailToContact()
     {
-        $cid        = $this->request['cid'];
-        $ceid       = $this->request['ceid'];
-        $action     = $this->request['action'];
-        
-        if (empty($cid))
-        {
-            throw new \Exception("keine ContactID vorhanden");
-        }
-
-        $ret = $this->contactProcess->updateContactEmailToContact($cid, $ceid, $action);
-
-        return [
-            "paperless"=> $ret,
-            "ui" => [
-                'notify'  => true,
-                'title'   => 'Suche',
-                'message' => 'Keine E-Mails gefunden.',
-                'type'    => 'info'
-            ]
-        ];
+        return $this->process(
+            $this->contactProcess, 
+            'updateContactEmailToContact', 
+            "contact", 
+            "Aktion erfolgreich"
+        );
     }
 
     /**

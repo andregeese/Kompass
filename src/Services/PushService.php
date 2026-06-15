@@ -70,7 +70,7 @@ class PushService extends \App\Core\Database
         ];
         // 3. In die Datenbank eintragen
         
-        $this->queryIt($sql, $params, false, false, true);
+        $this->queryIt($sql, $params, false, false, false);
 
         
     }

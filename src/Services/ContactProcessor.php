@@ -74,7 +74,12 @@ class ContactProcessor extends \App\Core\Database
     private function getContactId($name, $email, $type): int|bool
     {
         #error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
-        $sql = "SELECT id FROM contacts WHERE tenant_id = :tenant_id AND display_name = :name AND type = :type LIMIT 1;";
+        $sql = "SELECT HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as id 
+                  FROM contacts as c
+                 WHERE tenant_id = :tenant_id 
+                   AND display_name = :name 
+                   AND type = :type 
+                 LIMIT 1;";
         $params = [
             "tenant_id" => $_SESSION['tenant_id'] ?? null,
             "name" => $name,
@@ -104,7 +109,10 @@ class ContactProcessor extends \App\Core\Database
      */
     public function updateContactEmailToContact($cid, $ceid, $action)
     {
-        $sql = "UPDATE contact_emails SET contact_id=:cid WHERE tenant_id=:tenant_id AND id=:ceid";
+        $sql = "UPDATE contact_emails 
+                   SET contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED) 
+                 WHERE tenant_id=:tenant_id 
+                   AND id=CAST(AES_DECRYPT(UNHEX(:ceid), :crypto_key) AS UNSIGNED)";
         $params = [
             'cid' => ($action === 'link') ? $cid : null,
             'ceid' => $ceid
@@ -118,11 +126,11 @@ class ContactProcessor extends \App\Core\Database
     private function getContactEmailId(string $email): int|bool
     {
         // Sicherheitscheck: Ohne TenantId ist die Suche in einer Multi-Tenant Umgebung ungültig
-        if (empty($tenantId)) return false;
-        $sql = "SELECT id 
-                  FROM contact_emails 
-                 WHERE tenant_id = :tenant_id 
-                   AND email = :email 
+        //if (empty($tenantId)) return false;
+        $sql = "SELECT HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as id
+                  FROM contact_emails ce
+                 WHERE ce.tenant_id = :tenant_id 
+                   AND ce.email = :email 
                  LIMIT 1;";
                  
         $dbResult = $this->queryIt($sql, ["email" => $email], false, false, false);
@@ -216,7 +224,7 @@ class ContactProcessor extends \App\Core\Database
     public function getEmailsAndContactsByHash($hash)
     {
         $sql = "SELECT 
-                c.id AS contact_id,
+                HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                 c.is_active,
                 c.display_name,
                 c.type,
@@ -258,7 +266,7 @@ class ContactProcessor extends \App\Core\Database
     public function getAllEmails()
     {
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
                     c.display_name,
                     c.type,
@@ -288,40 +296,43 @@ class ContactProcessor extends \App\Core\Database
     /**
      * Bekommt eine Liste von Kontakten und dessen Verknüpfungen
      */
-    public function getContactListByContactID(int $contact_id)
+    public function getContactListByContactID($hash)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
-                    c.paperless_id as paperless_id,
+                    -- c.paperless_id as paperless_id,
                     cp.*,
                     c.display_name,
                     c.type,
-                    ce.id AS ceid,
+                    HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) AS ceid,
                     ce.email
                 FROM contacts c
                 LEFT JOIN contact_emails ce ON c.id = ce.contact_id
                 LEFT JOIN contact_paperless_map cp ON cp.contact_id = c.id
                 WHERE c.tenant_id = :tenant_id
-                  AND ce.contact_id=:contact_id
+                  AND ce.contact_id=CAST(AES_DECRYPT(UNHEX(:hash), :crypto_key) AS UNSIGNED)
                 -- Hier kannst du nach Bedarf filtern
                 ORDER BY c.display_name, ce.email";
 
         $dbRequest = $this->queryIt(
             $sql,
-            ["contact_id" => $contact_id],
+            ["hash" => $hash],
             false,
             false,
-            true
+            false
         );
 
         if (!$dbRequest->success) {
             return [];
         }
+
         $ret = $dbRequest->data->fetched;
+
         $contacts = [];
-        foreach ($ret as $row) {
+        foreach ($ret as $row) 
+        {
             $cid = $row['contact_id'];
             if (!isset($contacts[$cid])) {
                 $contacts[$cid] = [
@@ -344,13 +355,13 @@ class ContactProcessor extends \App\Core\Database
         return $finalContacts;
     }
 
-    public function getContactList(string $query = "", int $contact_id = null)
+    public function getContactListByQuery(string $query = "", int $contact_id = null)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
-                    c.paperless_id as paperless_id,
+                    -- c.paperless_id as paperless_id,
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
@@ -407,23 +418,23 @@ class ContactProcessor extends \App\Core\Database
     /**
      * Hash von der E-Mail
      */
-    public function getContactByEmailHash($hash)
+    public function getContactByHash($hash)
     {
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
                     c.display_name as displayname,
                     c.type,
-                    ce.id AS ceid,
+                    HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as ceid,
                     ce.email
                 FROM contact_emails ce
                 LEFT JOIN contacts as c ON c.id=ce.contact_id
-                
                 WHERE c.tenant_id = :tenant_id
-                  AND ce.email_hash=:hash
+                  AND c.id=CAST(AES_DECRYPT(UNHEX(:hash), :crypto_key) AS UNSIGNED)
                 -- Hier kannst du nach Bedarf filtern
-                ORDER BY c.display_name, ce.email";
-        $dbResult = $this->queryIt(
+                ORDER BY c.display_name, ce.email;";
+
+        return  $this->queryIt(
             $sql,
             ["hash" => $hash],
             false,
@@ -431,20 +442,19 @@ class ContactProcessor extends \App\Core\Database
             true
         );
 
-        return $dbResult;
     }
 
     /**
-     * 
+     * Sucht E-Mail
      */
-    public function getEmailsBySearch($query)
+    public function getEmailsBySearch(string $query)
     {
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
                     c.display_name,
                     c.type,
-                    ce.id AS ceid,
+                    HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as ceid,
                     ce.email
                 FROM contacts c
                 LEFT JOIN contact_emails ce ON c.id = ce.contact_id
@@ -598,7 +608,11 @@ class ContactProcessor extends \App\Core\Database
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
-        $sql = "SELECT ce.email as mail, HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as id, HEX(AES_ENCRYPT(CAST(ce.contact_id as CHAR), :crypto_key)) as contact_id, c.display_name as display_name, ce.email_hash as email_hash
+        $sql = "SELECT ce.email as mail, 
+                  HEX(AES_ENCRYPT(CAST(ce.id as CHAR), :crypto_key)) as id, 
+                  HEX(AES_ENCRYPT(CAST(ce.contact_id as CHAR), :crypto_key)) as contact_id, 
+                  c.display_name as display_name, 
+                  ce.email_hash as email_hash
                   FROM contact_emails as ce 
              LEFT JOIN contacts as c ON c.id = ce.contact_id
                  WHERE ce.tenant_id=:tenant_id 
@@ -620,14 +634,14 @@ class ContactProcessor extends \App\Core\Database
     /**
      * tbd auf id umstellen
      */
-    public function getContactByMail(string $id)
+    public function getContactByIdMail(string $id)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
-                    c.id AS contact_id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) AS contact_id,
                     c.display_name,
                     c.type,
-                    c.paperless_id,
+                    -- c.paperless_id,
                     GROUP_CONCAT(ce.email SEPARATOR ', ') AS additional_emails
                 FROM mails AS m
                 -- 1. Verbindung zur E-Mail-Tabelle über die sender_ceid
@@ -636,7 +650,7 @@ class ContactProcessor extends \App\Core\Database
                 INNER JOIN contacts AS c ON ce.contact_id = c.id
                 WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                 AND m.tenant_id = 6
-                GROUP BY c.id, c.display_name, c.type, c.paperless_id;";
+                GROUP BY c.id, c.display_name, c.type, -- c.paperless_id;";
         $dbResult = $this->queryIt(
             $sql,
             ["id" => $id],

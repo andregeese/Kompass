@@ -237,6 +237,48 @@ function dispatchAction(action, context, triggerElement) {
             
             window.dispatchEvent(new CustomEvent(eventName, { detail: data }));
         },
+        'mail_view': (ctx) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAlreadyInMailsView = urlParams.get('view') === 'mails';
+
+            if (isAlreadyInMailsView) {
+                // Alpine-Komponente direkt im DOM ansprechen, ohne die Seite neu zu laden
+                const mailViewEl = document.querySelector('[x-data^="mailView"]');
+                if (mailViewEl && mailViewEl.__x_data) {
+                    // Über den Alpine-Schnittstellen-Proxy die Funktion aufrufen
+                    mailViewEl.__x_data.openMailDirectlyByHash(ctx.hash || ctx.id);
+                    return;
+                }
+            }
+
+            // Fallback / Aufruf aus einer anderen View (z.B. Dashboard): Seite mit Query-Parametern ansteuern
+            const params = new URLSearchParams();
+            params.set('view', 'mails');
+            params.set('id', ctx.hash || ctx.id);
+            window.location.search = params.toString();
+        },
+        'contact_view': (ctx) => {
+            const targetHash = ctx.hash || ctx.id;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAlreadyInMailsView = urlParams.get('view') === 'contacts';
+
+            if (isAlreadyInMailsView) {
+                // Alpine-Komponente direkt im DOM ansprechen, ohne die Seite neu zu laden
+                const contactEl = document.querySelector('[x-data^="contactsView"]');
+                if (contactEl && contactEl.__x_data) {
+                    // Über den Alpine-Schnittstellen-Proxy die Funktion aufrufen
+                    contactEl.__x_data.openMailDirectlyByHash(targetHash);
+                    return;
+                }
+            }
+
+            // Fallback / Aufruf aus einer anderen View (z.B. Dashboard): Seite mit Query-Parametern ansteuern
+            const params = new URLSearchParams();
+            params.set('view', 'contacts');
+            params.set('hash', targetHash);
+            window.location.search = params.toString();
+        }
     };
 
     // 3. Ausführung mit Fehlerbehandlung
@@ -488,7 +530,7 @@ window.crmEngine = function() {
                 try {
                     // Wir senden das Memo an deinen PHP-Controller
                     // (Passe 'save_note' an deinen tatsächlichen API-Endpoint an)
-                    const jResponse = await apiCall('save_note', memo, 'POST');
+                    const jResponse = await apiCall('save_note', {memoData:memo}, 'POST');
                     
                     if (jResponse && jResponse.note) {
                         console.log(`✅ Notiz ${memo.id} erfolgreich mit DB synchronisiert.`);

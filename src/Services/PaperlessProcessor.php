@@ -74,7 +74,10 @@ class PaperlessProcessor extends \App\Core\Database
 
     public function getCorrespondentByContact($cid)
     {
-        $sql = "SELECT correspondent_id FROM contact_paperless_map WHERE tenant_id=:tenant_id AND contact_id=:cid;";
+        $sql = "SELECT correspondent_id 
+                  FROM contact_paperless_map 
+                 WHERE tenant_id=:tenant_id 
+                   AND contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED);";
         $params = [
             'cid' => $cid
         ];
@@ -120,7 +123,7 @@ class PaperlessProcessor extends \App\Core\Database
             LEFT JOIN contact_paperless_map cpm ON c.id = cpm.contact_id
             WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND m.tenant_id=:tenant_id;";
 
-        $dbResult = $this->queryIt($sql, ['id' => $id], false, false, true);
+        $dbResult = $this->queryIt($sql, ['id' => $id], false, false, false);
         
         // 1. Prüfen, ob überhaupt ein Ergebnis da ist
         if (!empty($dbResult->data) && is_array($dbResult->data->fetched)) {
@@ -726,28 +729,27 @@ class PaperlessProcessor extends \App\Core\Database
     {
         $sql = "SELECT tag_id 
                   FROM contact_paperless_map 
-                 WHERE tenant_id=:tenant_id 
-                   AND contact_id=:cid;";
+                 WHERE tenant_id=:tenant_id AND tag_id IS NOT NULL
+                   AND contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED);";
         $params = [
             'cid' => $cid
         ];
 
-        $dbResult = $this->queryIt($sql, $params, false, false, false);
+        $dbResult = $this->queryIt($sql, $params, false, false, true);
 
         if (!$dbResult->success){
             throw new Exception("Fehler beim Abrufen der Tags");
         }
+
+        $tagIds = array_column($dbResult->data->fetched, 'tag_id');
     
-
-        $corrIds = array_column($dbResult->data->fetched, 'correspondent_id');
-
         // 2. Falls keine IDs gefunden wurden, direkt abbrechen (spart API-Call)
-        if (empty($corrIds)) {
+        if (empty($tagIds)) {
             return [];
         }
 
         //jetzt den namen von correspondent in api finden
-        $b = $this->getTagsById($corrIds);
+        $b = $this->getTagsById($tagIds);
 
         return $b;
 
@@ -763,7 +765,8 @@ class PaperlessProcessor extends \App\Core\Database
         $idString = implode(',', $ids);
         
         $params = [
-            'id__in'   => $idString
+            'id__in'    => $idString,
+            'fields'    => 'id,name'
         ];
         // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
         $url = '/api/tags/?' . http_build_query($params);
@@ -779,6 +782,9 @@ class PaperlessProcessor extends \App\Core\Database
         // Paperless liefert die Liste im 'results'-Key
         $results = $paperlessData['results'] ?? ["LEER"];
         $formatted = [];
+
+        error_log(print_r($results, true));
+
         foreach ($results as $key => $item) 
         {
             if (empty($item['id'])) continue;
@@ -827,7 +833,8 @@ class PaperlessProcessor extends \App\Core\Database
         return $this->queryIt($sql, $params);
     }
 
-    public function updateTagToContact(int $cid, int $tagId, string $action)
+
+    public function updateTagToContact($cid, $tagId, string $action)
     {
         $params = [
             'cid'      => $cid,
@@ -837,13 +844,13 @@ class PaperlessProcessor extends \App\Core\Database
         $sql = "DELETE 
                   FROM contact_paperless_map 
                  WHERE 
-                    contact_id=:cid
-                  AND tag_id=:tagid
+                    contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED)
+                  AND tag_id=CAST(AES_DECRYPT(UNHEX(:tagid), :crypto_key) AS UNSIGNED)
                   AND tenant_id=:tenant_id";
 
         if (strtolower($action) == "link"){
             $sql = "INSERT INTO contact_paperless_map (contact_id, tag_id, tenant_id) 
-                         VALUES (:cid, :tagid, :tenant_id);";
+                         VALUES (CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED), CAST(AES_DECRYPT(UNHEX(:tagid), :crypto_key) AS UNSIGNED), :tenant_id);";
         }
         
         return $this->queryIt($sql, $params);
