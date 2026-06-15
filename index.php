@@ -232,6 +232,7 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
 
     <script>
         window.CRM_API_URL = './api.php';
+        window.CRM_PAPERLESS = 'http://192.168.0.72:8030'
     </script>
 
     <!-- Core-Scripts permanent laden -->

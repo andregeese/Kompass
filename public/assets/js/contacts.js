@@ -91,18 +91,7 @@ const contactsViewComponent = () => ({
             this.loading = false;
         }
     },
-    async saveContact(contact = this.activeContact) {
-        try {
-            const data = await apiCall('save_contact', this.activeContact, 'POST');
 
-            if (data.success) {
-                this.closeMatchModal();
-                this.loadContacts();
-            }
-        } catch (e) {
-            console.error("Speichern fehlgeschlagen", e);
-        }
-    },
     // NEU: Methode für den Button "Neuer Kontakt"
     openNewContactModal() {
         this.activeContact = { 
@@ -250,7 +239,7 @@ const contactsViewComponent = () => ({
 
     async saveContact() 
     {
-        const data = await apiCall('save_contact', this.activeContact, 'POST');
+        const data = await apiCall('save_contact', {data:this.activeContact}, 'POST');
         if (data.success) {
             console.log('Kontakt gespeichert:', data.message);
             this.closeMatchModal();

@@ -278,6 +278,28 @@ function dispatchAction(action, context, triggerElement) {
             params.set('view', 'contacts');
             params.set('hash', targetHash);
             window.location.search = params.toString();
+        },
+        'document_view': (ctx) => {
+            const targetHash = ctx.hash || ctx.id;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAlreadyInMailsView = urlParams.get('view') === 'document';
+
+            if (isAlreadyInMailsView) {
+                // Alpine-Komponente direkt im DOM ansprechen, ohne die Seite neu zu laden
+                const contactEl = document.querySelector('[x-data^="documentView"]');
+                if (contactEl && contactEl.__x_data) {
+                    // Über den Alpine-Schnittstellen-Proxy die Funktion aufrufen
+                    contactEl.__x_data.openMailDirectlyByHash(targetHash);
+                    return;
+                }
+            }
+
+            // Fallback / Aufruf aus einer anderen View (z.B. Dashboard): Seite mit Query-Parametern ansteuern
+            const params = new URLSearchParams();
+            params.set('view', 'document');
+            params.set('hash', targetHash);
+            window.open(`${window.CRM_PAPERLESS}/documents/${params.get('hash')}/details`, '_blank');
         }
     };
 
@@ -384,7 +406,8 @@ async function safeFetch(url, customOptions = {}) {
 window.crmEngine = function() {
     // Fallback falls window.CRM_API_URL in index.php fehlt
     const apiUrl = window.CRM_API_URL || 'api.php';
-    
+    const paperlessUrl = 'http://192.168.0.72:8030';
+
     return {
         SYNCFOLDER: [],
         // --- CORE & UI STATE ---

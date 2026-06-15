@@ -204,7 +204,12 @@ class ContactController extends \App\Core\BaseController {
      */
     public function saveContact()
     {
-        
+        return $this->process(
+            $this->contactProcess,
+            'saveContact',
+            'contact',
+            'Kontakt erfolgreich aktualisiert'
+        );
         // 1. Daten aus dem Request holen (inklusive der paperless_id aus dem Modal)
         $contact_id     = $this->request['id'] ?? null;
         $displayname    = $this->request['displayname'] ?? null;

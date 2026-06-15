@@ -137,8 +137,7 @@ class MailProcessor extends \App\Core\Database
             false
         );
 
-        error_log(print_r($dbResult, true));
-
+       
         if($dbResult->success && !empty($dbResult->data))
         {
             $row = $dbResult->data->fetched[0];
@@ -574,7 +573,7 @@ class MailProcessor extends \App\Core\Database
                     try {
                         $i = $mailsInDB[$mail['uid']] ?? null;
                         if (!empty($i)){
-                            error_log("-- mail (" . $mail['uid'] . ") in DB! $i --");
+                            // error_log("-- mail (" . $mail['uid'] . ") in DB! $i --");
                             continue;
                         }
 
@@ -583,33 +582,33 @@ class MailProcessor extends \App\Core\Database
                             // Kontakte anlegen (Nutzt hoffentlich auch interne Caches, damit es fix geht!)
 
                             $senderId = (int)$ceCache[$mail['from_email']] ?? null;
-                            error_log("senderId 1.: $senderId");
+                            //error_log("senderId 1.: $senderId");
 
                             if (empty($senderId) || $senderId === 0){
                                 $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
                                 $ceCache[$mail['from_email']] = (int)$senderId;
-                                error_log("senderId 2.: $senderId");
+                                //error_log("senderId 2.: $senderId");
                             }
                             
                             $reciepId = (int)$ceCache[$mail['to_email']] ?? null;
-                            error_log("reciepId 1.: $reciepId");
+                            //error_log("reciepId 1.: $reciepId");
 
                             if (empty($reciepId) || $reciepId === 0 ){
                                 $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
                                 $ceCache[$mail['to_email']] = (int)$reciepId;
-                                error_log("reciepId 2.: $reciepId");
+                                //error_log("reciepId 2.: $reciepId");
                             }
                             
                             if ($reciepId<=0 || $senderId<=0)
                             {
-                                error_log("Keine Zahl bei $reciepId oder $senderId!! " . print_r($mail['uid'], true));
+                                error_log("\t !! Keine Zahl bei $reciepId oder $senderId!! " . print_r($mail['uid'], true));
                                 continue;    
                             }
 
                             $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
                                         VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)";
                             
-                            $this->queryIt($sqlInsert, [
+                            $dbResult = $this->queryIt($sqlInsert, [
                                 'uid'           => $mail['uid'],
                                 'message_id'    => $mail['message_id'],
                                 'subject_hash'  => $mail['subject_hash'],
@@ -624,6 +623,8 @@ class MailProcessor extends \App\Core\Database
                             
                             $added++;
                         //}
+                        $mailsInDB[$mail['uid']] = $dbResult->data->lastInsertId;
+
                         $highestUid = max($highestUid, $mail['uid']);
                     } catch (\Throwable $dbEx) {
                         error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());

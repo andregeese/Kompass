@@ -60,10 +60,10 @@ class ContactProcessor extends \App\Core\Database
 
         // 2. Wenn nein: Kontakt suchen oder anlegen
         $contactId = $this->getContactIdInternal($name, $email, $type);
-        error_log("Kontakt gefunden $contactId");
+        //error_log("Kontakt gefunden $contactId");
 
         if (!$contactId) {
-            error_log("Kontakt anlegen");
+            //error_log("Kontakt anlegen");
             // Kontakt neu anlegen
             $sqlContact = "INSERT INTO contacts (display_name, type, tenant_id, is_active) VALUES (:name, :type, :tenant_id, 1);";
             $dbResult = $this->queryIt(
@@ -79,10 +79,10 @@ class ContactProcessor extends \App\Core\Database
 
             if (!$dbResult->success) return false;
             $contactId = $dbResult->data->lastId;
-            error_log("Kontakt angelegt: $contactId");
+            //error_log("Kontakt angelegt: $contactId");
         }
         // 3. E-Mail Eintrag erzwingen (da wir hier gelandet sind, existiert sie noch nicht für diesen Tenant)
-        error_log("$contactId -> $email => anlegen");
+        //error_log("$contactId -> $email => anlegen");
         return $this->insertContactEmail($contactId, $email, $salt);
     }
 
@@ -96,7 +96,7 @@ class ContactProcessor extends \App\Core\Database
      */
     private function getContactId($name, $email, $type, $bInternal=false)
     {
-        error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
+        //error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
         
         if (!$bInternal){
             $sql = "SELECT id";
@@ -133,7 +133,7 @@ class ContactProcessor extends \App\Core\Database
 
     private function getContactIdInternal($name, $email, $type):int|bool
     {
-        error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
+        //error_log("Suche Kontakt: Name='$name', Email='$email', Type='$type'");
         
         $sql = "SELECT id
                 FROM contacts as c
@@ -220,7 +220,7 @@ class ContactProcessor extends \App\Core\Database
 
     private function insertContactEmail($contactId, $email, $salt)
     {
-        error_log("Kontakt Email setzen Email='$email', ContactId='$contactId'");
+        //error_log("Kontakt Email setzen Email='$email', ContactId='$contactId'");
         $tenantId = $_SESSION['tenant_id'] ?? null;
         if (
             $tenantId === null
@@ -278,10 +278,10 @@ class ContactProcessor extends \App\Core\Database
      */
     public function saveContact($data)
     {
-        $sql = "UPDATE contacts SET display_name=:dname, type=:type WHERE tenant_id=:tenant_id AND id=:cid;";
-
+        $sql = "UPDATE contacts SET display_name=:dname, type=:type WHERE tenant_id=:tenant_id AND id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED);";
+        error_log(print_r($data, true));
         $params = [
-            'dname' => $data['name'],
+            'dname' => $data['displayname'],
             'type'  => $data['type'],
             'cid'   => $data['id']
         ];
