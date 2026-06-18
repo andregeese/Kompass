@@ -2,18 +2,24 @@
 
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
 ?>
 
-<div x-data="contactsView" x-init="initContacts()" class="flex-1 overflow-y-auto p-4 md:p-6 mx-auto w-full space-y-6">
+<div x-data="contactsView" x-init="initContacts()" class="flex-1 overflow-y-auto p-4 md:p-6 mx-auto w-full space-y-4">
     <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-            <span>👥</span> <span>Kontakte & Partner-Archiv</span>
+        <h2 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span class="flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
+                <svg class="w-8 h-8 md:w-6 md:h-6 shrink-0">
+                    <use href="public/assets/sprite.svg#icon-contact"></use>
+                </svg>
+            </span>
+            
+            <span>Kontakte & Partner-Archiv</span>
         </h2>
         <button @click="openNewContactModal()"
             class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-all text-sm font-medium whitespace-nowrap">
@@ -38,6 +44,12 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0">
+        <button @click="closeMatchModal()" 
+                class="absolute top-4 right-4 z-10 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-white/50 dark:bg-gray-800/50 rounded-full hover:bg-slate-100 dark:hover:bg-gray-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
 
         <div @click="closeMatchModal()" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
 

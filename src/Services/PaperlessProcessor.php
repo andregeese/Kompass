@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -141,79 +141,103 @@ class PaperlessProcessor extends \App\Core\Database
         return $resAr;
     }
 
+    
+    /**
+     * Holt die letzten unklassifierten Dokumente der letzten 4W
+     */
     public function getLastDocuments()
     {
-        $fourWeeksAgo = date('Y-m-d', strtotime('-4 weeks'));
-        $params = [
-            'query'    => 'tag:unclassified', 
-            'ordering' => '-created',
-            'created__gte' => $fourWeeksAgo,
-            'page_size'    => 200 // Groß genug, um die 4 Wochen abzudecken
-        ];
-
-        $docResponse = $this->request('/api/documents/'.'?' . http_build_query($params));
+        // 1. Dokumente laden
+        $params = ['query' => 'tag:unclassified', 'page_size' => 100];
+        $docResponse = $this->request('/api/documents/?' . http_build_query($params));
         $docData = json_decode($docResponse, true);
         $documents = $docData['results'] ?? [];
 
         if (empty($documents)) {
-            return []; // Keine Dokumente in den letzten 4 Wochen
-        }
-
-        // 3. Korrespondenten-IDs aus den Dokumenten extrahieren und zählen
-        $correspondentIds = [];
-        foreach ($documents as $doc) {
-            if (!empty($doc['correspondent'])) {
-                $correspondentIds[] = $doc['correspondent'];
-            }
-        }
-
-        // Zählt wie oft jede ID vorkommt (z.B. [ID 12 => 5, ID 4 => 2])
-        $countedIds = array_count_values($correspondentIds);
-        
-        // Sortieren: Höchste Anzahl zuerst
-        arsort($countedIds);
-        
-        // Die Top 5 IDs abschneiden
-        $top5Ids = array_slice($countedIds, 0, 5, true);
-
-        if (empty($top5Ids)) {
             return [];
         }
 
-        // 4. Alle Korrespondenten-Namen EINMALIG abrufen (statt 5 Einzel-Requests)
-        $corrResponse = $this->request('/api/correspondents/?page_size=1000');
-        $corrData = json_decode($corrResponse, true);
-        $allCorrespondents = $corrData['results'] ?? [];
+        // 2. Mapping-Cache vorbereiten, um API-Aufrufe zu minimieren
+        $correspondentCache = [];
+        $enrichedDocs = [];
 
-        // Eine Map bauen: [ID => Name]
-        $correspondentMap = [];
-        foreach ($allCorrespondents as $c) {
-            $correspondentMap[$c['id']] = $c['name'];
+        foreach ($documents as $doc) 
+        {
+            $docId = $doc['id'];
+            $corrId = $doc['correspondent']; // Das ist die ID des Korrespondenten
+
+            // Mapping prüfen: Wenn wir den Namen noch nicht im Cache haben, holen wir ihn
+            if ($corrId !== null && !isset($correspondentCache[$corrId])) {
+                // Hier greifen wir auf deine Methode zu
+                $corresData = $this->getCorrespondentIdFromDocument($docId);
+                $correspondentCache[$corrId] = $corresData['name'] ?? 'Unbekannt';
+            }
+
+            // 3. Dokument anreichern
+            $enrichedDoc = $doc;
+            $enrichedDoc['correspondent_name'] = $correspondentCache[$corrId] ?? 'Kein Korrespondent';
+            
+            $enrichedDocs[] = $enrichedDoc;
         }
 
-        // 5. Endergebnis für dein Dashboard zusammenbauen
-        $finalTop5 = [];
-        foreach ($top5Ids as $id => $count) {
-            $finalTop5[] = [
-                'id'    => $id,
-                'name'  => $correspondentMap[$id] ?? 'Unbekannter Absender',
-                'count' => $count
-            ];
+        error_log(print_r($enrichedDocs, true));
+        return $enrichedDocs;
+    }
+
+    public function getLastUnclassifiedDocuments()
+    {
+        // 1. Dokumente laden
+        $params = [
+            'query' => 'tag:unclassified', 
+            'ordering' => '-created'
+        ];
+        $docResponse = $this->request('/api/documents/?' . http_build_query($params));
+        $docData = json_decode($docResponse, true);
+        $documents = $docData['results'] ?? [];
+
+        if (empty($documents)) {
+            return [];
         }
 
-        // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
-        $url = '/api/documents/' . '?' . http_build_query($params);
-        
-        $jsonResponse = $this->request($url);
-        $paperlessData = json_decode($jsonResponse, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        // 2. Mapping-Cache vorbereiten, um API-Aufrufe zu minimieren
+        $correspondentCache = [];
+        $enrichedDocs = [];
+
+        foreach ($documents as $doc) 
+        {
+            $docId = $doc['id'];
+            $corrId = $doc['correspondent']; // Das ist die ID des Korrespondenten
+
+            // Mapping prüfen: Wenn wir den Namen noch nicht im Cache haben, holen wir ihn
+            if ($corrId !== null && !isset($correspondentCache[$corrId])) {
+                // Hier greifen wir auf deine Methode zu
+                $corresData = $this->getCorrespondentIdFromDocument($docId);
+                $correspondentCache[$corrId] = $corresData['name'] ?? 'Unbekannt';
+            }
+
+            // 3. Dokument anreichern
+            $enrichedDoc = $doc;
+            $enrichedDoc['correspondent_name'] = $correspondentCache[$corrId] ?? 'Kein Korrespondent';
+            
+            $enrichedDocs[] = $enrichedDoc;
         }
 
-        $results = $paperlessData['results'] ?? [];
+        return $enrichedDocs;
+    }
 
-        return $results;
+    public function getTotalDocumentCount($tag='')
+    {
+        // Wir setzen page_size auf 1, da wir nur die Metadaten brauchen
+        $params = ['page_size' => 1];
+        if (!empty($tag))
+        {
+            $params = ['tags__name__in' => $tag];
+        }
+        $response = $this->request('/api/documents/?' . http_build_query($params));
+        $data = json_decode($response, true);
+
+        // 'count' enthält die Gesamtzahl aller Dokumente im System
+        return $data['count'] ?? 0;
     }
 
     private function getCorrespondentsById(array $ids):array
@@ -286,8 +310,11 @@ class PaperlessProcessor extends \App\Core\Database
     public function getAllCorrespondents()
     {
         $params = [
-            'page_size' => 5000 // Holt bis zu 5000 Korrespondenten auf einmal
+            'page_size' => 5000,
+            'ordering' => '-document_count',
+            'document_count__gt' => '0' // Holt bis zu 5000 Korrespondenten auf einmal
         ];
+
         $url = '/api/correspondents/?' . http_build_query($params);
         $jsonResponse = $this->request($url);
         $paperlessData = json_decode($jsonResponse, true);
@@ -303,8 +330,8 @@ class PaperlessProcessor extends \App\Core\Database
                 ];
             }
         }
-        $this->dashboard->sendResponse(true, $correspondents);
-        //return $correspondents;
+        //$this->dashboard->sendResponse(true, $correspondents);
+        return $correspondents;
     }
 
     /**
@@ -613,22 +640,28 @@ class PaperlessProcessor extends \App\Core\Database
         unset($doc); // Referenz brechen
         return $documentsDetails;
     }
+
+
     /**
      * Holt ein einzelnes Dokument anhand seiner ID aus Paperless, um den Korrespondenten-ID zu erfahren
      */
     public function getCorrespondentIdFromDocument($documentId)
     {
-        $url = '/api/documents/' . intval($documentId) . '/';
-        
-        $jsonResponse = $this->request($url);
-        $paperlessData = json_decode($jsonResponse, true);
+        $params = [
+            'id__in' => $documentId
+        ];
+
+        $documentResponse = $this->request('/api/documents/?' . http_build_query($params));
+
+        $paperlessData = json_decode($documentResponse, true);
         
         // Falls das Dokument existiert und einen Korrespondenten hat
-        if ($jsonResponse && isset($paperlessData['correspondent'])) {
+        if ($documentResponse && isset($paperlessData['correspondent'])) {
             return $paperlessData['correspondent']; // Gibt die numerische ID des Korrespondenten zurück
         }
         return false;
     }
+
     /**
      * Holt alle Dokumente eines Korrespondenten aus Paperless anhand seiner numerischen ID
      */

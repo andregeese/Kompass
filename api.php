@@ -2,9 +2,9 @@
 
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -112,6 +112,8 @@ $routes = [
 
     // Paperless
     'get_last_documents'            => [App\Api\PaperlessController::class, 'getLastDocuments'],
+    'get_last_unclassified'         => [App\Api\PaperlessController::class, 'getLastUnclassifiedDocuments'],
+    'get_total_document_count'      => [App\Api\PaperlessController::class, 'getTotalDocumentCount'],
     'syncPaperless'                 => [App\Api\PaperlessController::class, 'sync'],
     'paperless_search'              => [App\Api\PaperlessController::class, 'search'],
     //'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondents'], //mail als 

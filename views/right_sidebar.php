@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */

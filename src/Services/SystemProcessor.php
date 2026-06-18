@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -333,12 +333,12 @@ class SystemProcessor extends \App\Core\Database
 
         // 1. Parallel abfragen (oder nacheinander, ist bei 5 Tabellen egal)
         $queries = [
-            'contact' => "SELECT id, display_name as title, '' as snippet FROM contacts WHERE display_name LIKE :query AND tenant_id = :tenant_id LIMIT 10",
-            'mail'    => "SELECT m.id, m.message_id as title, mb.body_search_index as snippet FROM mails m LEFT JOIN mail_bodies mb ON mb.mail_id = m.id WHERE mb.body_search_index LIKE :query AND m.tenant_id = :tenant_id LIMIT 10",
-            'note'    => "SELECT id, category as title, content as snippet FROM notes WHERE content LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            'contact' => "SELECT HEX(AES_ENCRYPT(CAST(id as CHAR), :crypto_key)) as id, display_name as title, '' as snippet FROM contacts WHERE display_name LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            'mail'    => "SELECT HEX(AES_ENCRYPT(CAST(m.id as CHAR), :crypto_key)) as id, m.message_id as title, mb.body_search_index as snippet FROM mails m LEFT JOIN mail_bodies mb ON mb.mail_id = m.id WHERE mb.body_search_index LIKE :query AND m.tenant_id = :tenant_id LIMIT 10",
+            'note'    => "SELECT HEX(AES_ENCRYPT(CAST(id as CHAR), :crypto_key)) as id, category as title, content as snippet FROM notes WHERE content LIKE :query AND tenant_id = :tenant_id LIMIT 10",
             // NEU: Appointments & Paperless
-            'appointment' => "SELECT id, summary as title, location as snippet FROM appointments WHERE summary LIKE :query AND tenant_id = :tenant_id LIMIT 10",
-            'paperless'   => "SELECT id, title, '' as snippet FROM paperless_documents WHERE title LIKE :query AND tenant_id = :tenant_id LIMIT 10"
+            'appointment' => "SELECT HEX(AES_ENCRYPT(CAST(id as CHAR), :crypto_key)) as id, summary as title, location as snippet FROM appointments WHERE summary LIKE :query AND tenant_id = :tenant_id LIMIT 10",
+            'paperless'   => "SELECT HEX(AES_ENCRYPT(CAST(id as CHAR), :crypto_key)) as id, title, '' as snippet FROM paperless_documents WHERE title LIKE :query AND tenant_id = :tenant_id LIMIT 10"
         ];
 
         

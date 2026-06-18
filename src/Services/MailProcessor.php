@@ -2,9 +2,9 @@
 
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */ 
@@ -494,7 +494,7 @@ class MailProcessor extends \App\Core\Database
                 $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
                 $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
 
-                if ($needsFullHeader) {
+                //if ($needsFullHeader) {
                     // Erst HIER den teuren Netzwerk-Call machen
                     $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
                     if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
@@ -507,7 +507,7 @@ class MailProcessor extends \App\Core\Database
                         $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
                         $ov->to = $header->toaddress ?? 'unknown@unknown.local';
                     }
-                }
+                //}
                 
                 $cleanSubject = $this->decodeMimeHeader($rawSubject);
                 $subjectHash = $this->dashboard->encrypt($cleanSubject);
@@ -526,6 +526,7 @@ class MailProcessor extends \App\Core\Database
                     'is_read'       => (int)($ov->seen ?? 0),
                     'is_flagged'    => (int)($ov->flagged ?? 0),
                     'is_answered'   => (int)($ov->answered ?? 0),
+                    'is_newsletter' => (int)($this->checkIfNewsletter($ov->subject, $rawHeaders ?? ''))
                 ];
 
             } catch (\Throwable $e) {
@@ -605,8 +606,8 @@ class MailProcessor extends \App\Core\Database
                                 continue;    
                             }
 
-                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, sender_ceid, recipient_ceid) 
-                                        VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :sceid, :rceid)";
+                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, is_newsletter, sender_ceid, recipient_ceid) 
+                                        VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :is_newsletter, :sceid, :rceid)";
                             
                             $dbResult = $this->queryIt($sqlInsert, [
                                 'uid'           => $mail['uid'],
@@ -617,6 +618,7 @@ class MailProcessor extends \App\Core\Database
                                 'is_read'       => $mail['is_read'],
                                 'is_flagged'    => $mail['is_flagged'],
                                 'is_answered'   => $mail['is_answered'],
+                                'is_newsletter' => $mail['is_answered'],
                                 'sceid'         => (int)$senderId,
                                 'rceid'         => (int)$reciepId
                             ], true, true, false);
@@ -646,7 +648,7 @@ class MailProcessor extends \App\Core\Database
         }
 
         error_log("Prozess: [$pid] End Sync Ordner: $folder");
-        //$updateCount = $this->deltaSync($folder, 100);
+        $updateCount = $this->deltaSync($folder, 100);
 
         return [
             "added"     => $added,
@@ -654,6 +656,32 @@ class MailProcessor extends \App\Core\Database
         ];
     }
 
+    /**
+     * Prüft anhand der Header und des Betreffs, ob eine Mail ein Newsletter ist.
+     * * @param string $subject Der Betreff der Mail
+     * @param string $headers Der komplette Roh-Header der Mail
+     * @return bool
+     */
+    private function checkIfNewsletter(string $subject, string $headers): bool
+    {
+        // 1. Der "List-Unsubscribe" Header ist das stärkste Indiz.
+        // Professionelle Newsletter enthalten diesen Header zwingend.
+        if (preg_match('/^List-Unsubscribe:/mi', $headers)) {
+            return true;
+        }
+
+        // 2. Keywords im Betreff prüfen (optional, für manuelle Newsletter)
+        $keywords = ['newsletter', 'abmelden', 'unsubscribe', 'angebot', 'wochenrückblick'];
+        $lowerSubject = mb_strtolower($subject);
+        
+        foreach ($keywords as $keyword) {
+            if (str_contains($lowerSubject, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * Synchronisiert Statusänderungen für bereits existierende Mails
@@ -702,7 +730,7 @@ class MailProcessor extends \App\Core\Database
         $updatedCount = 0;
         
         // 🚀 FIX: $dbMap wurde dem `use`-Block hinzugefügt, damit es inside der Transaktion existiert!
-        $this->transaction(function () use ($checkUids, $imapStream, $folder, $allUids, $dbMap, &$updatedCount) {
+        //$this->transaction(function () use ($checkUids, $imapStream, $folder, $allUids, $dbMap, &$updatedCount) {
 
             foreach ($checkUids as $uid) {
                 if (!isset($dbMap[$uid])) continue; 
@@ -758,7 +786,7 @@ class MailProcessor extends \App\Core\Database
 
                 $this->queryIt($sqlUpdate, $params);
             }
-        });
+        //});
 
         @imap_close($imapStream);
 
@@ -948,6 +976,7 @@ class MailProcessor extends \App\Core\Database
                         c.display_name as contact_name
                 FROM mails as m
                 LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
+                LEFT JOIN contacts c ON c.id=ce.contact_id
                 WHERE m.tenant_id = :tenant_id 
                 AND m.imap_folder = :folder
                 AND (
@@ -1277,7 +1306,7 @@ class MailProcessor extends \App\Core\Database
     /**
      * Email und Kontakt für TimeLine
      */
-    public function getMailItems($id)
+    public function getMailItems(string $id)
     {
         error_log(__FUNCTION__);
 
@@ -1481,7 +1510,7 @@ class MailProcessor extends \App\Core\Database
                     HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id,
                     uid, m.recipient_ceid, subject_hash, m.paperless_id, imap_folder,
                     date_received as date,
-                    is_read, is_flagged, is_answered,
+                    is_read, is_flagged, is_answered, is_newsletter,
                     -- 1. SENDER (Absender) sauber zusammenbauen mit Fallback, falls kein Name da ist
                     IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
                     CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
@@ -1580,6 +1609,7 @@ class MailProcessor extends \App\Core\Database
             'is_read'       => $row['is_read'],
             'is_flagged'      => $row['is_flagged'],
             'is_answered'     => $row['is_answered'],
+            'is_newsletter'     => $row['is_newsletter'],
             'displayname'  => $row['displayname'],
             'emailhash'    => $row['emailhash']
         ];
@@ -1611,7 +1641,7 @@ class MailProcessor extends \App\Core\Database
         );
         if (!$dbResult->success) {
             $this->dashboard->sendResponse(false, "", "Keine Mail gefunden für diesen Hash, kann body nicht speichern.");
-            throw new \Exception("Keine Mail gefunden für diesen Hash, kann body nicht speichern. $hash");
+            throw new \Exception("Keine Mail gefunden für diesen Hash, kann body nicht speichern. $id");
         }
         $mailId = $dbResult->data->fetched[0]['id'];
         // 1. HTML Sanitization (Sicherheits-Layer)

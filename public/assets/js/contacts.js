@@ -1,8 +1,8 @@
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -322,9 +322,7 @@ const contactsViewComponent = () => ({
 
     // --- E-Mail UI Logik ---
     isEmailLinked(ceid) {
-        console.log("isEmailLinked: " + ceid);
-        console.log(this.activeContact.emails);
-        return this.activeContact.emails.some(e => e.ceid === ceid);
+        return this.activeContact?.emails?.some(e => e.ceid === ceid);
     },
     
     toggleEmail(emailObj) {

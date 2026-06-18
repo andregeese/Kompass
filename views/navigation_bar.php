@@ -1,8 +1,8 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub - Unified Responsive Navigation
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * Kompass Hub - Unified Responsive Navigation
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * END_LICENSE
  */
 ?>

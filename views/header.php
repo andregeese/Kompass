@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -12,9 +12,11 @@
 <header class="bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 gap-2">
     <!-- Links: Logo & Titel (Auf Mobile kompakt) -->
     <a href="index.php?view=start" class="flex items-center space-x-2 md:space-x-3 shrink-0 hover:opacity-80 transition-opacity">
-        <span class="text-xl">🚀</span>
+        <span class="text-xl">
+            <svg class="w-8 h-8 md:w-8 md:h-8 shrink-0"><use href="public/assets/sprite.svg#icon-custom-compass"></use></svg>
+        </span>
         <h1 class="text-sm md:text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-blue-400 hidden sm:block">
-            Enterprise CRM
+            Kompass
         </h1>
     </a>
     

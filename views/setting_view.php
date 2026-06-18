@@ -1,21 +1,27 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
 ?>
-<div x-data="settingsComponent()" x-init="initSettings()" class="p-6 max-w-4xl mx-auto space-y-6 overflow-y-auto h-full">
+<div x-data="settingsComponent()" x-init="initSettings()" class="flex-1 overflow-y-auto p-4 md:p-6 mx-auto w-full space-y-4">
     
     <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-            <h1 class="text-xl font-bold tracking-tight">System- & E-Mail-Einstellungen</h1>
-            <p class="text-xs text-slate-400 mt-1">Verwalte deine IMAP-Verbindung und Paperless-Zugangsdaten für diesen Mandanten.</p>
-        </div>
-        <span class="text-3xl">⚙️</span>
+        <h2 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span class="flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
+                <svg class="w-8 h-8 md:w-6 md:h-6 shrink-0">
+                    <use href="public/assets/sprite.svg#icon-setting"></use>
+                </svg>
+            </span>
+            
+            <span>System- & E-Mail-Einstellungen</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Verwalte deine IMAP-Verbindung und Paperless-Zugangsdaten für diesen Mandanten.</p>
+        
     </div>
     <div x-show="message.text" 
          :class="message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'"

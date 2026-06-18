@@ -1,5 +1,5 @@
 /**
- * Enterprise CRM Hub - Time Travel Appointments Module
+ * Kompass Hub - Time Travel Appointments Module
  * @copyright 2026
  */
 

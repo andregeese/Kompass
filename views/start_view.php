@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -150,13 +150,26 @@
             </div>
 
             <div class="space-y-2 max-h-[25vh] overflow-y-auto pr-1.5">
-                <template x-for="docs in lastDocs" :key="docs.id">
-                    <div @click="$dispatch('navigate', {view:'paperless', id: docs.id)"
-                         class="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all cursor-pointer group">
+                <template x-for="doc in lastDocs" :key="doc.id">
+                    <div @click="dispatchAction('document_view', {hash:doc.id}, null)"
+                        class="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all cursor-pointer group">
+                        
                         <div class="min-w-0 pr-2">
-                            <div class="text-[11px] font-bold text-white group-hover:text-amber-400 transition-colors truncate" x-text="docs.title"></div>
-                            <div class="text-[9px] text-slate-400 font-mono mt-0.5" x-text="formatDate(docs.created)"></div>
+                            <div class="text-[11px] font-bold text-white group-hover:text-amber-400 transition-colors truncate" 
+                                x-text="doc.title"></div>
+                            
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[9px] text-amber-500/80 font-medium truncate" 
+                                    x-text="doc.correspondent_name"></span>
+                                <span class="text-[9px] text-slate-500 font-mono">|</span>
+                                <span class="text-[9px] text-slate-400 font-mono" 
+                                    x-text="formatDate(doc.created)"></span>
+                            </div>
                         </div>
+
+                        <svg class="w-3 h-3 text-slate-500 group-hover:text-amber-400 shrink-0">
+                            <use href="public/assets/sprite.svg#icon-document"></use>
+                        </svg>
                     </div>
                 </template>
             </div>

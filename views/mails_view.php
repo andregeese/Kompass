@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -56,7 +56,8 @@
                         :class="{
                                 'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedId === mail.id,
                                 'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined,
-                                'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read
+                                'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read,
+                                'bg-amber-50/60 dark:bg-amber-900/20 opacity-90': mail.is_newsletter
                             }">
                         
                         <div x-show="mail.is_read===0" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>

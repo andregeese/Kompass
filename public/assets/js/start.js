@@ -32,14 +32,16 @@ document.addEventListener('alpine:init', () => {
                 { id: 2, title: 'Backup Archiv-Datenbank', date: '2026-06-12', time: '22:00', category: '💾 Wartung' }
             ];
 
-            let pD = await apiCall('get_last_documents', {}, 'GET');
+            let pD = await apiCall('get_last_unclassified', {}, 'GET');
             let aC = await apiCall('get_accelerate_cluster', {}, 'GET');
+            let tD = await apiCall('get_total_document_count', {'tag':'unclassified'}, 'GET');
+            let tD2 = await apiCall('get_total_document_count', {}, 'GET');
             this.acceleratorClusters = aC.details.accelorate_clusters;
 
             let memos = await apiCall('get_critical_memos', {}, 'GET');
             let events = await apiCall('get_upcoming_events', {}, 'GET');
             
-            this.lastDocs = pD.details.last_docs;
+            let lastDocs = pD.details.last_docs;
             this.criticalMemos = memos.details.critical_memos;
             this.upcomingEvents = events.details.upcoming_events;
         },

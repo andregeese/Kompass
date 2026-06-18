@@ -1,9 +1,9 @@
 <?php
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -58,9 +58,19 @@ class PaperlessController extends \App\Core\BaseController {
         ];
     }
 
+    public function getTotalDocumentCount()
+    {
+        return $this->process($this->paperlessProcess, 'getTotalDocumentCount', 'c_docs', '');
+    }
+    
     public function getLastDocuments()
     {
         return $this->process($this->paperlessProcess, 'getLastDocuments', 'last_docs', '');
+    }
+
+    public function getLastUnclassifiedDocuments()
+    {
+        return $this->process($this->paperlessProcess, 'getLastUnclassifiedDocuments', 'last_docs', '');
     }
 
     public function getCorrespondentById() 

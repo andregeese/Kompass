@@ -1,0 +1,93 @@
+/* --- Globale Einstellungen & Utilities --- */
+[x-cloak] {
+    display: none !important;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Scrollbar Anpassungen */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+/* --- Layout Struktur --- */
+header {
+    padding-top: env(safe-area-inset-top);
+}
+
+#calendar-container {
+    display: flex;
+    flex-direction: column;
+    height: 700px;
+}
+
+#calendar {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* --- FullCalendar Anpassungen --- */
+.fc-scroller {
+    overflow-y: auto !important;
+}
+
+.fc .fc-daygrid-body {
+    background-color: transparent !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: #f1f5f9 !important;
+}
+
+/* Header & Toolbar */
+.fc .fc-header-toolbar {
+    margin-bottom: 1rem !important;
+}
+
+.fc .fc-button-primary {
+    background-color: transparent !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #475569 !important;
+    padding: 4px 12px !important;
+    font-size: 0.8rem !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease;
+}
+
+.fc .fc-button-primary:hover {
+    background-color: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+/* Zellen & Datum */
+.fc .fc-daygrid-day-top {
+    flex-direction: row !important;
+    padding: 4px !important;
+}
+
+.fc .fc-daygrid-day-number {
+    font-size: 0.75rem !important;
+    font-weight: 500;
+    color: #94a3b8 !important;
+    padding: 4px !important;
+    text-decoration: none !important;
+}

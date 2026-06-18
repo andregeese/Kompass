@@ -2,9 +2,9 @@
 
 /**
  * START_LICENSE
- * Enterprise CRM Hub
+ * Kompass Hub
  * @license BSL 1.1 - Proprietary, non-commercial use only.
- * @copyright 2026 CRM by abwurfzone by André Geese. All rights reserved.
+ * @copyright 2026 Kompass by abwurfzone by André Geese. All rights reserved.
  * @note Modification, rebranding, and commercial distribution are strictly prohibited.
  * END_LICENSE
  */
@@ -16,7 +16,7 @@ header("Pragma: no-cache");
 header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
 
 /**
- * Enterprise CRM Hub - Core Controller
+ * Kompass Hub - Core Controller
  * Lädt Composer-Autoloading und steuert die modulare View-Injektion.
  */
 define('ROOT_PATH', __DIR__);
@@ -119,30 +119,18 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="digitaler_compass.svg">
+    <link rel="apple-touch-icon" href="digitaler_compass.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="digitaler_compass_180.png">
+    <link rel="preload" href="./public/assets/sprite.svg" as="image" type="image/svg+xml">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kompass Hub">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="<?= \App\Core\Auth::getCSRFToken(); ?>">
-    <title>Enterprise CRM Hub</title>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <defs>
-            <symbol id="icon-mail" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </symbol>
-            <symbol id="icon-mail-send" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-            </symbol>
-            <symbol id="icon-appointment" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </symbol>
-            <symbol id="icon-document" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </symbol>
-            <symbol id="icon-note" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </symbol>
-        </defs>
-        </svg>
-
+    <title>Kompass Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./public/assets/compass.css?v=<?= filemtime(__DIR__ . '/public/assets/compass.css') ?>">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -158,96 +146,6 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
             }
         }
     </script>
-    <style>
-        [x-cloak] {
-            display: none !important;
-        }
-
-        body {
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-
-        .dark ::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
-
-        /* Container-Struktur */
-        #calendar-container {
-            display: flex;
-            flex-direction: column;
-            height: 700px;
-        }
-
-        #calendar {
-            flex-grow: 1;
-            overflow: hidden;
-            /* Haupt-Container bleibt fix */
-        }
-
-        /* Scroll-Verhalten & Grid-Feinabstimmung */
-        .fc-scroller {
-            overflow-y: auto !important;
-        }
-
-        .fc .fc-daygrid-body {
-            background-color: transparent !important;
-        }
-
-        .fc-theme-standard td,
-        .fc-theme-standard th {
-            border-color: #f1f5f9 !important;
-            /* Dezente Linien */
-        }
-
-        /* Header & Toolbar */
-        .fc .fc-header-toolbar {
-            margin-bottom: 1rem !important;
-        }
-
-        .fc .fc-button-primary {
-            background-color: transparent !important;
-            border: 1px solid #e2e8f0 !important;
-            color: #475569 !important;
-            padding: 4px 12px !important;
-            font-size: 0.8rem !important;
-            border-radius: 8px !important;
-            transition: all 0.2s ease;
-        }
-
-        .fc .fc-button-primary:hover {
-            background-color: #f8fafc !important;
-            color: #1e293b !important;
-        }
-
-        /* Zellen & Datum */
-        .fc .fc-daygrid-day-top {
-            flex-direction: row !important;
-            padding: 4px !important;
-        }
-
-        .fc .fc-daygrid-day-number {
-            font-size: 0.75rem !important;
-            font-weight: 500;
-            color: #94a3b8 !important;
-            /* Slate-400 */
-            padding: 4px !important;
-            text-decoration: none !important;
-        }
-    </style>
 
     <script>
         window.CRM_API_URL = './api.php';
@@ -280,6 +178,9 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
         }
     "
     class="h-full bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 antialiased selection:bg-blue-500 selection:text-white pb-safe">
+    <div style="display: none;">
+        <?php echo file_get_contents(__DIR__ . '/public/assets/sprite.svg'); ?>
+    </div>
     <div x-show="!isOnline" x-cloak class="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <div class="flex items-center space-x-2">
             <span>⚠️ Funkloch aktiv – App läuft im ausfallsicheren Offline-Cache Modus.</span>
