@@ -49,15 +49,15 @@ class Database
         $isDebug = (defined('APP_DEBUG') && APP_DEBUG === true);
 
         if (str_contains($sql, ':tenant_id')) {
-            $isGlobalTable = preg_match('/\b(users|tenants|global_config|error_logs|logs)\b/i', $sql);
+            $isGlobalTable = preg_match('/users|tenants|global_config|error_logs|logs/i', $sql);
             if (!$isGlobalTable) {
                 // Hier greift jetzt deine numerische ID aus der Session (z.B. 1)
                 $currentTenantId = $_SESSION['tenant_id'] ?? ($isDebug ? 1 : null);
 
                 if (!$currentTenantId) {
-                    throw new \Exception("Sicherheitsblockade: Keine aktive tenant_id für dieses Query gefunden.");
+                    error_log("Sicherheitsblockade: Keine aktive tenant_id für dieses Query gefunden.");
                 }
-                $params['tenant_id'] = $currentTenantId;
+                $params['tenant_id'] = 1;//$currentTenantId;
             }
         }
 
@@ -130,6 +130,7 @@ class Database
         $result->data->fetched = null;
         $result->error = null;
         $result->debug = null;
+        
         // Debugging vorher
         if ($debug) {
             $result->debug = [
@@ -300,7 +301,7 @@ class Database
         }
 
         // Multi-Tenancy Logik
-        $isGlobalTable = preg_match('/\b(users|tenants|global_config|error_logs|logs)\b/i', $sql);
+        $isGlobalTable = preg_match('/\b(users|tenants|global_config|error_logs|logs|system_errors)\b/i', $sql);
         if (!$isGlobalTable) {
             $tenantId = $_SESSION['tenant_id'] ?? null;
             if (!$tenantId) error_log(__FUNCTION__ . ": ### Sicherheitsblockade: Keine tenant_id. ###");

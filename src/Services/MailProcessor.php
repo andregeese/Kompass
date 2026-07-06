@@ -572,11 +572,16 @@ class MailProcessor extends \App\Core\Database
                 foreach ($mailsToWrite as $mail) 
                 {
                     try {
+                        //error_log($mail['uid']);
                         $i = $mailsInDB[$mail['uid']] ?? null;
+                        $highestUid = max($highestUid, $mail['uid']);
+
                         if (!empty($i)){
-                            // error_log("-- mail (" . $mail['uid'] . ") in DB! $i --");
+                            # error_log ("-- mail (" . $mail['uid'] . ") in DB!--");
                             continue;
+                            
                         }
+                        //error_log ("-- mail (" . $mail['uid'] . ") N in DB! --");
 
                         //$exists = $this->mail_exists($mail['uid'], $mail['message_id'], $folder);
                         //if (!$exists) {
@@ -618,7 +623,7 @@ class MailProcessor extends \App\Core\Database
                                 'is_read'       => $mail['is_read'],
                                 'is_flagged'    => $mail['is_flagged'],
                                 'is_answered'   => $mail['is_answered'],
-                                'is_newsletter' => $mail['is_answered'],
+                                'is_newsletter' => $mail['is_newsletter'],
                                 'sceid'         => (int)$senderId,
                                 'rceid'         => (int)$reciepId
                             ], true, true, false);
@@ -635,6 +640,12 @@ class MailProcessor extends \App\Core\Database
             //});
         }
 
+        error_log($added . " - " . $folder . " - " . $highestUid);
+
+        if ($added >= 0) {
+            $this->saveSyncCheckpoint($folder, $highestUid);
+        }
+
         // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen
         if (isset($imapStream) && $imapStream instanceof \IMAP\Connection) {
             try {
@@ -643,12 +654,11 @@ class MailProcessor extends \App\Core\Database
                 // Falls sie serverseitig schon zu war: Stumm ignorieren
             }
         }
-        if ($added > 0) {
-            $this->saveSyncCheckpoint($folder, $highestUid);
-        }
+        
+        
 
         error_log("Prozess: [$pid] End Sync Ordner: $folder");
-        $updateCount = $this->deltaSync($folder, 100);
+        //$updateCount = $this->deltaSync($folder, 100);
 
         return [
             "added"     => $added,
@@ -664,6 +674,7 @@ class MailProcessor extends \App\Core\Database
      */
     private function checkIfNewsletter(string $subject, string $headers): bool
     {
+        //error_log("NL check");
         // 1. Der "List-Unsubscribe" Header ist das stärkste Indiz.
         // Professionelle Newsletter enthalten diesen Header zwingend.
         if (preg_match('/^List-Unsubscribe:/mi', $headers)) {
@@ -1456,6 +1467,7 @@ class MailProcessor extends \App\Core\Database
         imap_close($imapStream);
         return true;
     }
+    
     /**
      * Holt eine paginierte Liste von Mails aus der Datenbank, basierend auf dem angegebenen Ordner. Es werden nur Mails zurückgegeben, die nicht als 'deleted' markiert sind. Der Betreff wird entschlüsselt und sowohl Betreff als auch Sender werden mit mb_convert_encoding bereinigt, um sicherzustellen, dass sie korrekt im Dashboard angezeigt werden, selbst wenn sie ursprünglich in einem anderen Zeichensatz vorlagen.
      * @param int $page Die Seite der Ergebnisse (1-basiert)

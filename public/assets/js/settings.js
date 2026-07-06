@@ -107,7 +107,8 @@ const settingsComponent = () => ({
         this.message.text = ''; // altes Feedback löschen
 
         try {
-            const res = await apiCall('save_settings', this.form, 'POST');
+            //const res = await apiCall('save_settings', this.form, 'POST');
+            const response = await apiCall('save_settings', {'data': this.form}, 'POST');
             
             if (res.success) {
                 this.showMsg('Einstellungen erfolgreich gespeichert!', 'success');

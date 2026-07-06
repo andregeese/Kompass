@@ -48,9 +48,20 @@ class AuthController extends \App\Core\BaseController
     public function register()
     {
         try{
-            $email = $_POST['email'];
-            $plainPassword = $_POST['password'];
-            $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+            error_log("REGISTER DATA: " . print_r($_SERVER, true));
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true);
+
+            // 2. Debugging: Logge, was wirklich ankam
+            error_log("RAW INPUT: " . $rawInput);
+            // 3. Fallback: Falls $data leer ist, prüfe, ob es doch ein Form-POST war
+            $email = $data['email'] ?? $_POST['email'] ?? null;
+            $password = $data['password'] ?? $_POST['password'] ?? null;
+
+            if (!$email) {
+                throw new \Exception("E-Mail fehlt im Request.");
+            }
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $ret = $this->dashboard->registerUser($email, $hashedPassword);
             // 1. Passwort sicher hashen
             // PASSWORD_DEFAULT nutzt aktuell den sichersten Algorithmus (aktuell bcrypt)

@@ -170,7 +170,7 @@ class Dashboard
             return $tenantId; 
         } catch (Throwable $t) {
             error_log("Fehler bei registerUser: " . $t->getMessage());
-            throw new Exception("Registrierung fehlgeschlagen: " . $t->getMessage());
+            //throw new Exception("Registrierung fehlgeschlagen: " . $t->getMessage());
         }
     }
 

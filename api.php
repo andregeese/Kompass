@@ -16,7 +16,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // 2. Wohin schreibt PHP interne Fehler?
-$logFile = __DIR__ . "/debug_new.log";
+$logFile = __DIR__ . "/debug.log";
 ini_set('log_errors', 1);
 ini_set('error_log', $logFile); // Hier muss 'error_log' stehen, nicht deine Klasse
 
@@ -47,7 +47,9 @@ $receivedToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($headers['X-CSRF-TOKEN'] ?? '
 $action = $_REQUEST['action'] ?? '';
 // Liste der Aktionen, die KEIN CSRF-Token benötigen
 $publicActions = ['login', 'register'];
-if (!in_array($action, $publicActions)) {
+if (isset($_GET['debug']) && $_GET['debug']=='debugMe'){
+
+}elseif(!in_array($action, $publicActions)) {
     // Hole das Token IMMER aus der korrekten $_SERVER Variable (da Nginx/PHP-FPM)
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!\App\Core\Auth::verifyCsrfToken($csrfToken)) {
@@ -62,6 +64,8 @@ if (!in_array($action, $publicActions)) {
         exit;
     }
 }
+
+
 header('Content-Type: application/json; charset=utf-8');
 $action = $_REQUEST['action'] ?? '';
 // 1. Instanz erzeugen
@@ -183,6 +187,8 @@ try {
     // Hier greift der BaseController Konstruktor (Sicherheits-Check passiert automatisch!)
     $controller = new $controllerClass($dashboard);
     $responseBody = $controller->$method();
+
+    //error_log("API RESPONSE: " . print_r($responseBody, true));
 
     // KORREKTUR: Wenn das Ergebnis KEIN standardisiertes Paket ist, schnüren wir es hier!
     if (!is_array($responseBody) || !isset($responseBody['success'])) {

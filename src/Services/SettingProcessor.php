@@ -136,7 +136,7 @@ class SettingProcessor extends \App\Core\Database
                 ],
                 false,
                 false,
-                false
+                true
             );
         }
 
