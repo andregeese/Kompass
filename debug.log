@@ -4335,3 +4335,55 @@
 [06-Jul-2026 18:01:55 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
 [06-Jul-2026 18:01:56 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (INBOX): 6162 | Letzte UID in DB: 119908 | Höchste UID Server: 132631
 [06-Jul-2026 18:01:56 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
+[06-Jul-2026 18:02:26 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[06-Jul-2026 18:02:26 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[06-Jul-2026 18:02:26 Europe/Berlin] Prozess: [21] Starte Sync für Ordner: Sent Messages
+[06-Jul-2026 18:02:26 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
+[06-Jul-2026 18:02:26 Europe/Berlin] search Key In DB: IMAP_HOST
+[06-Jul-2026 18:02:26 Europe/Berlin] search Key In DB: IMAP_PORT
+[06-Jul-2026 18:02:26 Europe/Berlin] search Key In DB: IMAP_USER
+[06-Jul-2026 18:02:26 Europe/Berlin] search Key In DB: IMAP_PASSWORD
+[06-Jul-2026 18:02:26 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}Sent Messages
+[06-Jul-2026 18:02:26 Europe/Berlin] mails in Cache laden
+[06-Jul-2026 18:02:27 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (Sent Messages): 6869 | Letzte UID in DB: 5837 | Höchste UID Server: 7342
+[06-Jul-2026 18:02:27 Europe/Berlin] Sync: Verarbeite 100 neue Mails.
+[06-Jul-2026 18:02:32 Europe/Berlin] mails in Cache laden
+[06-Jul-2026 18:02:53 Europe/Berlin] mails in Cache laden
+[06-Jul-2026 18:02:59 Europe/Berlin] mails im Cache
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] Kontakt-Email gefunden 
+[06-Jul-2026 18:02:59 Europe/Berlin] 100 - Sent Messages - 5938
+[06-Jul-2026 18:02:59 Europe/Berlin] Prozess: [29] End Sync Ordner: Sent Messages
+[06-Jul-2026 18:02:59 Europe/Berlin] VERIFY: Session-Token-Status: Vorhanden
+[06-Jul-2026 18:02:59 Europe/Berlin] BASECONTROLLER: Request an Dashboard übergeben.
+[06-Jul-2026 18:02:59 Europe/Berlin] Prozess: [22] Starte Sync für Ordner: DMSDone
+[06-Jul-2026 18:02:59 Europe/Berlin] /var/www/html/age_web/src/Services/MailProcessor.php: connectIMAP
+[06-Jul-2026 18:02:59 Europe/Berlin] search Key In DB: IMAP_HOST
+[06-Jul-2026 18:02:59 Europe/Berlin] search Key In DB: IMAP_PORT
+[06-Jul-2026 18:02:59 Europe/Berlin] search Key In DB: IMAP_USER
+[06-Jul-2026 18:02:59 Europe/Berlin] search Key In DB: IMAP_PASSWORD
+[06-Jul-2026 18:02:59 Europe/Berlin] connectionstring: {imap.mail.me.com:993/imap/ssl}DMSDone
+[06-Jul-2026 18:03:01 Europe/Berlin] DEBUG-SYNC: Gefundene Mails im Ordner (DMSDone): 1997 | Letzte UID in DB: 4950 | Höchste UID Server: 4950
+[06-Jul-2026 18:03:01 Europe/Berlin] Sync: Verarbeite 0 neue Mails.
+[06-Jul-2026 18:03:01 Europe/Berlin] mails in Cache laden
+[06-Jul-2026 18:03:01 Europe/Berlin] mails im Cache
+[06-Jul-2026 18:03:01 Europe/Berlin] 0 - DMSDone - 4950
+[06-Jul-2026 18:03:01 Europe/Berlin] Prozess: [22] End Sync Ordner: DMSDone
