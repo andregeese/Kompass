@@ -49,7 +49,7 @@
             <div x-show="activeTab === 'context'" class="space-y-4">
                 <!--Kontakte -->
                 <div class="space-y-3">
-                    <div @click.stop="dispatchAction('contact_view', {hash:contactState?.contact.id}, null)" 
+                    <div @click.stop="dispatchAction('contact_view', {hash:contactState?.contact?.id}, null)" 
                          class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all select-none shadow-sm">
                         <div class="flex items-center space-x-2 min-w-0">
                             <span class="flex h-2 w-2 rounded-full shrink-0" :class="contactState?.success ? 'bg-emerald-500' : 'bg-amber-500'"></span>

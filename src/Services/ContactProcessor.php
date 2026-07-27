@@ -370,7 +370,6 @@ class ContactProcessor extends \App\Core\Database
      */
     public function getContactListByContactID($hash)
     {
-        error_log(__FUNCTION__);
         $sql = "SELECT 
                     HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
@@ -429,11 +428,9 @@ class ContactProcessor extends \App\Core\Database
 
     public function getContactListByQuery(string $query = "", int $contact_id = null)
     {
-        error_log(__FUNCTION__);
         $sql = "SELECT 
                     HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.is_active as is_active,
-                    -- c.paperless_id as paperless_id,
                     c.display_name,
                     c.type,
                     ce.id AS ceid,
@@ -488,7 +485,9 @@ class ContactProcessor extends \App\Core\Database
     }
 
     /**
-     * Hash von der E-Mail
+     * Sucht einen Kontakt anhand der Mail-ID
+     * @param string $hash: die verschlüsselte Mail-ID
+     * @return array -> fetched
      */
     public function getContactByHash($hash)
     {
@@ -547,7 +546,9 @@ class ContactProcessor extends \App\Core\Database
     }
 
     /**
-     * Erzeugt die TimeLine von Kontakten
+     * Erzeugt die Timeline-Daten für einen Kontakt anhand der Mail-ID
+     * @param mixed $id: die verschlüsselte Mail-ID
+     * @return array -> Timeline-Daten
      */
     public function getTimelineData(mixed $id)
     {
@@ -704,13 +705,15 @@ class ContactProcessor extends \App\Core\Database
 
 
     /**
-     * tbd auf id umstellen
+     * Sucht einen Kontakt anhand der Mail-ID
+     * @param string $id: die verschlüsselte Mail-ID
+     * @return array -> fetched
      */
     public function getContactByIdMail(string $id)
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
-                    c.id,
+                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.display_name,
                     c.type,
                     GROUP_CONCAT(ce.email SEPARATOR ', ') AS additional_emails
@@ -727,7 +730,7 @@ class ContactProcessor extends \App\Core\Database
             ["id" => $id],
             false,
             false,
-            true
+            false
         );
 
         if ($dbResult->success && !empty($dbResult->data->fetched)) {

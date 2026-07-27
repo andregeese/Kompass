@@ -208,7 +208,7 @@ const mailViewComponent = () => ({
     },        
 
     async moveToDMS(mail) {
-        if (!this.isOnline || !mail?.hash) return;
+        if (!this.isOnline || !mail?.id) return;
     
         try {
             const jResponse = await apiCall('dms', {'id': mail.id}, 'POST');
