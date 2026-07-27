@@ -111,6 +111,8 @@ $viewJsMapping = [
     'start'        => 'start.js'
 ];
 $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
+// Beispiel: Wert aus deiner Konfiguration, Datenbank oder Umgebungsvariable
+$paperlessUrl = "http://192.168.0.3:8030"; 
 ?>
 
 <!DOCTYPE html>
@@ -147,15 +149,13 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
         }
     </script>
 
-    <script>
-        window.CRM_API_URL = './api.php';
-        window.CRM_PAPERLESS = 'http://192.168.0.72:8030'
-    </script>
-
+    
+        
     <!-- Core-Scripts permanent laden -->
     <script src="./public/assets/js/crm.js?v=<?= filemtime(__DIR__ . '/public/assets/js/crm.js') ?>" defer></script>
     <script src="./public/assets/js/right_sidebar.js?v=<?= filemtime(__DIR__ . '/public/assets/js/right_sidebar.js') ?>" defer></script>
     
+
 
     <!-- Dynamisches Skript ohne blockierenden I/O Festplatten-Check -->
     <script src="./public/assets/js/<?= $jsFile ?>?v=<?= filemtime(__DIR__ . '/public/assets/js/'.$jsFile) ?>" defer></script>
@@ -163,6 +163,26 @@ $jsFile = $viewJsMapping[$currentView] ?? 'start.js';
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+
+    <script>
+        window.CRM_API_URL = './api.php';
+        window.CRM_PAPERLESS = ''; // Initial leer
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                let res = await apiCall('get_settings', {}, 'POST'); 
+                console.log("Einstellungen vom Backend:", res);
+                if (res?.success && res?.details && res.details?.settings) {
+                    window.CRM_PAPERLESS = res.details.settings.PAPERLESS_URL || '';
+                    console.log("Paperless URL geladen:", window.CRM_PAPERLESS);
+                } else {
+                    console.error("Fehler beim Laden der Einstellungen:", res);
+                }
+            } catch (err) {
+                console.error("API-Aufruf fehlgeschlagen:", err);
+            }
+        });
+    </script>
 </head>
 
 <body x-data="crmEngine()"

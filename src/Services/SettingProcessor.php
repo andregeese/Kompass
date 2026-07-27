@@ -61,7 +61,7 @@ class SettingProcessor extends \App\Core\Database
 
                 try {
                     // Sensible Werte für das Frontend entschlüsseln
-                    if (in_array($key, ['PAPERLESS_URL', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
+                    if (in_array($key, ['PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
                         
                         // Falls der Wert in der DB leer ist, macht Entschlüsseln keinen Sinn
                         if (empty($val)) {
@@ -70,12 +70,15 @@ class SettingProcessor extends \App\Core\Database
                         }
 
                         $settings[$key] = \App\Core\Crypto::decrypt($val, $encryptionKey);
-                        
+                        error_log("Decrypted Value for {$key}: " . $settings[$key]);
                     } else if ($key == "SYNC_FOLDERS") {
                         // Falls val kein valides JSON ist, fängt json_decode das ab (gibt null aus)
                         $settings[$key] = json_decode($val, true) ?? [];
+                        error_log("Plain Value for {$key}: " . $settings[$key]);
+                        
                     } else {
                         $settings[$key] = $val;
+                        error_log("Plain Value for {$key}: " . $settings[$key]);
                     }
                 } catch (\Throwable $e) {
                     // JEDER Fehler (auch Fatal/TypeError) im Loop wird jetzt hier geloggt!

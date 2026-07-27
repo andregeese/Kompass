@@ -249,7 +249,7 @@ class MailProcessor extends \App\Core\Database
             if (!$msgNumber) {
                 return "Mail existiert nicht mehr auf dem Server.";
             }*/
-            $structure = imap_fetchstructure($imapStream, $uid);
+            $structure = imap_fetchstructure($imapStream, $uid, FT_UID);
             $plainText = $this->findPart($uid, $structure, 'TEXT/PLAIN', $imapStream);
 
             if (!$plainText) {
@@ -271,24 +271,30 @@ class MailProcessor extends \App\Core\Database
     private function findPart($uid, $structure, $mimeType, &$imapStream, $partNumber = null)
     {
         try {
-            error_log("## " . __FUNCTION__ . " aufgerufen mit UID: $uid, Typ: " . ($structure->type ?? 'n/a') . ", MIME: $mimeType ##");            // Basis-MIME-Typ bestimmen
-            // 1. Sicherer Zugriff auf den Typ
-            $type = isset($structure->type) ? $structure->type : 0;
-
-            // 2. MIME-Typ Logik (kein Array-Zugriff auf $structure!)
+            $type = $structure->type ?? 0;
             $primaryTypes = ["TEXT", "MULTIPART", "MESSAGE", "APPLICATION", "AUDIO", "IMAGE", "VIDEO", "OTHER"];
             $primary = $primaryTypes[$type] ?? "TEXT";
             $subtype = isset($structure->subtype) ? strtoupper($structure->subtype) : "PLAIN";
             $currentMimeType = $primary . '/' . $subtype;
+
             if ($currentMimeType === $mimeType) {
                 $part = $partNumber ?: "1";
                 $data = imap_fetchbody($imapStream, $uid, $part, FT_UID);
 
-                $encoding = isset($structure->encoding) ? $structure->encoding : 0;
-                return ($encoding == 3) ? base64_decode($data) : quoted_printable_decode($data);
+                $encoding = $structure->encoding ?? 0;
+
+                // Sauberer Check für IMAP Encodings:
+                // 3 = BASE64, 4 = QUOTED-PRINTABLE
+                switch ($encoding) {
+                    case 3:
+                        return base64_decode($data);
+                    case 4:
+                        return quoted_printable_decode($data);
+                    default:
+                        return $data;
+                }
             }
-            // 3. WICHTIG: Hier liegt oft der Fehler!
-            // Wir prüfen, ob $structure->parts ein Array ist, bevor wir es in eine Schleife schicken.
+
             if ($type == 1 && isset($structure->parts) && is_array($structure->parts)) {
                 foreach ($structure->parts as $index => $sub) {
                     $newPart = $partNumber ? $partNumber . '.' . ($index + 1) : (string)($index + 1);
@@ -298,9 +304,11 @@ class MailProcessor extends \App\Core\Database
             }
             return null;
         } catch (\Throwable $e) {
-            error_log(__FUNCTION__ . ": ERROR: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
+            error_log(__FUNCTION__ . ": ERROR: " . $e->getMessage());
+            return null;
         }
     }
+    
     /**
      * Verschiebt eine Mail in den DMS-Ordner. Wichtig: Diese Methode sollte erst nach erfolgreicher PDF-Erstellung aufgerufen werden, um Datenverlust zu vermeiden.
      * @param string $hash Der Hash der Mail, die verschoben werden soll.
@@ -1251,6 +1259,7 @@ class MailProcessor extends \App\Core\Database
         // 1. Erst versuchen, aus der DB zu laden (entschlüsselt)
         $htmlContent = ""; 
         $thmlfromDB = $this->getDecryptedMailBody($id);
+        $htmlContent ="";
 
         // 2. Wenn DB leer, IMAP anzapfen
         if (empty($htmlContent)) {
@@ -1333,13 +1342,18 @@ class MailProcessor extends \App\Core\Database
                     -- Join, um alle ceids zu finden, die zum Kontakt der Ausgangs-Mail gehören
                     JOIN contact_emails ce ON (m.sender_ceid = ce.id OR m.recipient_ceid = ce.id)
                     WHERE ce.contact_id IN (
-                        -- Subquery: Finde den Kontakt, der zur Ausgangs-Mail gehört
+                        -- Subquery: Finde den Kontakt der E-Mail-Adresse
                         SELECT contact_id 
                         FROM contact_emails 
-                        WHERE id IN (
-                            SELECT sender_ceid 
-                            FROM mails 
-                            WHERE id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
+                        WHERE id = (
+                            -- Subquery: Je nach Ordner sender_ceid (Eingang) oder recipient_ceid (Ausgang) wählen
+                            SELECT 
+                                CASE 
+                                    WHEN UPPER(m_base.imap_folder) IN ('OUTBOX', 'SENT', 'GESENDET', 'SENT MESSAGES') THEN m_base.recipient_ceid
+                                    ELSE m_base.sender_ceid
+                                END
+                            FROM mails m_base
+                            WHERE m_base.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                         )
                     )
                     AND m.tenant_id = :tenant_id 
@@ -1354,7 +1368,7 @@ class MailProcessor extends \App\Core\Database
             ],
             false,
             false,
-            false
+            true
         );
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
