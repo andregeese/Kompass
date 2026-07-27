@@ -107,10 +107,9 @@ const settingsComponent = () => ({
         this.message.text = ''; // altes Feedback löschen
 
         try {
-            //const res = await apiCall('save_settings', this.form, 'POST');
             const response = await apiCall('save_settings', {'data': this.form}, 'POST');
             
-            if (res.success) {
+            if (response.success) {
                 this.showMsg('Einstellungen erfolgreich gespeichert!', 'success');
                 // Optional: initSettings() nochmal aufrufen, um State aufzuräumen (Passwörter leeren)
                 this.initSettings();
@@ -118,7 +117,7 @@ const settingsComponent = () => ({
                 this.showMsg(res.error || 'Fehler beim Speichern', 'error');
             }
         } catch (err) {
-            this.showMsg('Verbindungsfehler beim Speichern.', 'error');
+            this.showMsg('Verbindungsfehler beim Speichern.' + err.message, 'error');
         } finally {
             this.loading = false;
         }

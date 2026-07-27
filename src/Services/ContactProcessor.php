@@ -710,7 +710,7 @@ class ContactProcessor extends \App\Core\Database
     {
         error_log(__FUNCTION__);
         $sql = "SELECT 
-                    HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) AS contact_id,
+                    c.id,
                     c.display_name,
                     c.type,
                     GROUP_CONCAT(ce.email SEPARATOR ', ') AS additional_emails
@@ -720,14 +720,14 @@ class ContactProcessor extends \App\Core\Database
                 -- 2. Verbindung zur Kontakt-Tabelle
                 INNER JOIN contacts AS c ON ce.contact_id = c.id
                 WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
-                AND m.tenant_id = 6
+                AND m.tenant_id = :tenant_id
                 GROUP BY c.id, c.display_name, c.type;";
         $dbResult = $this->queryIt(
             $sql,
             ["id" => $id],
             false,
             false,
-            false
+            true
         );
 
         if ($dbResult->success && !empty($dbResult->data->fetched)) {

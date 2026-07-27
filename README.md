@@ -151,6 +151,9 @@ SET foreign_key_checks = 0;
 
 SET NAMES utf8mb4;
 
+CREATE DATABASE `Dashboard` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `Dashboard`;
+
 DROP TABLE IF EXISTS `appointments`;
 CREATE TABLE `appointments` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -163,6 +166,7 @@ CREATE TABLE `appointments` (
   `ical_data` text COLLATE utf8mb4_unicode_ci,
   `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
+  `ceid` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_perf_dates` (`tenant_id`,`start_time`,`end_time`),
   CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
@@ -264,6 +268,8 @@ CREATE TABLE `mails` (
   KEY `idx_tenant_contact` (`tenant_id`,`contact_id`),
   KEY `idx_tenant_subject` (`tenant_id`,`subject_hash`),
   KEY `mails_ibfk_4` (`paperless_id`),
+  KEY `idx_tenant_uid` (`tenant_id`,`uid`),
+  KEY `idx_tenant_folder_uid` (`tenant_id`,`imap_folder`,`uid`),
   CONSTRAINT `mails_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
   CONSTRAINT `mails_ibfk_2` FOREIGN KEY (`sender_ceid`) REFERENCES `contact_emails` (`id`) ON DELETE CASCADE,
   CONSTRAINT `mails_ibfk_3` FOREIGN KEY (`recipient_ceid`) REFERENCES `contact_emails` (`id`) ON DELETE CASCADE,
@@ -283,6 +289,8 @@ CREATE TABLE `notes` (
   `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `lokal_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ceid` int DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_tenant_mail` (`tenant_id`,`mail_uid`),
   KEY `idx_tenant_mail_folder` (`tenant_id`,`mail_folder`,`mail_uid`),
@@ -343,31 +351,4 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- 2026-07-06 15:00:43 UTC
-
-
-SELECT * FROM mysql.slow_log ORDER BY start_time DESC LIMIT 5
-
-
-
-## PERFORMANCE CHECK:
-SELECT start_time, query_time, rows_examined, rows_sent, sql_text 
-FROM mysql.slow_log 
-ORDER BY query_time DESC 
-LIMIT 10;
-
-SET GLOBAL log_output = 'TABLE';
-SET GLOBAL slow_query_log = 1;
-
--- 2. Den Zeitschwellenwert sinnvoll hochsetzen
--- 0.5 Sekunden ist perfekt: Alles darunter ist für Web-Apps völlig okay.
--- Alles darüber wird für dich aufgezeichnet.
-SET GLOBAL long_query_time = 0.5;
-
--- 3. Das "Index-Rauschen" abschalten
--- Wenn dies auf 1 steht, wird JEDE Abfrage geloggt, die keinen Index nutzt – 
--- selbst wenn sie auf einer Mini-Tabelle mit 2 Zeilen in 0,0001 Sekunden läuft. Das schalten wir ab.
-SET GLOBAL log_queries_not_using_indexes = 0;
-
--- 4. Tisch abwischen (Altes Rauschen löschen)
-TRUNCATE mysql.slow_log;
+-- 2026-07-08 07:57:50 UTC

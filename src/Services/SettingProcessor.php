@@ -98,48 +98,58 @@ class SettingProcessor extends \App\Core\Database
     
         $allowedKeys = ['IMAP_HOST', 'IMAP_PORT', 'IMAP_USER', 'IMAP_PASSWORD', 'PAPERLESS_URL', 'PAPERLESS_TOKEN','SYNC_FOLDERS', 'DMS_FOLDER', 'SENT_FOLDER'];
         
+        // :tenant_id bleibt im SQL, da injectTenantId() es befüllt
         $sql = "INSERT INTO tenant_config (tenant_id, config_key, config_value) 
                 VALUES (:tenant_id, :config_key, :config_value)
                 ON DUPLICATE KEY UPDATE config_value = :config_value_update";
-        
-        $dbResult = [];
-        foreach ($data as $key => $val) 
-        {
-            // 1. Key normieren: Alles groß
+    
+        foreach ($data as $key => $val) {
             $key = strtoupper($key); 
-            
             if (!in_array($key, $allowedKeys)) continue;
-            // 2. Jetzt funktionieren alle in_array Checks sicher
-            if (in_array($key, ['IMAP_PASSWORD', 'PAPERLESS_TOKEN']) && empty($val)) {
-                continue;
-            }
+            if (in_array($key, ['IMAP_PASSWORD', 'PAPERLESS_TOKEN']) && empty($val)) continue;
 
             if (in_array($key, ['PAPERLESS_NAME', 'PAPERLESS_TOKEN', 'IMAP_PASSWORD', 'IMAP_USER'])) {
                 $finalValue = \App\Core\Crypto::encrypt($val, $encryptionKey);
             } else {
-                if ($key== 'SYNC_FOLDERS'){
-                    $syncFolders = $val;
-                    $finalValue = json_encode($syncFolders, JSON_UNESCAPED_UNICODE);
-                    
-                }else{
-                    $finalValue = $val;
-
-                }
+                $finalValue = ($key === 'SYNC_FOLDERS') ? json_encode($val, JSON_UNESCAPED_UNICODE) : $val;
             }
+
+            // Trick: Wir nutzen ':tenant_id' statisch in JEDER Zeile. 
+            // injectTenantId() injiziert den Wert einmalig in $params['tenant_id'], 
+            // und PDO verteilt ihn beim Execute auf alle Zeilen.
+            $valuesToInsert[] = "(:tenant_id, :config_key_$i, :config_value_$i)";
             
-            $dbResult[] = $this->queryIt(
-                $sql, 
-                [
-                    'config_key'          => $key,
-                    'config_value'        => $finalValue,
-                    'config_value_update' => $finalValue
-                ],
-                false,
-                false,
-                true
-            );
+            $params["config_key_$i"]   = $key;
+            $params["config_value_$i"] = $finalValue;
+            
+            $i++;
         }
 
-        return ['settings' => $dbResult];
+        if (empty($valuesToInsert)) {
+            return (object)['success' => true, 'message' => 'Keine Daten zu speichern.'];
+        }
+
+        error_log("Prepared Values: " . print_r($valuesToInsert, true));
+
+        // Falls keine validen Daten übrig geblieben sind, direkt abbrechen
+        if (empty($valuesToInsert)) {
+            return ['success' => true, 'message' => 'Keine Änderungen zu speichern.'];
+        }
+
+        // Das SQL-Statement dynamisch zusammenbauen
+        // Nutzt VALUES(spaltenname), um sich auf den jeweils reingereichten Wert zu beziehen
+        // Aufbau des finalen Statements
+        $sql = "INSERT INTO tenant_config (tenant_id, config_key, config_value) 
+                VALUES " . implode(', ', $valuesToInsert) . "
+                ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)";
+        
+        error_log("SQL: " . $sql, true);
+
+        $dbResult = $this->queryIt($sql, $params, false, false, true);
+
+
+        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched))
+            ?  $dbResult
+            : null;
     }
 }

@@ -57,7 +57,7 @@ class Database
                 if (!$currentTenantId) {
                     error_log("Sicherheitsblockade: Keine aktive tenant_id für dieses Query gefunden.");
                 }
-                $params['tenant_id'] = 1;//$currentTenantId;
+                $params['tenant_id'] = $currentTenantId;
             }
         }
 
