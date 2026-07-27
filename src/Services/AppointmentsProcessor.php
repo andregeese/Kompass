@@ -140,19 +140,19 @@ class AppointmentsProcessor extends BaseProcessor
     public function updateAppointment($appointment_id, $ceid='')
     {
         $sql = "UPDATE appointments 
-                   SET ceid=:ceid 
+                   SET ceid = CAST(AES_DECRYPT(UNHEX(:ceid), :crypto_key) AS UNSIGNED)
                  WHERE tenant_id=:tenant_id 
                    AND id=CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
         
         return $this->queryIt(
             $sql,
             [
-                'ceid'  => $ceid == '' ? NULL : (int)$ceid,
+                'ceid' => empty($ceid) ? NULL : $ceid,
                 'id'    => $appointment_id
             ],
             false,
             false,
-            false
+            true
         );
 
     }
@@ -485,20 +485,22 @@ class AppointmentsProcessor extends BaseProcessor
         }
         //return "Erfolgreich partitioniert.";
     }
+
+
     public function saveAppointment($data)
     {
         $sql = "UPDATE appointments 
             SET summary = :summary, 
                 ceid = :ceid 
-            WHERE id = :crypto_key AND tenant_id = :tenant_id";
+            WHERE id = :id AND tenant_id = :tenant_id";
             
-        $dbResult = $this->queryIt($sql, [
+        return $this->queryIt($sql, [
             'summary'   => $data['title'],
             'ceid'      => !empty($data['ceid']) ? (int)$data['ceid'] : null,
             'id'        => (int)$data['id']
         ]);
 
-        return $dbResult;
+        
     }
 
 

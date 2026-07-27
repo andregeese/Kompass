@@ -51,15 +51,6 @@ class AppointmentsController extends \App\Core\BaseController
     }
     public function saveAppointment()
     {
-        $data = [
-            'id'        => $this->request->get('id'),
-            'title'   => $this->request->get('summary'),
-            'ceid'      => $this->request->get('ceid'),
-        ];
-        
-        if (empty($data['id'])) {
-            return ['success' => false, 'error' => 'Keine ID angegeben'];
-        }
         return $this->appointProcess->saveAppointment($data);
     }
 

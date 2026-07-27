@@ -242,7 +242,7 @@ const appointmentEditorComponent = () => ({
     
     async toggleContactLink(contact) {
         // Prüfen, ob dieser Kontakt bereits mit dem aktuellen Formular verknüpft ist
-        const isLinked = Number(this.form.ceid) === Number(contact.ceid);
+        const isLinked = this.form.ceid === contact.ceid;
 
         // 1. Lokalen Zustand sofort umschalten (UI reagiert blitzschnell)
         this.form.ceid = isLinked ? '' : contact.ceid;
