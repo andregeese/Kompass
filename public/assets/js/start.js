@@ -14,6 +14,8 @@ document.addEventListener('alpine:init', () => {
         upcomingEvents: [],
 
         acceleratorClusters: [],
+        
+        lastDocs:[],
 
         init() {
             // Hier würdest du deine API-Endpunkte triggern, um die Daten zu füttern
@@ -36,14 +38,18 @@ document.addEventListener('alpine:init', () => {
             let aC = await apiCall('get_accelerate_cluster', {}, 'GET');
             let tD = await apiCall('get_total_document_count', {'tag':'unclassified'}, 'GET');
             let tD2 = await apiCall('get_total_document_count', {}, 'GET');
-            this.acceleratorClusters = aC.details.accelorate_clusters;
+            this.acceleratorClusters = aC?.details?.accelorate_clusters || [];
 
             let memos = await apiCall('get_critical_memos', {}, 'GET');
             let events = await apiCall('get_upcoming_events', {}, 'GET');
             
-            let lastDocs = pD.details.last_docs;
-            this.criticalMemos = memos.details.critical_memos;
-            this.upcomingEvents = events.details.upcoming_events;
+            // (Falls correspondent_name im Objekt fehlt, nutzen wir correspondent als Fallback)
+            const rawDocs = pD?.details?.last_docs || [];
+            this.lastDocs = rawDocs.slice(0, 5).map(doc => ({
+                ...doc,
+                // Fallback, falls die API nur die ID (correspondent) sendet und keinen String
+                correspondent_name: doc.correspondent_name || (doc.correspondent ? `ID: ${doc.correspondent}` : 'Unbekannt')
+            }));
         },
 
         // Hilfsfunktionen für Datumsberechnungen und Style-Zuweisung

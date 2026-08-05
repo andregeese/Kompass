@@ -188,10 +188,11 @@ class PaperlessProcessor extends \App\Core\Database
     {
         // 1. Dokumente laden
         $params = [
-            'query' => 'tag:unclassified', 
+            'tag' => 'unclassified', 
             'ordering' => '-created'
         ];
         $docResponse = $this->request('/api/documents/?' . http_build_query($params));
+        error_log($docResponse);
         $docData = json_decode($docResponse, true);
         $documents = $docData['results'] ?? [];
 

@@ -53,6 +53,7 @@ const loginComponent = () => ({
                         }
                         // Leite den Browser auf die Mail-Ansicht um
                         window.location.href = 'index.php?view=start';
+                        this.currentView = 'start'; // Optional, falls du die Ansicht im Frontend ändern möchtest
                     }else {
                         // Wenn es eine Registrierung war, schalte das Formular um
                         if (typeof showNotify === 'function') {

@@ -28,7 +28,7 @@ const settingsComponent = () => ({
     
     async initSettings() {
         try {
-            let res = await apiCall('get_settings', {}, 'POST'); 
+            //let res = await apiCall('get_settings', {}, 'POST'); 
             
             if (res.success && res.details && res.details?.settings) {
                 const dbSettings = res.details.settings;

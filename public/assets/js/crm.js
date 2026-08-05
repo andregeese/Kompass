@@ -122,6 +122,11 @@ function triggerSecurityLockout() {
     }, 2000);
 }
 async function initApiConfig() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (!metaTag || !metaTag.content) {
+        // Nicht eingeloggt / Keine Session -> Initialisierung überspringen
+        return; 
+    }
     const res = await apiCall('get_allowed_actions', {}, 'GET');
     if (res.success) ALLOWED_ACTIONS = res.data;
 }
@@ -129,7 +134,7 @@ async function initApiConfig() {
 // Standardisierte Aufrufe
 async function apiCall(action, params = {}, method = 'POST') 
 {
-    const publicActions = ['login', 'register'];
+    const publicActions = ['login', 'register', 'get_settings'];
     const isPublic = publicActions.includes(action);
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     const currentToken = metaTag ? metaTag.content : '';
@@ -387,7 +392,7 @@ async function safeFetch(url, customOptions = {}) {
             const data = await response.json().catch(() => ({})); // Versuch JSON zu lesen
             if (data.error === 'CSRF Token ungültig' || data.error?.includes('CSRF')) {
                 showNotify("Session abgelaufen", "Die Seite wird neu geladen...", "warning");
-                triggerSecurityLockout();
+                //triggerSecurityLockout();
                 return { success: false, error: 'CSRF_EXPIRED' };
             }
         }
@@ -475,11 +480,20 @@ window.crmEngine = function() {
         // --- GLOBAL INITIALIZATION ---
         async init() {
             
-            
             // Wenn wir auf der Login-Seite sind, holen wir KEINE Daten!
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('view') === 'login' || !urlParams.get('view')) {
+            const view = urlParams.get('view');
+
+            if (view === 'login' || !view) {
+                this.currentView = 'login';
                 return; 
+            }
+            
+            try {
+                let res = await apiCall('get_settings', {}, 'POST');
+                // z.B. this.settings = res;
+            } catch (err) {
+                console.error('Fehler beim Laden der Settings:', err);
             }
             
             const res = await apiCall('get_imap_folder', {}, 'GET');
