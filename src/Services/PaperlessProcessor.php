@@ -48,11 +48,13 @@ class PaperlessProcessor extends \App\Core\Database
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         }
+
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
         error_log("PaperlessURL:" . $url);
+
         // Globale Fehlerprüfung für alle Endpunkte
         if ($httpCode === 0) {
             throw new \Exception("Paperless-Server ist offline oder nicht erreichbar. (cURL: $curlError)");
@@ -192,7 +194,7 @@ class PaperlessProcessor extends \App\Core\Database
             'ordering' => '-created'
         ];
         $docResponse = $this->request('/api/documents/?' . http_build_query($params));
-        error_log($docResponse);
+        #error_log($docResponse);
         $docData = json_decode($docResponse, true);
         $documents = $docData['results'] ?? [];
 
@@ -430,6 +432,7 @@ class PaperlessProcessor extends \App\Core\Database
         // Falls nur die reine E-Mail-Adresse im Feld stand
         return strtolower(trim($rawSender));
     }
+
     /**
      * Durchsucht die Paperless-Instanz nach einem Suchbegriff, mit optionaler Datumseins- oder -eingrenzung. Dokumente, deren Erstelldatum exakt mit dem Mail-Datum übereinstimmt, erhalten eine höhere Gewichtung für die Sortierung und werden im Frontend hervorgehoben. Das ermöglicht es, relevante Dokumente schneller zu erkennen, selbst wenn die Volltextsuche nicht perfekt ist.
       * @param string $query Der Suchbegriff für Titel und Inhalt
@@ -510,6 +513,7 @@ class PaperlessProcessor extends \App\Core\Database
         
         return $foundDocuments;
     }
+
     public function getDocumentById($docs)
     {
         // Fall A: Mehrere IDs (Batch-Abfrage über Filter)
@@ -668,9 +672,12 @@ class PaperlessProcessor extends \App\Core\Database
      */
     public function fetchDocumentsByCorrespondentId($correspondentId=null)
     {            
+        error_log(__FUNCTION__ . ": " . print_r($correspondentId, true));
+
         if (!$correspondentId) {
             return false;
         }
+
         $idString = is_array($correspondentId) 
         ? implode(',', array_map('intval', $correspondentId)) 
         : intval($correspondentId);
@@ -764,19 +771,27 @@ class PaperlessProcessor extends \App\Core\Database
     }
 
     /**
-     * Holt alle Tags aus der DB
+     * Holt alle Tags aus der DB passend zur Mail
+     * @param $mid MailId
      */
-    public function getTagsByContact($cid)
+    public function getTagsByContact($mid)
     {
-        $sql = "SELECT tag_id 
-                  FROM contact_paperless_map 
-                 WHERE tenant_id=:tenant_id AND tag_id IS NOT NULL
-                   AND contact_id=CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED);";
+        error_log(__FUNCTION__ . ": ".  $mid);
+
+        $sql = "SELECT cpm.tag_id 
+                  FROM mails AS m
+            INNER JOIN contact_emails as ce ON ce.id = m.sender_ceid
+            INNER JOIN contacts as c on c.id=ce.contact_id
+            INNER JOIN contact_paperless_map AS cpm ON cpm.contact_id = c.id
+            WHERE m.tenant_id = :tenant_id 
+              AND m.id = CAST(AES_DECRYPT(UNHEX(:mid), :crypto_key) AS UNSIGNED) 
+              AND cpm.tag_id IS NOT NULL";
+        
         $params = [
-            'cid' => $cid
+            'mid' => $mid
         ];
 
-        $dbResult = $this->queryIt($sql, $params, false, false, true);
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
 
         if (!$dbResult->success){
             throw new Exception("Fehler beim Abrufen der Tags");
@@ -789,11 +804,62 @@ class PaperlessProcessor extends \App\Core\Database
             return [];
         }
 
-        //jetzt den namen von correspondent in api finden
-        $b = $this->getTagsById($tagIds);
+        //jetzt die Dokumente zu tags finden
+        $b = $this->getDocumentsByTag($tagIds);
 
         return $b;
 
+    }
+
+    /**
+     * Holt alle Dokumente aus Paperless, die mit den angegebenen Tag-IDs verknüpft sind.
+     * @param string|array $ids Eine einzelne Tag-ID oder ein Array von Tag-IDs
+     * @return array Eine Liste von Dokumenten mit ID, Titel und Erstelldatum, die den angegebenen Tags zugeordnet sind
+     */
+    private function getDocumentsByTag(string | array $ids)
+    {
+        if (empty($ids))
+        {
+            return [];
+        }
+        $idString = implode(',', $ids);
+        
+        $params = [
+            'tagid__in'    => $idString,
+            'fields'    => 'id,title','created'
+        ];
+        // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
+        $url = '/api/documents/?' . http_build_query($params);
+        
+        $jsonResponse = $this->request($url);
+        $paperlessData = json_decode($jsonResponse, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Ungültiges JSON von Paperless erhalten.");
+        }
+        $results = $paperlessData['results'] ?? [];
+
+        // Paperless liefert die Liste im 'results'-Key
+        $results = $paperlessData['results'] ?? ["LEER"];
+        $formatted = [];
+
+        #error_log(print_r($results, true));
+
+        foreach ($results as $key => $item) 
+        {
+            if (empty($item['id'])) continue;
+            if (!isset($item['id']) || !isset($item['title'])) {
+                continue;
+            }
+            $formatted[] = [
+                'id'        => (int)$item['id'],
+                'title'     => (string)$item['title'],
+                'created'   => !empty($item['created']) ? date('d.m.Y H:i:s', strtotime($item['created'])) : date('d.m.Y H:i:s'),
+
+            ];
+        }
+        
+        return $formatted;
     }
 
     //holt den Namen des Tag/der Tags aus Paperless
@@ -824,7 +890,7 @@ class PaperlessProcessor extends \App\Core\Database
         $results = $paperlessData['results'] ?? ["LEER"];
         $formatted = [];
 
-        error_log(print_r($results, true));
+        #error_log(print_r($results, true));
 
         foreach ($results as $key => $item) 
         {

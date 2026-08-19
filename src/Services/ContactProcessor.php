@@ -637,7 +637,8 @@ class ContactProcessor extends \App\Core\Database
         // 3. DOKUMENTE QUELLE: DIREKTE IDS
         // ==========================================
         $dokumenteIds = $paperlessItems['dokumente'] ?? [];
-        //error_log(print_r($dokumenteIds, true));
+        error_log(print_r($dokumenteIds, true));
+
         if (!empty($dokumenteIds)) {
             $cleanIdsD = implode(",", array_map('intval', $dokumenteIds));
             $resDocs = $this->getDocumentsById($cleanIdsD);
@@ -656,7 +657,30 @@ class ContactProcessor extends \App\Core\Database
         }
 
         // ==========================================
-        // 4. SORTIERUNG & FINISH
+        // 4. DOKUMENTE QUELLE: DIREKTE IDS via TAGS
+        // ==========================================
+        $paperlessTags = $paperless->getTagsByContact($id);
+        error_log("DOCS BY TAGS");
+        error_log(print_r($paperlessTags, true));
+        
+        ## alle Dokumente nach Tags holen
+        if (!empty($paperlessTags) && is_array($paperlessTags)) {
+            foreach ($paperlessTags as $_tag) {
+                $timeline[] = $this->formatItemTL(
+                    'document',
+                    $_tag['id'],
+                    $_tag['created'] ?? $_cor['created_date'] ?? 'now',
+                    $_tag['title'],
+                    'Paperless Dokument',
+                    '/dms/document/' . $_tag['id']
+                );
+            }
+        } else {
+            error_log(__FILE__ . ": " . __FUNCTION__ . ": keine Tags zu Mailkontakt gefunden");
+        }
+
+        // ==========================================
+        // 5. SORTIERUNG & FINISH
         // ==========================================
         // Fix: Wir sortieren jetzt bombenfest nach dem echten Unix-Timestamp!
 
@@ -712,6 +736,7 @@ class ContactProcessor extends \App\Core\Database
     public function getContactByIdMail(string $id)
     {
         error_log(__FUNCTION__);
+
         $sql = "SELECT 
                     HEX(AES_ENCRYPT(CAST(c.id as CHAR), :crypto_key)) as contact_id,
                     c.display_name,
@@ -725,6 +750,7 @@ class ContactProcessor extends \App\Core\Database
                 WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED)
                 AND m.tenant_id = :tenant_id
                 GROUP BY c.id, c.display_name, c.type;";
+            
         $dbResult = $this->queryIt(
             $sql,
             ["id" => $id],
@@ -756,6 +782,41 @@ class ContactProcessor extends \App\Core\Database
         // Hier logik für Paperless API
         $paperless = new PaperlessProcessor($this->dashboard);
         $docs = $paperless->fetchDocumentsByCorrespondentId($docIDs);
+        return $docs;
+    }
+
+    private function getDocumentItemsByTag($tagIds)
+    {
+        error_log(__FUNCTION__);
+
+        if (empty($tagIds)) {
+            return [];
+        }
+
+        // Hier logik für Paperless API
+        $paperless = new PaperlessProcessor($this->dashboard);
+        $docs = $paperless->getDocumentItemsByTag($tagIds);
+        
+        return $docs;
+    }
+
+    /**
+     * Dokumente aus Paperless (TimeLineData)
+     * @param int $contactId (holt alle Dokumente zu einem Tag)
+     * return array of Documents
+     */
+    private function getTagsByContact($contactId)
+    {
+        error_log(__FUNCTION__);
+
+        if (empty($contactId)) {
+            return [];
+        }
+
+        // Hier logik für Paperless API
+        $paperless = new PaperlessProcessor($this->dashboard);
+        $docs = $paperless->getTagsByContact($contactId);
+        
         return $docs;
     }
 
@@ -810,6 +871,7 @@ class ContactProcessor extends \App\Core\Database
     {
         $timeline = [];
         $monthsDe = [1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember'];
+        
         foreach ($items as $item) {
             $dateRaw = $item['date'] ?? '';
 

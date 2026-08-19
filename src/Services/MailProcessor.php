@@ -1368,7 +1368,7 @@ class MailProcessor extends \App\Core\Database
             ],
             false,
             false,
-            true
+            false
         );
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
