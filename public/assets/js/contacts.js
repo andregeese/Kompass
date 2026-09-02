@@ -352,8 +352,10 @@ const contactsViewComponent = () => ({
 
     async performTagSearch() {
         if (!this.activeContact) return;
+        const currentTags = Array.isArray(this.activeContact.tags) ? this.activeContact.tags : [];
+
         if (this.tagQuery.trim().length < 2) {
-            this.tagResults = [...(this.activeContact.tags ?? [])];
+            this.tagResults = [...currentTags];
             return;
         }
         
@@ -369,8 +371,8 @@ const contactsViewComponent = () => ({
                 color: item.color || '#a8a29e'
             }));
             
-            const existingTags = Array.isArray(this.activeContact.tags) ? this.activeContact.tags : [];
-            const combined = [...existingTags, ...normalizedResults];
+            //const existingTags = Array.isArray(this.activeContact.tags) ? this.activeContact.tags : [];
+            const combined = [...currentTags, ...normalizedResults];
             
             // Einzigartig machen nach Tag-ID (nicht mehr ceid!)
             this.tagResults = Array.from(new Map(combined.map(item => [item.id, item])).values());
@@ -387,12 +389,21 @@ const contactsViewComponent = () => ({
     },
     
     async toggleTag(tagObj) {
-        const isLinked = this.isTagLinked(tagObj.id);
+       if (!this.activeContact) return;
 
+        // 1. Array-Fallstrick absichern
+        if (!Array.isArray(this.activeContact.tags)) {
+            this.activeContact.tags = [];
+        }
+
+        const isLinked = this.isTagLinked(tagObj.id);
+        const previousTags = [...this.activeContact.tags]; // Backup für Rollback
+
+        // 2. UI sofort aktualisieren
         if (isLinked) {
             this.activeContact.tags = this.activeContact.tags.filter(t => t.id !== tagObj.id);
         } else {
-            this.activeContact.tags.push(tagObj);
+            this.activeContact.tags = [...this.activeContact.tags, tagObj];
         }
         
         try {
@@ -403,6 +414,7 @@ const contactsViewComponent = () => ({
             }, 'POST');
         } catch (e) {
             console.error("Tag-Zuweisung auf Server fehlgeschlagen", e);
+            this.activeContact.tags = previousTags; // Rollback auf vorherigen Zustand
         }
     },
     

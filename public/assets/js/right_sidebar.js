@@ -64,6 +64,7 @@ const rightSidebarComponent = () => ({
                 }
             }
         });
+
         // REAKTIVER WATCHER (Wenn die Mail gewechselt wird, während die Sidebar offen ist)
         this.$watch(() => this.$data.currentMail, (newMail) => {
             if (newMail) {
@@ -85,6 +86,7 @@ const rightSidebarComponent = () => ({
             this.selectedPaperlessId = this.contactState.contact.paperless_id;
         }
     },
+
     // 🛠️ Hilfsfunktion: Füllt alle Sidebar-Felder radikal aus dem Mail-Objekt vor
     fillSidebarWithMailData(mail) {
         this.manualSearchQuery = mail.subject || '';
@@ -132,7 +134,8 @@ const rightSidebarComponent = () => ({
         const mail = this.$data?.currentMail 
                   || window.mailComponent?.currentMail 
                   || (typeof currentMail !== 'undefined' ? currentMail : null);
-                  
+        
+        console.log(mail);
         if (!mail || !mail.id) return;
         
         try {
@@ -180,7 +183,8 @@ const rightSidebarComponent = () => ({
             this.paperlessDMSMatches = [];
             return;
         }
-        //this.paperlessLoading = true;
+        
+        this.paperlessLoading = true;
         try {
             const data = await apiCall('paperless_search', {query:this.manualSearchQuery}, 'GET');
             
@@ -195,7 +199,7 @@ const rightSidebarComponent = () => ({
             console.error("DMS-Suche fehlgeschlagen:", err);
             this.paperlessDMSMatches = [];
         } finally {
-            //this.paperlessLoading = false;
+            this.paperlessLoading = false;
         }
     },
     async linkToPaperless(documentId) {

@@ -419,6 +419,49 @@ class MailProcessor extends \App\Core\Database
     }
 
     /**
+     * Gleicht die Datenbank mit dem IMAP-Server ab, um gelöschte/verschobene Mails zu erkennen.
+     */
+    public function reconcileFolder(string $folder): array
+    {
+        $pid = getmypid();
+        error_log("Prozess: [$pid] Starte Reconciliation für Ordner: $folder");
+
+        $imapStream = $this->connectIMAP($folder);
+        if (!$imapStream) return ['deleted' => 0];
+
+        // 1. Alle UIDs aktuell auf dem IMAP-Server holen
+        $serverUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
+        @imap_close($imapStream);
+
+        if (!is_array($serverUids)) $serverUids = [];
+        $serverUidMap = array_flip($serverUids); // Für schnelle isset() Abfrage
+
+        // 2. Alle aktiven UIDs aus der DB für diesen Ordner holen
+        $sqlDB = "SELECT uid, id FROM mails WHERE tenant_id = :tenant_id AND imap_folder = :folder AND status = 'active';";
+        $dbRes = $this->queryIt($sqlDB, ['folder' => $folder], false, false, false);
+        
+        $deletedCount = 0;
+
+        if ($dbRes->success && is_array($dbRes->data->fetched)) {
+            foreach ($dbRes->data->fetched as $row) {
+                $dbUid = (int)$row['uid'];
+                $dbId  = (int)$row['id'];
+
+                // 3. Wenn die UID der DB auf dem IMAP-Server fehlt -> Mail wurde gelöscht/verschoben
+                if (!isset($serverUidMap[$dbUid])) {
+                    $sqlDelete = "UPDATE mails SET status = 'deleted' WHERE id = :id AND tenant_id = :tenant_id;";
+                    $this->queryIt($sqlDelete, ['id' => $dbId], true, false, false);
+                    $deletedCount++;
+                }
+            }
+        }
+
+        error_log("Reconciliation [$folder]: $deletedCount Mails als gelöscht/entfernt markiert.");
+
+        return ['deleted' => $deletedCount];
+    }
+
+    /**
      * E-Mail Syncronisation
      */
     public function syncMails(int $maxNewMailsLimit, string $folder): array
@@ -426,48 +469,67 @@ class MailProcessor extends \App\Core\Database
         @set_time_limit(240);
         $pid = getmypid();
         error_log("Prozess: [$pid] Starte Sync für Ordner: $folder");
+        
         $added = 0;
-        $lastUid = 0;
-
-        //$result = ['success' => false, 'added' => 0, 'error' => null];
-
-        $imapStream = $this->connectIMAP($folder);
-        // 1. Hole alle UIDs sortiert vom Server - VOR dem Debugging!
-        $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
-        $checkPoint = $this->getSyncCheckpoint($folder);
-
         $updateCount = 0;
 
-        if (!empty($checkPoint->data) && !empty($checkPoint->data->fetched))
-        {
-            $lastUid= $checkPoint->data->fetched[0]['last_uid'];
+        $imapStream = $this->connectIMAP($folder);
+        if (!$imapStream) {
+            return ["added" => 0, "update" => 0];
         }
 
-        // DEBUG-BLOCK (Jetzt mit Werten)
-        $maxServerUid = !empty($allUids) ? max($allUids) : 0;
-        error_log("DEBUG-SYNC: Gefundene Mails im Ordner ($folder): " . count($allUids) . " | Letzte UID in DB: $lastUid | Höchste UID Server: $maxServerUid");
-        
-        // 2. Filtern
-        $newUids = array_filter($allUids, function ($uid) use ($lastUid) {
-            return (int)$uid > (int)$lastUid;
-        });
+        // 1. Alle UIDs aufsteigend vom Server holen (SORTARRIVAL: 0 = Älteste zuerst)
+        $allUids = imap_sort($imapStream, SORTARRIVAL, 0, SE_UID);
+        if (!is_array($allUids) || empty($allUids)) {
+            if ($imapStream instanceof \IMAP\Connection) {
+                @imap_close($imapStream);
+            }
+            return ["added" => 0, "update" => 0];
+        }
 
-        sort($newUids);
-        $uidsToProcess = array_slice($newUids, 0, $maxNewMailsLimit);
+        // 2. Alle UIDs aus der DB für diesen Ordner in Key-Map laden (O(1) Lookup)
+        $mailsInDB = [];
+        $sql = "SELECT uid, id FROM mails WHERE tenant_id = :tenant_id AND imap_folder = :folder;";
+        $dbRes = $this->queryIt($sql, ['folder' => $folder], false, false, false);
+        if ($dbRes->success && is_array($dbRes->data->fetched)) {
+            foreach ($dbRes->data->fetched as $row) {
+                $mailsInDB[(int)$row["uid"]] = (int)$row["id"];
+            }
+        }
 
-        error_log("Sync: Verarbeite " . count($uidsToProcess) . " neue Mails.");
-        $highestUid = $lastUid;
+        // 3. Echte Differenz bilden: Welche Server-UIDs fehlen noch in der DB?
+        // Da $allUids aufsteigend ist, beginnt $missingUids automatisch bei der ÄLTESTEN fehlenden Mail!
+        $missingUids = array_values(array_filter($allUids, function ($uid) use ($mailsInDB) {
+            return !isset($mailsInDB[(int)$uid]);
+        }));
 
-        // 🚀 SCHRITT 1: IMAP-Batch-Fetch ausserhalb der Transaktion!
-        // Wir bauen einen String wie "12345,12346,12347"
+        $totalMissing = count($missingUids);
+        error_log("DEBUG-SYNC ($folder): Server gesamt: " . count($allUids) . " | In DB: " . count($mailsInDB) . " | Fehlend: $totalMissing");
+
+        if (empty($missingUids)) {
+            if ($imapStream instanceof \IMAP\Connection) {
+                @imap_close($imapStream);
+            }
+            return ["added" => 0, "update" => 0];
+        }
+
+        // 4. Nimm die ältesten X fehlenden Mails (ab der kleinsten fehlenden UID)
+        $uidsToProcess = array_slice($missingUids, 0, $maxNewMailsLimit);
+        $firstUid = $uidsToProcess[0];
+        $lastUidInBatch = end($uidsToProcess);
+
+        error_log("Sync ($folder): Verarbeite " . count($uidsToProcess) . " Mails (Von ältester UID $firstUid bis UID $lastUidInBatch). Noch verbleibend: " . ($totalMissing - count($uidsToProcess)));
+
+       // 5. IMAP-Batch-Fetch der Overviews (NUR für die tatsächlich fehlenden Mails!)
         $uidSequence = implode(',', $uidsToProcess);
-        $overviews = !empty($uidsToProcess) ? imap_fetch_overview($imapStream, $uidSequence, FT_UID) : [];
+        $overviews = imap_fetch_overview($imapStream, $uidSequence, FT_UID);
 
-        // Wir indizieren die Overviews nach UID für den schnellen Zugriff
         $overviewMap = [];
-        foreach ($overviews as $ov) {
-            if (isset($ov->uid)) {
-                $overviewMap[(int)$ov->uid] = $ov;
+        if (is_array($overviews)) {
+            foreach ($overviews as $ov) {
+                if (isset($ov->uid)) {
+                    $overviewMap[(int)$ov->uid] = $ov;
+                }
             }
         }
 
@@ -477,20 +539,17 @@ class MailProcessor extends \App\Core\Database
         error_log("mails in Cache laden");
         foreach ($uidsToProcess as $uid) 
         {
+            $uid = (int)$uid;
             if (!isset($overviewMap[$uid])) continue;
             $ov = $overviewMap[$uid];
 
-            $needsFullHeader = (
-                empty($ov->from) || 
-                empty($ov->to) || 
-                str_contains($ov->subject, '=?') || 
-                strlen($ov->subject) >= 250 // Annahme: Abgeschnitten
-            );
-            $rawSubject = $ov->subject;
+            $rawSubject = $ov->subject ?? '';
+            $rawHeaders = '';
             
             # error_log("\t $uid in Cache geladen");
 
             try {
+                //error_log(print_r($ov, true));
                 // Fallback-Header holen (Das bleibt leider ein Einzel-Request, falls nötig)
                 if (empty($ov->from) || empty($ov->to)) {
                     $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
@@ -502,21 +561,19 @@ class MailProcessor extends \App\Core\Database
                 $fromData = $this->parseAndDecodeAddress($ov->from ?: '');
                 $toData   = $this->parseAndDecodeAddress($ov->to ?: '');
 
-                //if ($needsFullHeader) {
-                    // Erst HIER den teuren Netzwerk-Call machen
-                    $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
-                    if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
-                        $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
-                    }
-                    
-                    // Ggf. Header-Fallback
-                    if (empty($ov->from)) {
-                        $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
-                        $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
-                        $ov->to = $header->toaddress ?? 'unknown@unknown.local';
-                    }
-                //}
+                // Erst HIER den teuren Netzwerk-Call machen
+                $rawHeaders = imap_fetchheader($imapStream, $uid, FT_UID);
+                if (preg_match('/^Subject:\s+(.*?)(?=\r?\n[^\s]|$)/mi', $rawHeaders, $matches)) {
+                    $rawSubject = trim(str_replace(["\r", "\n"], '', $matches[1]));
+                }
                 
+                // Ggf. Header-Fallback
+                if (empty($ov->from)) {
+                    $header = imap_headerinfo($imapStream, imap_msgno($imapStream, $uid));
+                    $ov->from = $header->fromaddress ?? 'unknown@unknown.local';
+                    $ov->to = $header->toaddress ?? 'unknown@unknown.local';
+                }
+
                 $cleanSubject = $this->decodeMimeHeader($rawSubject);
                 $subjectHash = $this->dashboard->encrypt($cleanSubject);
                 $message_id = $ov->message_id ?? '';
@@ -525,7 +582,7 @@ class MailProcessor extends \App\Core\Database
                 $mailsToWrite[] = [
                     'uid'           => (int)$uid,
                     'message_id'    => $message_id,
-                    'subject_hash'  => $subjectHash,
+                    'subject_hash'  => $subjectHash ?? '',
                     'date_received' => $formattedDate,
                     'from_name'     => $fromData['name'],
                     'from_email'    => $fromData['email'],
@@ -534,11 +591,12 @@ class MailProcessor extends \App\Core\Database
                     'is_read'       => (int)($ov->seen ?? 0),
                     'is_flagged'    => (int)($ov->flagged ?? 0),
                     'is_answered'   => (int)($ov->answered ?? 0),
-                    'is_newsletter' => (int)($this->checkIfNewsletter($ov->subject, $rawHeaders ?? ''))
+                    'is_newsletter' => (int)$this->checkIfNewsletter($cleanSubject, $rawHeaders ?? '')               
                 ];
 
             } catch (\Throwable $e) {
                 error_log("Fehler bei der Datenvorbereitung für UID $uid: " . $e->getMessage());
+                error_log("Fehler bei der Datenvorbereitung für UID $uid: " . print_r($ov, true));
             }
         }
         error_log("mails im Cache");
@@ -558,8 +616,8 @@ class MailProcessor extends \App\Core\Database
         }
 
         $mailsInDB = [];
-        $sql = "SELECT uid, id FROM mails WHERE tenant_id=:tenant_id;";
-        $dbRes = $this->queryIt($sql, [], false, false, false);
+        $sql = "SELECT uid, id FROM mails WHERE tenant_id=:tenant_id AND imap_folder = :folder;";
+        $dbRes = $this->queryIt($sql, ['folder' => $folder], false, false, false);
         if ($dbRes->success && is_array($dbRes->data->fetched))
         {
             //error_log(print_r($dbRes->data->fetched, true));
@@ -573,85 +631,118 @@ class MailProcessor extends \App\Core\Database
         // 🚀 SCHRITT 2: Reiner, ultraschneller Datenbank-Schreibprozess innerhalb der Transaktion
         if (!empty($mailsToWrite)) 
         {
-            //$this->transaction(function () use ($mailsToWrite, $folder, &$added, &$highestUid, &$ceCache, &$mailsInDB) 
-            //{
-                $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
-
-                foreach ($mailsToWrite as $mail) 
-                {
-                    try {
-                        //error_log($mail['uid']);
-                        $i = $mailsInDB[$mail['uid']] ?? null;
-                        $highestUid = max($highestUid, $mail['uid']);
-
-                        if (!empty($i)){
-                            # error_log ("-- mail (" . $mail['uid'] . ") in DB!--");
-                            continue;
-                            
-                        }
-                        //error_log ("-- mail (" . $mail['uid'] . ") N in DB! --");
-
-                        //$exists = $this->mail_exists($mail['uid'], $mail['message_id'], $folder);
-                        //if (!$exists) {
-                            // Kontakte anlegen (Nutzt hoffentlich auch interne Caches, damit es fix geht!)
-
-                            $senderId = (int)$ceCache[$mail['from_email']] ?? null;
-                            //error_log("senderId 1.: $senderId");
-
-                            if (empty($senderId) || $senderId === 0){
-                                $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
-                                $ceCache[$mail['from_email']] = (int)$senderId;
-                                //error_log("senderId 2.: $senderId");
-                            }
-                            
-                            $reciepId = (int)$ceCache[$mail['to_email']] ?? null;
-                            //error_log("reciepId 1.: $reciepId");
-
-                            if (empty($reciepId) || $reciepId === 0 ){
-                                $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
-                                $ceCache[$mail['to_email']] = (int)$reciepId;
-                                //error_log("reciepId 2.: $reciepId");
-                            }
-                            
-                            if ($reciepId<=0 || $senderId<=0)
-                            {
-                                error_log("\t !! Keine Zahl bei $reciepId oder $senderId!! " . print_r($mail['uid'], true));
-                                continue;    
-                            }
-
-                            $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, is_newsletter, sender_ceid, recipient_ceid) 
-                                        VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :is_newsletter, :sceid, :rceid)";
-                            
-                            $dbResult = $this->queryIt($sqlInsert, [
-                                'uid'           => $mail['uid'],
-                                'message_id'    => $mail['message_id'],
-                                'subject_hash'  => $mail['subject_hash'],
-                                'date_received' => $mail['date_received'],
-                                'folder'        => $folder,
-                                'is_read'       => $mail['is_read'],
-                                'is_flagged'    => $mail['is_flagged'],
-                                'is_answered'   => $mail['is_answered'],
-                                'is_newsletter' => $mail['is_newsletter'],
-                                'sceid'         => (int)$senderId,
-                                'rceid'         => (int)$reciepId
-                            ], true, true, false);
-                            
-                            $added++;
-                        //}
-                        $mailsInDB[$mail['uid']] = $dbResult->data->lastInsertId;
-
-                        $highestUid = max($highestUid, $mail['uid']);
-                    } catch (\Throwable $dbEx) {
-                        error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());
+            
+            $contactProcess = $this->getService("processContact", \App\Services\ContactProcessor::class);
+            $highestSafeUid =0;
+            foreach ($mailsToWrite as $mail) 
+            {
+                try {
+                    $currentUid = $mail['uid'];
+                    
+                    // A) Bereits in diesem Ordner mit gleicher UID verarbeitet?
+                    if (isset($mailsInDB[$currentUid])) {
+                        error_log ("-- mail (" . $mail['uid'] . ") in DB!--");
+                        $highestSafeUid = max($highestSafeUid, $currentUid);
+                        continue;
                     }
+                    // B) MOVE-ERKENNUNG: Existiert diese Message-ID bereits in einem anderen Ordner?
+                    $existingMail = null;
+                    if (!empty($mail['message_id'])) {
+                        $sqlCheck = "SELECT id, imap_folder FROM mails WHERE tenant_id = :tenant_id AND message_id = :msg_id LIMIT 1;";
+                        $resCheck = $this->queryIt($sqlCheck, ['msg_id' => $mail['message_id']], false, false, false);
+                        if ($resCheck->success && !empty($resCheck->data->fetched)) {
+                            $existingMail = $resCheck->data->fetched[0];
+                        }
+                    }
+
+                    if ($existingMail) {
+                        // Mail wurde verschoben -> UPDATE Ordner, UID & Status
+                        $sqlUpdate = "UPDATE mails 
+                                      SET imap_folder = :folder, uid = :uid, status = 'active', 
+                                          is_read = :is_read, is_flagged = :is_flagged, is_answered = :is_answered 
+                                      WHERE id = :id AND tenant_id = :tenant_id;";
+                        
+                        /*$this->queryIt($sqlUpdate, [
+                            'folder'      => $folder,
+                            'uid'         => $currentUid,
+                            'is_read'     => $mail['is_read'],
+                            'is_flagged'  => $mail['is_flagged'],
+                            'is_answered' => $mail['is_answered'],
+                            'id'          => $existingMail['id']
+                        ], true, false, false);*/
+
+                        $updateCount++;
+                        $mailsInDB[$currentUid] = (int)$existingMail['id'];
+                        $highestSafeUid = max($highestSafeUid, $currentUid);
+                        
+                        error_log("MAIL VERSCHOBEN: ID {$existingMail['id']} von '{$existingMail['imap_folder']}' nach '$folder' (Neue UID: $currentUid)");
+                        continue;
+                    }
+
+                    $senderId = (int)$ceCache[$mail['from_email']] ?? null;
+                    //error_log("senderId 1.: $senderId");
+
+                    if (empty($senderId) || $senderId === 0){
+                        $senderId = $contactProcess->insertContact($mail['from_name'], $mail['from_email'], 'person');
+                        $ceCache[$mail['from_email']] = (int)$senderId;
+                        //error_log("senderId 2.: $senderId");
+                    }
+                    
+                    $reciepId = (int)$ceCache[$mail['to_email']] ?? null;
+                    //error_log("reciepId 1.: $reciepId");
+
+                    if (empty($reciepId) || $reciepId === 0 ){
+                        $reciepId = $contactProcess->insertContact($mail['to_name'], $mail['to_email'], 'person');
+                        $ceCache[$mail['to_email']] = (int)$reciepId;
+                        //error_log("reciepId 2.: $reciepId");
+                    }
+                    
+                    if ($reciepId<=0 || $senderId<=0)
+                    {
+                        error_log("SYNC ERROR: UID $currentUid abgebrochen (Sender/Empfänger ungültig).");
+                        //$hasErrorInBatch = true; // Lücke entsteht!
+                        continue;  
+                    }
+
+                    $sqlInsert = "INSERT INTO mails (uid, message_id, subject_hash, date_received, imap_folder, status, tenant_id, is_read, is_flagged, is_answered, is_newsletter, sender_ceid, recipient_ceid) 
+                                VALUES (:uid, :message_id, :subject_hash, :date_received, :folder, 'active', :tenant_id, :is_read, :is_flagged, :is_answered, :is_newsletter, :sceid, :rceid)";
+                    
+                    $dbResult = $this->queryIt($sqlInsert, [
+                        'uid'           => $mail['uid'],
+                        'message_id'    => $mail['message_id'],
+                        'subject_hash'  => $mail['subject_hash'],
+                        'date_received' => $mail['date_received'],
+                        'folder'        => $folder,
+                        'is_read'       => $mail['is_read'],
+                        'is_flagged'    => $mail['is_flagged'],
+                        'is_answered'   => $mail['is_answered'],
+                        'is_newsletter' => $mail['is_newsletter'],
+                        'sceid'         => (int)$senderId,
+                        'rceid'         => (int)$reciepId
+                    ], true, true, false);
+                        
+
+                    if ($dbResult->success) {
+                        $added++;
+                        $mailsInDB[$currentUid] = (int)$dbResult->data->lastId;
+                        $highestSafeUid = max($highestSafeUid, $currentUid);
+                    } else {
+                        error_log("Mail Insert fehlgeschlagen für UID $currentUid: " . ($dbResult->error ?? 'Unbekannter Fehler'));
+                    }
+                    
+
+                } catch (\Throwable $dbEx) {
+                    $hasErrorInBatch = true;
+                    error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());
                 }
-            //});
+            }
         }
 
-        error_log($added . " - " . $folder . " - " . $highestUid);
+        error_log($added . " - " . $folder . " - " . $highestUid . " - " . $lastUid . " - " . $highestSafeUid);
 
-        if ($added >= 0) {
-            $this->saveSyncCheckpoint($folder, $highestUid);
+       // 8. Checkpoint aktualisieren
+        if ($highestSafeUid > $lastUid) {
+            $this->saveSyncCheckpoint($folder, $highestSafeUid);
         }
 
         // FIX: Erst ganz am Ende des gesamten Sync-Vorgangs schließen
@@ -662,11 +753,8 @@ class MailProcessor extends \App\Core\Database
                 // Falls sie serverseitig schon zu war: Stumm ignorieren
             }
         }
-        
-        
-
-        error_log("Prozess: [$pid] End Sync Ordner: $folder");
-        //$updateCount = $this->deltaSync($folder, 100);
+    
+        error_log("Prozess: [$pid] End Sync Ordner: $folder | Neu: $added | Verschoben/Updated: $updateCount");
 
         return [
             "added"     => $added,
@@ -680,8 +768,9 @@ class MailProcessor extends \App\Core\Database
      * @param string $headers Der komplette Roh-Header der Mail
      * @return bool
      */
-    private function checkIfNewsletter(string $subject, string $headers): bool
+    private function checkIfNewsletter(?string $subject, string $headers): bool
     {
+        $subject = $subject ?? '';
         //error_log("NL check");
         // 1. Der "List-Unsubscribe" Header ist das stärkste Indiz.
         // Professionelle Newsletter enthalten diesen Header zwingend.
@@ -945,6 +1034,7 @@ class MailProcessor extends \App\Core\Database
 
         return $dbResult;
     }
+
     /**
      * Speichert den Fortschritt.
      */
@@ -1636,7 +1726,7 @@ class MailProcessor extends \App\Core\Database
             'is_flagged'      => $row['is_flagged'],
             'is_answered'     => $row['is_answered'],
             'is_newsletter'     => $row['is_newsletter'],
-            'displayname'  => $row['displayname'],
+            //'displayname'  => $row['display_name'],
             'emailhash'    => $row['emailhash']
         ];
     

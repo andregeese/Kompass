@@ -659,9 +659,9 @@ class ContactProcessor extends \App\Core\Database
         // ==========================================
         // 4. DOKUMENTE QUELLE: DIREKTE IDS via TAGS
         // ==========================================
-        $paperlessTags = $paperless->getTagsByContact($id);
+        $paperlessTags = $paperless->getTagsByContactTimeLine($id);
         error_log("DOCS BY TAGS");
-        error_log(print_r($paperlessTags, true));
+        //error_log(print_r($paperlessTags, true));
         
         ## alle Dokumente nach Tags holen
         if (!empty($paperlessTags) && is_array($paperlessTags)) {

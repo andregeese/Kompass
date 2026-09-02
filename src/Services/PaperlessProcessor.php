@@ -29,6 +29,8 @@ class PaperlessProcessor extends \App\Core\Database
         
         $this->apiUrl = $this->systemProcess->getRequiredEnv('PAPERLESS_URL');
         $this->token = $this->systemProcess->getRequiredEnv('PAPERLESS_TOKEN');
+        //$this->token = '1c50f5e61e72fed8a204c5fdec8c40c7edcdbdf6';
+        error_log("PaperlessToken: " . $this->token);
     }
     /**
      * Zentraler cURL-Handler für alle Paperless-API-Requests
@@ -771,27 +773,28 @@ class PaperlessProcessor extends \App\Core\Database
     }
 
     /**
-     * Holt alle Tags aus der DB passend zur Mail
-     * @param $mid MailId
+     * Holt alle Tags aus der DB passend zur Kontakt-ID (Seitenleiste) und ruft anschließend die zugehörigen Dokumente aus Paperless ab.
+     * @param $cid ContactId (verschlüsselt)
+     * @return array Eine Liste von Dokumenten, die den Tags des Kontakts zugeordnet sind, mit ID, Titel und Erstelldatum
      */
-    public function getTagsByContact($mid)
+    public function getTagsByContact($cid)
     {
-        error_log(__FUNCTION__ . ": ".  $mid);
+        error_log(__FUNCTION__ . ": ".  $cid);
 
-        $sql = "SELECT cpm.tag_id 
+        $sql = "SELECT cpm.tag_id
                   FROM mails AS m
             INNER JOIN contact_emails as ce ON ce.id = m.sender_ceid
             INNER JOIN contacts as c on c.id=ce.contact_id
             INNER JOIN contact_paperless_map AS cpm ON cpm.contact_id = c.id
             WHERE m.tenant_id = :tenant_id 
-              AND m.id = CAST(AES_DECRYPT(UNHEX(:mid), :crypto_key) AS UNSIGNED) 
+              AND c.id = CAST(AES_DECRYPT(UNHEX(:cid), :crypto_key) AS UNSIGNED) 
               AND cpm.tag_id IS NOT NULL";
         
         $params = [
-            'mid' => $mid
+            'cid' => $cid
         ];
 
-        $dbResult = $this->queryIt($sql, $params, false, false, false);
+        $dbResult = $this->queryIt($sql, $params, false, false, true);
 
         if (!$dbResult->success){
             throw new Exception("Fehler beim Abrufen der Tags");
@@ -811,6 +814,32 @@ class PaperlessProcessor extends \App\Core\Database
 
     }
 
+    public function getTagsByContactTimeLine($mid)
+    {
+        $sql = "SELECT 
+                    m.id, recipient_ceid, sender_ceid,ce.email,cmp.*
+                FROM 
+                    mails m
+                LEFT JOIN contact_emails as ce on ce.id = m.sender_ceid
+                LEFT JOIN contacts as c on c.id = ce.contact_id
+                LEFT JOIN contact_paperless_map  as cmp on cmp.contact_id=c.id
+                WHERE m.id = CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED) AND m.tenant_id=:tenant_id;";
+
+        $params = [
+            'id' => $mid
+        ];
+
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
+
+        if (!$dbResult->success){
+            throw new Exception("Fehler beim Abrufen der Tags");
+        }
+
+        $tagIds =  array_filter(array_column($dbResult->data->fetched, 'tag_id'));
+        $docs = $this->getDocumentsByTag($tagIds);
+        return $docs;
+    }
+
     /**
      * Holt alle Dokumente aus Paperless, die mit den angegebenen Tag-IDs verknüpft sind.
      * @param string|array $ids Eine einzelne Tag-ID oder ein Array von Tag-IDs
@@ -825,8 +854,10 @@ class PaperlessProcessor extends \App\Core\Database
         $idString = implode(',', $ids);
         
         $params = [
-            'tagid__in'    => $idString,
-            'fields'    => 'id,title','created'
+            'tags__id__in'     => $idString,
+            'fields'        => 'id,title,created',
+            'page_size'     => 10000,
+            'ordering'      => '-created'
         ];
         // Falls deine API-Basisklasse das Format nicht automatisch anhängt, hier mit angeben
         $url = '/api/documents/?' . http_build_query($params);

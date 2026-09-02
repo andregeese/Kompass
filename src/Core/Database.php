@@ -16,7 +16,8 @@ use App\Services\SystemProcessor;
 
 class Database
 {
-    private ?PDO $pdo = null;
+    private static ?PDO $sharedPdo = null;
+    protected ?PDO $pdo = null;
 
     public function __construct() {}
     /**
@@ -24,7 +25,16 @@ class Database
      */
     public function getConnection(): PDO
     {
-        if ($this->pdo) return $this->pdo;
+        // 1. Bereits existierende statische Verbindung nutzen
+        if (self::$sharedPdo !== null) {
+            return self::$sharedPdo;
+        }
+
+        // Fallback: Falls lokal schon gesetzt
+        if ($this->pdo !== null) {
+            self::$sharedPdo = $this->pdo;
+            return $this->pdo;
+        }
         $systemService = new SystemProcessor(null);
         $host = $systemService->getStaticEnv('DB_HOST');
         $db   = $systemService->getStaticEnv('DB_NAME');
@@ -41,6 +51,9 @@ class Database
             PDO::ATTR_PERSISTENT         => false,
             PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
         ]);
+        
+        self::$sharedPdo = $this->pdo;
+
         return $this->pdo;
     }
 

@@ -112,7 +112,7 @@ abstract class BaseController
     }
 
     /**
-     * kümmert ich um die Api
+     * kümmert sich um die Api
      */
     protected function process($processor, string $method, string $key, string $successMessage = ''):array
     {

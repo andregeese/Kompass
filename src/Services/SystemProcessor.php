@@ -242,6 +242,7 @@ class SystemProcessor extends \App\Core\Database
         }else{
             throw new \Exception("### .env ($envPath) nicht gefunden!! ###");
         }
+
         // 2. Priorität: Datenbank (tenant_config)
         if ($tenantId) {
             error_log("search Key In DB: " . $key);
@@ -263,7 +264,7 @@ class SystemProcessor extends \App\Core\Database
                     if (in_array($key, $encryptedKeys)) {
                         $masterKey = trim($this->getMasterKeyFromEnv()); 
                         $decrypted = \App\Core\Crypto::decrypt($value, $masterKey);
-                        //error_log("decrypted: " . $decrypted);
+                        error_log("decrypted: " . $decrypted);
                         
                         // DEBUG: WICHTIG!
                         if ($decrypted === false) {
