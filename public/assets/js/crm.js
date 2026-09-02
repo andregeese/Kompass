@@ -218,6 +218,7 @@ function dispatchAction(action, context, triggerElement) {
     debugger;
     // 2. Action-Registry
     const actions = {
+        'mail-send_view':        (ctx) => window.loadMailByHash?.(ctx.id),
         'mail_view':        (ctx) => window.loadMailByHash?.(ctx.id),
         'note_add':         (ctx) => openNoteModal(ctx.uid, ctx.folder),
         'mail_archive':     (ctx) => archiveMail(ctx.uid, triggerElement),
@@ -243,6 +244,26 @@ function dispatchAction(action, context, triggerElement) {
             window.dispatchEvent(new CustomEvent(eventName, { detail: data }));
         },
         'mail_view': (ctx) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAlreadyInMailsView = urlParams.get('view') === 'mails';
+
+            if (isAlreadyInMailsView) {
+                // Alpine-Komponente direkt im DOM ansprechen, ohne die Seite neu zu laden
+                const mailViewEl = document.querySelector('[x-data^="mailView"]');
+                if (mailViewEl && mailViewEl.__x_data) {
+                    // Über den Alpine-Schnittstellen-Proxy die Funktion aufrufen
+                    mailViewEl.__x_data.openMailDirectlyByHash(ctx.hash || ctx.id);
+                    return;
+                }
+            }
+
+            // Fallback / Aufruf aus einer anderen View (z.B. Dashboard): Seite mit Query-Parametern ansteuern
+            const params = new URLSearchParams();
+            params.set('view', 'mails');
+            params.set('id', ctx.hash || ctx.id);
+            window.location.search = params.toString();
+        },
+        'mail-send_view': (ctx) => {
             const urlParams = new URLSearchParams(window.location.search);
             const isAlreadyInMailsView = urlParams.get('view') === 'mails';
 

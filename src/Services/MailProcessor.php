@@ -1081,16 +1081,47 @@ class MailProcessor extends \App\Core\Database
         // 2. Das SQL-Statement aufbauen
         // Da LIMIT und OFFSET im queryIt-Array oft als String übergeben würden (was MySQL crasht),
         // betten wir die vorab typisierten Zahlen direkt sicher in den String ein.
-        $sql = "SELECT m.uid, HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, m.subject_hash as sHash, m.date_received, m.paperless_id, 
-                        c.display_name as contact_name
-                FROM mails as m
-                LEFT JOIN contact_emails ce ON m.sender_ceid = ce.id
-                LEFT JOIN contacts c ON c.id=ce.contact_id
+        $sql = "SELECT 
+                    m.uid, 
+                    HEX(AES_ENCRYPT(CAST(m.id AS CHAR), :crypto_key)) AS id, 
+                    m.subject_hash AS sHash, 
+                    m.date_received, 
+                    m.paperless_id, 
+                    m.is_read, 
+                    m.is_flagged, 
+                    m.is_answered, 
+                    m.is_newsletter,
+                    
+                    -- Formatierter Absender aus SQL 2
+                    IF(c_snd.display_name IS NOT NULL AND c_snd.display_name != '', 
+                    CONCAT(c_snd.display_name, ' <', cm_snd.email, '>'), 
+                    cm_snd.email) AS sender,
+                    
+                    cm_snd.email_hash AS emailhash,
+                    
+                    -- Formatierter Empfänger aus SQL 2
+                    IF(c_rcp.display_name IS NOT NULL AND c_rcp.display_name != '', 
+                    CONCAT(c_rcp.display_name, ' <', cm_rcp.email, '>'), 
+                    cm_rcp.email) AS recipient,
+                    
+                    c_snd.display_name AS contact_name
+
+                FROM mails AS m
+                -- Absender-Joins
+                LEFT JOIN contact_emails AS cm_snd ON cm_snd.id = m.sender_ceid
+                LEFT JOIN contacts AS c_snd ON c_snd.id = cm_snd.contact_id
+
+                -- Empfänger-Joins (aus SQL 2 übernommen)
+                LEFT JOIN contact_emails AS cm_rcp ON cm_rcp.id = m.recipient_ceid
+                LEFT JOIN contacts AS c_rcp ON c_rcp.id = cm_rcp.contact_id
+
                 WHERE m.tenant_id = :tenant_id 
                 AND m.imap_folder = :folder
+                AND (m.status IN ('active') OR m.status IS NULL)
+                -- Suchfilter aus SQL 1 beibehalten
                 AND (
-                    ce.email LIKE :search 
-                    OR c.display_name LIKE :search
+                    cm_snd.email LIKE :search 
+                    OR c_snd.display_name LIKE :search
                 )
                 ORDER BY m.date_received DESC;";
 
@@ -1243,6 +1274,50 @@ class MailProcessor extends \App\Core\Database
         );
 
         return $a;
+    }
+
+    public function getMailsThatShouldBeArchived()
+    {
+        $sql ="WITH contact_group_emails AS (
+            SELECT ce_all.email
+            FROM contact_emails ce_target
+            INNER JOIN contact_emails ce_all ON ce_all.contact_id = ce_target.contact_id
+            WHERE ce_target.email IN (
+                SELECT ce.email
+                FROM `mails` m
+                INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
+                WHERE m.tenant_id = 6 
+                AND m.imap_folder IN ('DMS', 'DMSDone')
+                GROUP BY ce.email
+                HAVING COUNT(*) > 0
+            )
+            GROUP BY ce_all.email
+        ),
+        dms_senders AS (
+            SELECT email AS sender_email FROM contact_group_emails
+        )
+        SELECT 
+            ce.email AS sender,
+            COALESCE(NULLIF(c.display_name, ''), ce.email) AS showname,
+            COUNT(m.id) AS unarchived_count,
+            MAX(m.date_received) AS latest_received
+        FROM `mails` m
+        INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
+        LEFT JOIN contacts c ON c.id = ce.contact_id
+        INNER JOIN dms_senders ds ON ds.sender_email = ce.email
+        WHERE m.tenant_id = 6
+        AND m.imap_folder = 'INBOX'
+        AND m.status = 'active'
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM `mails` m_dms 
+            INNER JOIN contact_emails ce_dms ON ce_dms.id = m_dms.sender_ceid
+            WHERE m.tenant_id = 6 
+                AND ce_dms.email = ce.email 
+                AND m_dms.imap_folder IN ('DMS', 'DMSDone')
+        )
+        GROUP BY ce.email, c.display_name
+        ORDER BY unarchived_count DESC, latest_received DESC;";
     }
 
     /**
@@ -1615,7 +1690,9 @@ class MailProcessor extends \App\Core\Database
      */
     private function buildSearchSQLAndParams(string $folder, string $search, int $limit, int $offset, ?string $targetHash = null): array
     {
-        $salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
+        error_log("buildSearchSQLAndParams: folder=$folder, search=$search, limit=$limit, offset=$offset, targetHash=$targetHash");
+
+        //$salt = defined('HASH_SALT') ? HASH_SALT : 'default_fallback_salt';
 
         $params = [
             'folder' => $folder,

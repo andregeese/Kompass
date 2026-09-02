@@ -17,24 +17,34 @@ Kein "Rebranding": Es ist strikt untersagt, den Code zu verändern, um ihn als e
 Integrität der Lizenz: Die in den Quelldateien enthaltenen Lizenz-Header dürfen weder entfernt noch manipuliert werden.
 
 Über dieses Projekt
-Der Quellcode dient der Transparenz und der Nachvollziehbarkeit. Die Kernlogik und das Urheberrecht liegen vollumfänglich bei CRM by abwurfzone / André Geese.
+Der Quellcode dient der Transparenz und der Nachvollziehbarkeit. Die Kernlogik und das Urheberrecht liegen vollumfänglich bei Kompass by abwurfzone / André Geese.
 
 Kontakt & Genehmigungen
 Für Anfragen bezüglich kommerzieller Lizenzen, Anpassungen oder Kooperationen kontaktieren Sie bitte den Urheber direkt.
 
-Copyright (c) 2026 CRM by abwurfzone by André Geese. All rights reserved.
+Copyright (c) 2026 Kompass by abwurfzone by André Geese. All rights reserved.
+
+# Smart-Bar: für den schnellen Überblick:
+![Smart-Bat](image.png)
+
+# Kontaktliste: für das Sehen der Verzweigungen
+![Kontaktliste](image-1.png)
+
+# Globale Suche
+![globale Suche](image-2.png)
+
+**WIR verzweigen Mails und Digitale System (hier am Beispiel von paperless-ngx) und setzen noch einen drauf in dem wir Termin und Notizen pro E-Mail-Adresse hinterlegen können.**
 
 
-
-# 🚀 [CRM by abwurfzone]
+# 🚀 [Kompass by abwurfzone]
 
 **Dein lokales CRM für E-Mails, Dokumente & Termine – sicher gehostet bei dir.**
 
 ---
 
-[CRM by abwurfzone] ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
+[Kompass by abwurfzone] ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
 
-## 🌟 Warum [CRM by abwurfzone]?
+## 🌟 Warum [Kompass by abwurfzone]?
 
 * **Datensouveränität:** Deine Daten bleiben bei dir auf deinem Server oder NAS. Du behältst die volle Kontrolle.
 * **Alles an einem Ort:** Synchronisiere deine E-Mails mit Paperless-Dokumenten, verwalte Termine und Notizen direkt am Kontakt.
@@ -46,8 +56,8 @@ Copyright (c) 2026 CRM by abwurfzone by André Geese. All rights reserved.
 ## ⚖️ Lizenz & Kostenmodell
 
 ### Lizenz
-Dieses Projekt steht unter der **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
-Das bedeutet für dich: Du darfst die Software frei nutzen, kopieren und anpassen. Wenn du den Code veränderst und anderen über ein Netzwerk zur Verfügung stellst, musst du die Änderungen ebenfalls unter der AGPL veröffentlichen. Das sichert den Open-Source-Gedanken für die gesamte Community.
+Dieses Projekt steht unter der **Business Source License (BSL 1.1)**. 
+Das bedeutet für dich: Du darfst den Quellcode zu Transparenzzwecken frei einsehen, prüfen und für private oder interne Zwecke nutzen. Jede kommerzielle Nutzung, Modifikation, Weiterverbreitung oder das Rebranding (Weiterführung unter anderem Namen) ist ohne vorherige schriftliche Genehmigung des Urhebers jedoch untersagt. Nach Ablauf der Change Date wird diese Software automatisch in eine Open-Source-Lizenz überführt.
 
 ### Kosten
 *   **Software:** Die Basis-Version ist und bleibt **kostenlos**. Es gibt keine versteckten „Paywalls“ innerhalb der Software.
@@ -66,7 +76,7 @@ Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compo
 
 
 
-git clone https://github.com/DEIN-USER/DEIN-REPO.git
+git clone https://github.com/abwurfzone/Kompass.git
 cd DEIN-REPO
 
 ```
@@ -103,7 +113,7 @@ Wir wissen, wie wichtig deine Daten sind. Im Ordner `/scripts` findest du ein ei
 ## 🛠️ Support & Wartung
 Du benötigst Unterstützung bei der Einrichtung oder möchtest, dass sich jemand um die Wartung und Updates kümmert?
 
-*   **Community Support:** Nutze die [GitHub Issues](https://github.com/DEIN-USER/DEIN-REPO/issues) für Fragen oder Fehlerberichte.
+*   **Community Support:** Nutze die [GitHub Issues](https://github.com/andregeese/Kompass/issues) für Fragen oder Fehlerberichte.
 *   **Professionelle Hilfe:** Wir bieten spezielle Support-Pakete für Vereine und Unternehmen an.
     *   [Hier klicken für mehr Informationen zu unseren Wartungsverträgen]: fly@abwurfzone.de
 
