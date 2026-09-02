@@ -18,6 +18,8 @@ const mailViewComponent = () => ({
     query: false,
     isSidebarOpen: true,
     currentMailHtml:'',
+    folder: 'INBOX',
+    currentFolder: 'INBOX',
     
     async init_mails() {
         // 1. FIX: await hinzugefügt!
@@ -26,6 +28,16 @@ const mailViewComponent = () => ({
             this.SYNCFOLDER = res?.details?.imaps || [];
         } catch (e) {
             console.error("Fehler beim Laden der IMAP-Ordner:", e);
+        }
+
+        // URL-Parameter prüfen, ob ein spezifischer Ordner übergeben wurde
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedFolder = urlParams.get('folder');
+        
+        if (requestedFolder && this.SYNCFOLDER.includes(requestedFolder)) {
+            this.currentFolder = requestedFolder;
+        }else if (this.SYNCFOLDER.length > 0) {
+            this.currentFolder = this.SYNCFOLDER[0];
         }
 
         this.initInfiniteScroll();
@@ -59,6 +71,7 @@ const mailViewComponent = () => ({
         {
             this.mailSearchQuery = query;
             this.searchQuery = query;
+            this.folder = params.get('folder') || 'INBOX';
         }
 
         // 2. FIX: Watcher JETZT global für alle Zustände aktiv!

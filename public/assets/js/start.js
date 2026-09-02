@@ -4,7 +4,8 @@ document.addEventListener('alpine:init', () => {
         pipeline: {
             inbox: 20,
             dms: 2,
-            done: 412
+            done: 412,
+            timeFilter: 4
         },
 
         // Memos, die heute fällig sind oder deren due_date in der Vergangenheit liegt
@@ -23,6 +24,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadDashboardData() {
+            this.isLoadingClusters = true;
             // Beispiel-Inhalt für Memos (Simulation)
             this.criticalMemos = [
                 { id: 101, content: 'Smarte Wohnwagen-Upgrades prüfen & DMS checken', due_date: '2026-06-11', email: 'no-reply@shelly.cloud' },
@@ -35,10 +37,10 @@ document.addEventListener('alpine:init', () => {
             ];
 
             let pD = await apiCall('get_last_unclassified', {}, 'GET');
-            let aC = await apiCall('get_accelerate_cluster', {}, 'GET');
-            let tD = await apiCall('get_total_document_count', {'tag':'unclassified'}, 'GET');
-            let tD2 = await apiCall('get_total_document_count', {}, 'GET');
-            this.acceleratorClusters = aC?.details?.accelorate_clusters || [];
+            let selectedValue = this.selectedWeeks || 4; // Entspricht deiner x-model Variable
+            let payload = selectedValue === 'all' ? { weeks: 0, unlimited: 1 } : { weeks: parseInt(selectedValue), unlimited: 0 };
+
+            this.fetchClusters();
 
             let memos = await apiCall('get_critical_memos', {}, 'GET');
             let events = await apiCall('get_upcoming_events', {}, 'GET');
@@ -50,6 +52,21 @@ document.addEventListener('alpine:init', () => {
                 // Fallback, falls die API nur die ID (correspondent) sendet und keinen String
                 correspondent_name: doc.correspondent_name || (doc.correspondent ? `ID: ${doc.correspondent}` : 'Unbekannt')
             }));
+
+            this.upcomingEvents = events?.details?.upcoming_events || [];
+        },
+
+        async fetchClusters() {
+            this.isLoadingClusters = true;
+            let weeksParam = this.pipeline.timeFilter === 'all' ? 999 : parseInt(this.pipeline.timeFilter);
+            let aC = await apiCall('get_accelerate_cluster', { weeks: weeksParam }, 'GET');
+            this.acceleratorClusters = aC?.details?.accelorate_clusters || [];
+            this.isLoadingClusters = false;
+        },
+
+        async changeTimeFilter(e) {
+            this.pipeline.timeFilter = e.target.value;
+            await this.fetchClusters();
         },
 
         // Hilfsfunktionen für Datumsberechnungen und Style-Zuweisung

@@ -47,19 +47,35 @@
             <div class="flex items-center justify-between border-b border-slate-800/60 pb-2">
                 <div class="flex items-center space-x-2">
                     <span class="text-sm">🤖</span>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Top Kontakte (Letzte 4 Wochen)</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Top Kontakte</h3>
+                    <!-- Lade-Icon, das sich dreht, während isLoadingClusters true ist -->
+                    <svg x-show="isLoadingClusters" class="w-3.5 h-3.5 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                 </div>
-                <span class="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">Smart Vorschlag</span>
+                <div class="flex items-center space-x-2">
+                    <select id="timeFilter" x-model="pipeline.timeFilter" @change="changeTimeFilter($event)" class="bg-slate-900 text-slate-300 text-[10px] border border-slate-700 rounded-md px-2 py-0.5 focus:outline-none focus:border-blue-500">
+                        <option value="4">4 Wochen</option>
+                        <option value="8">8 Wochen</option>
+                        <option value="12">12 Wochen</option>
+                        <option value="20">20 Wochen</option>
+                        <option value="40">40 Wochen</option>
+                        <option value="56">56 Wochen</option>
+                        <option value="all">Alle</option>
+                    </select>
+                    <span class="text-[9px] bg-blue-500/15 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">Smart Vorschlag</span>
+                </div>
             </div>
 
             <div class="space-y-2 max-h-[32vh] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-800">
                 <template x-for="cluster in acceleratorClusters" :key="cluster.sender">
-                    <div @click.stop="dispatchAction('search_mails', { query: cluster.sender })"
-                         class="flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all gap-4 cursor-pointer group">
+                    <div @click.stop="dispatchAction('search_mails', { query: cluster.sender, folder:cluster.folder })"
+                        class="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-xl border border-white/10 transition-all gap-4 cursor-pointer group shadow-sm">
                         
                         <div class="min-w-0 flex-1">
                             <div class="text-[11px] font-bold text-white group-hover:text-blue-400 transition-colors truncate" x-text="cluster.showname"></div>
-                            <div class="text-[9px] text-slate-400 font-mono mt-0.5" x-text="(cluster.mail_count || cluster.count) + ' offene Daten-Mails in ' + cluster.folder"></div>
+                            <div class="text-[9px] text-slate-300 font-mono mt-0.5" x-text="(cluster.mail_count || cluster.count) + ' Mails in ' + cluster.folder"></div>
                         </div>
                         
                         <button x-show="cluster.allow_acceleration == 1"
@@ -70,7 +86,7 @@
                         </button>
                         
                         <span x-show="cluster.allow_acceleration == 0" 
-                              class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center space-x-1 shrink-0">
+                            class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center space-x-1 shrink-0">
                             <span>✅</span>
                             <span>Im DMS</span>
                         </span>

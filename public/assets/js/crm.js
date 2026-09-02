@@ -215,7 +215,7 @@ function dispatchAction(action, context, triggerElement) {
     if (typeof debug !== 'undefined' && debug) {
         console.log(`%c[Dispatcher] Triggered: ${action}`, "color: #3b82f6; font-weight: bold;", context);
     }
-
+    debugger;
     // 2. Action-Registry
     const actions = {
         'mail_view':        (ctx) => window.loadMailByHash?.(ctx.id),
@@ -326,6 +326,7 @@ function dispatchAction(action, context, triggerElement) {
             const params = new URLSearchParams();
             params.set('view', 'mails');
             params.set('query', targetHash);
+            params.set('folder', ctx.folder);
             window.location.search = params.toString();
         }
     };

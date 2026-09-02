@@ -1189,10 +1189,9 @@ class MailProcessor extends \App\Core\Database
     /**
      * 
      */
-    public function getAccelorateClusters()
+    public function getAccelorateClusters(int $weeks = 4, $unlimited = 0)
     {
         $sql = "WITH aggregated_mails AS (
-                    -- SCHRITT 1: Mails gruppieren, zählen und das Datum der NEUESTEN Mail ermitteln
                     SELECT 
                         ce.email AS sender,
                         m.imap_folder AS folder,
@@ -1200,23 +1199,20 @@ class MailProcessor extends \App\Core\Database
                         MAX(m.date_received) AS latest_received,
                         MAX(COALESCE(NULLIF(c.display_name, ''), ce.email)) as showname
                     FROM `mails` as m
-                    -- FIX 1: Dynamischer Join – bei 'Sent Messages' auf den Empfänger prüfen
                     INNER JOIN contact_emails ce ON ce.`id` = CASE 
-                        WHEN m.imap_folder = 'Sent Messages' THEN m.recipient_ceid -- Falls die Spalte 'recipient_ceid' heißt, hier anpassen
+                        WHEN m.imap_folder = 'Sent Messages' THEN m.recipient_ceid 
                         ELSE m.sender_ceid 
                     END
                     LEFT JOIN contacts c ON c.id = ce.contact_id
-                    WHERE m.tenant_id = 6
-                    -- FIX 2: Flexibler Filter je nach Ordnertyp
+                    WHERE m.tenant_id = :tenant_id
+                    AND m.status NOT IN ('deleted')
+                    -- Universeller Zeitraum-Filter: Greift bei :weeks = 0 komplett (Alle), ansonsten auf die Wochenbasis
+                    AND (:weeks = 0 OR m.date_received >= NOW() - INTERVAL :weeks WEEK)
+                    -- Flexibler Filter je nach Ordnertyp und Status
                     AND (
-                        -- Für den aktuellen Posteingang & Gesendet: Letzte 4 Wochen & aktiver Status
-                        (m.imap_folder IN ('INBOX', 'Sent Messages') 
-                        AND m.`status` = 'active' 
-                        AND m.date_received >= NOW() - INTERVAL 4 WEEK)
+                        (m.imap_folder IN ('INBOX', 'Sent Messages') AND m.`status` = 'active')
                         OR
-                        -- Für Archiv/DMS: Kein Zeitlimit & alle DMS-relevanten Statuswerte erlauben
-                        (m.imap_folder IN ('DMS', 'DMSDone') 
-                        AND m.`status` IN ('active', 'dms', 'archived', 'DMSDone'))
+                        (m.imap_folder IN ('DMS', 'DMSDone') AND m.`status` IN ('active', 'dms', 'archived', 'DMSDone'))
                     )
                     AND ce.email NOT LIKE 'noreply%'
                     AND ce.email NOT LIKE 'no-reply%'
@@ -1224,7 +1220,6 @@ class MailProcessor extends \App\Core\Database
                     HAVING mail_count > 1
                 ),
                 ranked_clusters AS (
-                    -- SCHRITT 2: Ränge vergeben (Die zeitlich neuesten Gruppen pro Ordner zuerst)
                     SELECT 
                         showname,
                         sender,
@@ -1234,13 +1229,20 @@ class MailProcessor extends \App\Core\Database
                         ROW_NUMBER() OVER (PARTITION BY folder ORDER BY latest_received DESC) as rank_num
                     FROM aggregated_mails
                 )
-                -- SCHRITT 3: Die letzten 5 Gruppen pro Ordner stumpf ausgeben
                 SELECT showname, sender, folder, mail_count, latest_received
                 FROM ranked_clusters
                 WHERE rank_num <= 5
                 ORDER BY folder, latest_received DESC;";
-        
-        return $this->queryIt($sql, [], false, false, false);
+
+        $a = $this->queryIt(
+            $sql, 
+            ['weeks' => $weeks], 
+            false, 
+            false, 
+            true
+        );
+
+        return $a;
     }
 
     /**

@@ -785,6 +785,9 @@ class ContactProcessor extends \App\Core\Database
         return $docs;
     }
 
+    /**
+     * @deprecated
+     */
     private function getDocumentItemsByTag($tagIds)
     {
         error_log(__FUNCTION__);
