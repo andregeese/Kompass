@@ -9,54 +9,71 @@
  * END_LICENSE
  */
 
-//api.php
 date_default_timezone_set('Europe/Berlin');
 define('ROOT_PATH', __DIR__);
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// 2. Wohin schreibt PHP interne Fehler?
+
+// Interne PHP-Fehler in Datei umleiten
 $logFile = __DIR__ . "/debug.log";
 ini_set('log_errors', 1);
-ini_set('error_log', $logFile); // Hier muss 'error_log' stehen, nicht deine Klasse
+ini_set('error_log', $logFile);
 
+// CORS / Preflight HANDLING (CORS-Headers für Cookies & modern JS-Fetch)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Origin: *");
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
     header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-    header("Access-Control-Allow-Headers: X-CSRF-TOKEN, Content-Type");
+    header("Access-Control-Allow-Headers: X-CSRF-TOKEN, Content-Type, Authorization");
     header("HTTP/1.1 200 OK");
     exit;
 }
-$all_headers = [];
-foreach ($_SERVER as $name => $value) {
-    if (substr($name, 0, 5) == 'HTTP_') {
-        $all_headers[$name] = $value;
-    }
-}
-//error_log("ALLE HTTP-HEADER: " . print_r($all_headers, true));
-// 3. Sicherstellen, dass die Datei beschreibbar ist
+
+// Log-Datei initialisieren
 if (!file_exists($logFile)) {
     touch($logFile);
     chmod($logFile, 0666);
 }
+
 require_once __DIR__ . '/vendor/autoload.php';
+
+// Session Cookie Parameter vor Auth::init() setzen (Sicher gegen Port- & SameSite-Issues)
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => false, // Auf true setzen, sobald HTTPS aktiv ist
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+}
+
 // 1. Initialisierung
 \App\Core\ErrorLogs::register();
 \App\Core\Auth::init();
-$receivedToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($headers['X-CSRF-TOKEN'] ?? 'KEIN_TOKEN');
-$action = $_REQUEST['action'] ?? '';
-// Liste der Aktionen, die KEIN CSRF-Token benötigen
-$publicActions = ['login', 'register', 'forgot_password', 'reset_password'];
-if (isset($_GET['debug']) && $_GET['debug']=='debugMe'){
 
-}elseif(!in_array($action, $publicActions)) {
-    // Hole das Token IMMER aus der korrekten $_SERVER Variable (da Nginx/PHP-FPM)
+$action = $_REQUEST['action'] ?? '';
+
+// Öffentliche Aktionen (ohne CSRF / Session Check)
+$publicActions = ['login', 'register', 'forgot_password', 'reset_password'];
+
+if (isset($_GET['debug']) && $_GET['debug'] === 'debugMe') {
+    // Debug Bypass
+} elseif (!in_array($action, $publicActions, true)) {
+    
+    // Fix: Sicheres Auslesen des CSRF-Tokens aus $_SERVER
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    
     if (!\App\Core\Auth::verifyCsrfToken($csrfToken)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'CSRF Token ungültig']);
         exit;
     }
+
     if (!\App\Core\Auth::validateFingerprint()) {
         error_log("SICHERHEITSWARNUNG: Fingerprint-Mismatch für User ID " . ($_SESSION['user_id'] ?? 'Guest'));
         http_response_code(401);
@@ -65,15 +82,15 @@ if (isset($_GET['debug']) && $_GET['debug']=='debugMe'){
     }
 }
 
-
 header('Content-Type: application/json; charset=utf-8');
-$action = $_REQUEST['action'] ?? '';
+
 // 1. Instanz erzeugen
 $db = new \App\Core\Database();
 // 2. Logger instruieren
 \App\Core\ErrorLogs::setDatabase($db);
 // 3. Dashboard mit DB-Instanz versorgen
 $dashboard = new \App\Dashboard($db);
+
 // --- ROUTER MAP ---
 $routes = [
     // Auth
@@ -101,12 +118,12 @@ $routes = [
     'pdf'                           => [App\Api\MailController::class, 'handlePdf'],
     'sync_mails'                    => [App\Api\MailController::class, 'syncMails'],
     'track_folders'                 => [App\Api\MailController::class, 'trackFolders'],
-    'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'], // Sonderfall: Rendert HTML
+    'stream_mail_html'              => [App\Api\MailController::class, 'streamHtml'],
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
     'get_mail_data_for_note'        => [App\Api\MailController::class, 'getMailById'],
 
-    //Appointment
+    // Appointments
     'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
     'get_appointments'              => [App\Api\AppointmentsController::class, 'getAppointments'],
     'get_upcoming_events'           => [App\Api\AppointmentsController::class, 'getUpcomingEvents'],
@@ -122,7 +139,6 @@ $routes = [
     'get_total_document_count'      => [App\Api\PaperlessController::class, 'getTotalDocumentCount'],
     'syncPaperless'                 => [App\Api\PaperlessController::class, 'sync'],
     'paperless_search'              => [App\Api\PaperlessController::class, 'search'],
-    //'get_paperless_correspondents'  => [App\Api\PaperlessController::class, 'getCorrespondents'], //mail als 
     'paperless_mail_tree'           => [App\Api\PaperlessController::class, 'getMailTree'],
     'paperless_tree'                => [App\Api\PaperlessController::class, 'getTree'],
     'link_mail_to_paperless'        => [App\Api\PaperlessController::class, 'linkMail'],
@@ -131,7 +147,6 @@ $routes = [
     'get_tags_by_search'            => [App\Api\PaperlessController::class, 'getTagsBySearch'],
     'get_tags_by_contact'           => [App\Api\PaperlessController::class, 'getTagsByContact'],
     'update_tag_to_contact'         => [App\Api\PaperlessController::class, 'updateTagToContact'],
-    
     'search_correspondents'         => [App\Api\PaperlessController::class, 'searchCorrespondents'],
     'search_tags'                   => [App\Api\PaperlessController::class, 'searchTags'],
     'get_correspondets'             => [App\Api\PaperlessController::class, 'getCorrespondents'],
@@ -154,7 +169,6 @@ $routes = [
     'list_contacts'                 => [App\Api\ContactController::class, 'getContacts'],
     'get_graph'                     => [App\Api\ContactController::class, 'getContacts'],
     'update_mail_to_contact'        => [App\Api\ContactController::class, 'updateContactEmailToContact'],
-    
 
     // System
     'system_status'                 => [App\Api\SystemController::class, 'status'],
@@ -164,7 +178,7 @@ $routes = [
     'get_allowed_actions'           => [App\Api\SystemController::class, 'getAllowedActions'],
     'get_imap_folder'               => [App\Api\SystemController::class, 'getIMAPFolder'],
 
-    //NOTES
+    // Notes
     'get_notes'                     => [App\Api\NotesController::class, 'getNotes'],
     'get_notes_by_uid'              => [App\Api\NotesController::class, 'getNotesByUID'],
     'save_note'                     => [App\Api\NotesController::class, 'saveNote'],
@@ -172,53 +186,53 @@ $routes = [
     'get_critical_memos'            => [App\Api\NotesController::class, 'getCriticalMemos'],
 ];
 
-// 1. Spezieller Endpunkt für die Routen-Konfiguration
+// Endpunkt für die Routen-Konfiguration
 if ($action === 'get_allowed_actions') {
     echo json_encode(['success' => true, 'data' => array_keys($routes)]);
     exit;
 }
-if (!array_key_exists($action, $routes)) {
-    throw new \Exception("Aktion '$action' unbekannt.");
-}
 
-// 4. Controller ausführen
-$controllerClass = $routes[$action][0];
-$method = $routes[$action][1];
-
+// Controller-Ausführung in den try-catch Block legen
 try {
-    // Hier greift der BaseController Konstruktor (Sicherheits-Check passiert automatisch!)
+    if (!array_key_exists($action, $routes)) {
+        throw new \Exception("Aktion '$action' unbekannt.");
+    }
+
+    $controllerClass = $routes[$action][0];
+    $method = $routes[$action][1];
+
     $controller = new $controllerClass($dashboard);
     $responseBody = $controller->$method();
 
-    //error_log("API RESPONSE: " . print_r($responseBody, true));
-
-    // KORREKTUR: Wenn das Ergebnis KEIN standardisiertes Paket ist, schnüren wir es hier!
     if (!is_array($responseBody) || !isset($responseBody['success'])) {
         $responseBody = [
             'success' => true,
-            'status'  => 'success', // Standard-Status
-            'details' => $responseBody ?? new \stdClass(), // Das rohe Array wandert nach 'details'
+            'status'  => 'success',
+            'details' => $responseBody ?? new \stdClass(),
             'error'   => null
         ];
     }
 
-    
-    // ERFOLG: Wir nehmen Status und Details aus dem Rückgabewert
     \App\Dashboard::sendResponse(
         true, 
         $responseBody['details'], 
         null, 
         $responseBody['status']
     );
-    
+
 } catch (\Throwable $e) {
-    // FEHLER: Hier greift success = false
-    // Wir loggen den Fehler und schicken die Meldung an den error-Key
     error_log("API Global Catch: " . $e->getMessage());
     
     \App\Dashboard::sendResponse(
         false, 
-        new \stdClass(), 
+        [
+            'ui' => [
+                'notify'  => true,
+                'title'   => 'Fehler',
+                'message' => $e->getMessage(),
+                'type'    => 'danger'
+            ]
+        ], 
         $e->getMessage(), 
         'error'
     );

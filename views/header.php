@@ -13,7 +13,9 @@
     <!-- Links: Logo & Titel (Auf Mobile kompakt) -->
     <a href="index.php?view=start" class="flex items-center space-x-2 md:space-x-3 shrink-0 hover:opacity-80 transition-opacity">
         <span class="text-xl">
-            <svg class="w-8 h-8 md:w-8 md:h-8 shrink-0"><use href="public/assets/sprite.svg#icon-custom-compass"></use></svg>
+            <svg class="w-12 h-12 md:w-12 md:h-12 shrink-0" viewBox="0 0 60 60">
+                <use href="public/assets/sprite.svg#icon-custom-compass"></use>
+            </svg>
         </span>
         <h1 class="text-sm md:text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-blue-400 hidden sm:block">
             Kompass

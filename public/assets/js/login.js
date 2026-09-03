@@ -47,50 +47,47 @@ const loginComponent = () => ({
             password: this.formData.password
         };
 
-        // Felder für Passwort-Reset hinzufügen
         if (this.isForgotPassword) {
             payload.app_key = this.formData.app_key;
         }
 
-        // Felder für Registrierung hinzufügen
         if (this.isRegister) {
-            payload.paperless_url = this.formData.paperless_url;
-            payload.paperless_name = this.formData.paperless_name;
+            payload.paperless_url   = this.formData.paperless_url;
+            payload.paperless_name  = this.formData.paperless_name;
             payload.paperless_token = this.formData.paperless_token;
         }
 
         try {
             const data = await apiCall(action, payload, 'POST');
-            if (data?.success) {
-                const newToken = data.csrf_token; 
-                
-                if (newToken) {
-                    let meta = document.querySelector('meta[name="csrf-token"]');
-                    if (meta) {
-                        meta.content = newToken;
-                    } else {
-                        meta = document.createElement('meta');
-                        meta.name = 'csrf-token';
-                        meta.content = newToken;
-                        document.head.appendChild(meta);
-                    }
-                }
 
+            // 1. CSRF-Token aktualisieren (KORREKTUR: liegt jetzt unter details.csrf_token)
+            const newToken = data?.details?.csrf_token;
+            if (newToken) {
+                let meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) {
+                    meta.content = newToken;
+                } else {
+                    meta = document.createElement('meta');
+                    meta.name = 'csrf-token';
+                    meta.content = newToken;
+                    document.head.appendChild(meta);
+                }
+            }
+
+            // 2. Erfolg verarbeiten
+            if (data?.success) {
                 if (action === 'login') {
+                    // Bei Erfolg direkt weiterleiten
                     window.location.href = 'index.php?view=start';
-                    this.currentView = 'start';
                 } else if (action === 'reset-password') {
-                   
-                    alert('Passwort erfolgreich geändert.');
                     this.switchToLogin();
                 } else {
-                    
                     this.switchToLogin();
                 }
-            } else {
-                
-                alert(data?.error || 'Fehler bei der Anfrage.');
-            }
+            } 
+            // Hinweis: Wenn data.success === false ist, hat safeFetch/apiCall 
+            // das showNotify dank details.ui.notify bereits automatisch ausgelöst!
+
         } catch (err) {
             console.error("Auth-Error:", err);
         } finally {

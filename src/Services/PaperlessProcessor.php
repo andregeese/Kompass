@@ -54,7 +54,7 @@ class PaperlessProcessor extends \App\Core\Database
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
-        curl_close($ch);
+        //curl_close($ch);
         error_log("PaperlessURL:" . $url);
 
         // Globale Fehlerprüfung für alle Endpunkte
@@ -307,7 +307,7 @@ class PaperlessProcessor extends \App\Core\Database
                 ];
             }
         }
-        $this->dashboard->sendResponse(true, $correspondents);
+        //$this->dashboard->sendResponse(true, $correspondents);
         //return $correspondents;
     }
 
@@ -335,7 +335,7 @@ class PaperlessProcessor extends \App\Core\Database
                 ];
             }
         }
-        //$this->dashboard->sendResponse(true, $correspondents);
+        ////$this->dashboard->sendResponse(true, $correspondents);
         return $correspondents;
     }
 

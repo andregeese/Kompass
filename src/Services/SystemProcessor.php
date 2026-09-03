@@ -247,11 +247,12 @@ class SystemProcessor extends \App\Core\Database
         if ($tenantId) {
             error_log("search Key In DB: " . $key);
             #error_log("Suche in .env $key");
-            $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tid LIMIT 1";
+            $sql = "SELECT config_value FROM tenant_config WHERE config_key = :key AND tenant_id = :tenant_id LIMIT 1";
             $params=[
-                'key' => $key, 'tid' => $tenantId
+                'key' => $key
             ];
             $dbResult = $this->queryit($sql, $params, false, false, false);
+            
             if ($dbResult->success && !empty($dbResult->data->fetched)) {
                 $row = $dbResult->data->fetched;
             

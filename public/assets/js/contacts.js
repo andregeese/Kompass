@@ -245,7 +245,7 @@ const contactsViewComponent = () => ({
             this.closeMatchModal();
             // Optional: Hier das UI aktualisieren, falls der Server bereinigte Daten schickt
         } else {
-            showNotify(data);
+            //showNotify(data);
         }
     },
 

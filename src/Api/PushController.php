@@ -43,12 +43,18 @@ class PushController extends \App\Core\BaseController
             $this->pushService->saveSubscription($userId, $json);
 
             // 4. Response senden
-            $this->sendJsonResponse(['status' => 'success', 'message' => 'Erfolgreich abonniert.']);
+            return [
+                'success' => true,
+                'message' => 'Subscription erfolgreich gespeichert.'
+            ];
 
         } catch (Exception $e) {
             $code = $e->getCode() ?: 500;
             http_response_code($code);
-            $this->sendJsonResponse(['status' => 'error', 'message' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 

@@ -210,7 +210,7 @@ const rightSidebarComponent = () => ({
             
             if (data?.success) {
                 this.$data.currentMail.paperless_id = documentId;
-                showNotify('Zuordnung erfolgreich', 'E-Mail verknüpft.', 'success');
+                //showNotify('Zuordnung erfolgreich', 'E-Mail verknüpft.', 'success');
                 this.loadPaperlessTree(mail);
             }
         } catch (err) {
@@ -229,7 +229,7 @@ const rightSidebarComponent = () => ({
                 this.manualSearchQuery = mail.subject || '';
                 this.searchDMS();
                 this.loadPaperlessTree(mail);
-                showNotify('Verbindung gelöst', 'Die Zuordnung wurde aufgehoben.', 'info');
+                //showNotify('Verbindung gelöst', 'Die Zuordnung wurde aufgehoben.', 'info');
             }
         } catch (err) {
             console.error("Fehler beim Lösen:", err);

@@ -655,21 +655,21 @@ class MailProcessor extends \App\Core\Database
                         }
                     }
 
-                    if ($existingMail) {
+                    /*if ($existingMail) {
                         // Mail wurde verschoben -> UPDATE Ordner, UID & Status
                         $sqlUpdate = "UPDATE mails 
                                       SET imap_folder = :folder, uid = :uid, status = 'active', 
                                           is_read = :is_read, is_flagged = :is_flagged, is_answered = :is_answered 
                                       WHERE id = :id AND tenant_id = :tenant_id;";
                         
-                        /*$this->queryIt($sqlUpdate, [
-                            'folder'      => $folder,
-                            'uid'         => $currentUid,
-                            'is_read'     => $mail['is_read'],
-                            'is_flagged'  => $mail['is_flagged'],
-                            'is_answered' => $mail['is_answered'],
-                            'id'          => $existingMail['id']
-                        ], true, false, false);*/
+                        // $this->queryIt($sqlUpdate, [
+                        //     'folder'      => $folder,
+                        //     'uid'         => $currentUid,
+                        //     'is_read'     => $mail['is_read'],
+                        //     'is_flagged'  => $mail['is_flagged'],
+                        //     'is_answered' => $mail['is_answered'],
+                        //     'id'          => $existingMail['id']
+                        // ], true, false, false);
 
                         $updateCount++;
                         $mailsInDB[$currentUid] = (int)$existingMail['id'];
@@ -677,7 +677,7 @@ class MailProcessor extends \App\Core\Database
                         
                         error_log("MAIL VERSCHOBEN: ID {$existingMail['id']} von '{$existingMail['imap_folder']}' nach '$folder' (Neue UID: $currentUid)");
                         continue;
-                    }
+                    }*/
 
                     $senderId = (int)$ceCache[$mail['from_email']] ?? null;
                     //error_log("senderId 1.: $senderId");
@@ -732,7 +732,6 @@ class MailProcessor extends \App\Core\Database
                     
 
                 } catch (\Throwable $dbEx) {
-                    $hasErrorInBatch = true;
                     error_log("DB-Insert-Fehler bei UID " . $mail['uid'] . ": " . $dbEx->getMessage());
                 }
             }
@@ -1270,7 +1269,7 @@ class MailProcessor extends \App\Core\Database
             ['weeks' => $weeks], 
             false, 
             false, 
-            true
+            false
         );
 
         return $a;
@@ -1286,7 +1285,7 @@ class MailProcessor extends \App\Core\Database
                 SELECT ce.email
                 FROM `mails` m
                 INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
-                WHERE m.tenant_id = 6 
+                WHERE m.tenant_id = :tenant_id
                 AND m.imap_folder IN ('DMS', 'DMSDone')
                 GROUP BY ce.email
                 HAVING COUNT(*) > 0
@@ -1305,14 +1304,14 @@ class MailProcessor extends \App\Core\Database
         INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
         LEFT JOIN contacts c ON c.id = ce.contact_id
         INNER JOIN dms_senders ds ON ds.sender_email = ce.email
-        WHERE m.tenant_id = 6
+        WHERE m.tenant_id = :tenant_id
         AND m.imap_folder = 'INBOX'
         AND m.status = 'active'
         AND NOT EXISTS (
             SELECT 1 
             FROM `mails` m_dms 
             INNER JOIN contact_emails ce_dms ON ce_dms.id = m_dms.sender_ceid
-            WHERE m.tenant_id = 6 
+            WHERE m.tenant_id = :tenant_id
                 AND ce_dms.email = ce.email 
                 AND m_dms.imap_folder IN ('DMS', 'DMSDone')
         )
@@ -1373,6 +1372,7 @@ class MailProcessor extends \App\Core\Database
             'live_status' => $results
         ];
     }
+
     /**
      * Entschlüsselt den Mail-Inhalt für das Iframe
      */
@@ -1410,10 +1410,11 @@ class MailProcessor extends \App\Core\Database
         // 5. Entschlüsseln mit OPENSSL_RAW_DATA
         return openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
     }
+
     /**
      * Holt den Body einer Mail. Falls noch nicht in der DB vorhanden (Lazy Loading),
      * wird er live via IMAP von iCloud nachgeladen, verschlüsselt gecached und zurückgegeben.
-     * * @param string $hash Der Hash (oder ID) der Mail aus der lokalen DB
+     * * @param string $id Der Hash (oder ID) der Mail aus der lokalen DB
      * @return string Der bereinigte, lesbare UTF-8 Body der Mail
      * @throws Exception Wenn die Mail nicht existiert oder IMAP fehlschlägt
      */
@@ -1442,7 +1443,7 @@ class MailProcessor extends \App\Core\Database
             }
 
             // Jetzt in die DB schreiben (Sicherheit vor Speichern!)
-            //$this->saveMailWithContent($hash, $htmlContent, strip_tags($htmlContent));
+            //$this->saveMailWithContent($id, $htmlContent, strip_tags($htmlContent));
         }
 
         
@@ -1698,7 +1699,6 @@ class MailProcessor extends \App\Core\Database
             'folder' => $folder,
             'limit'  => (int)$limit,
             'offset' => (int)$offset,
-            'tenant_id' => 6
         ];
 
         $sql = "SELECT 
@@ -1835,7 +1835,7 @@ class MailProcessor extends \App\Core\Database
             false
         );
         if (!$dbResult->success) {
-            $this->dashboard->sendResponse(false, "", "Keine Mail gefunden für diesen Hash, kann body nicht speichern.");
+            //$this->dashboard->sendResponse(false, "", "Keine Mail gefunden für diesen Hash, kann body nicht speichern.");
             throw new \Exception("Keine Mail gefunden für diesen Hash, kann body nicht speichern. $id");
         }
         $mailId = $dbResult->data->fetched[0]['id'];

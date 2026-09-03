@@ -23,8 +23,15 @@ function confirmAction(message, buttonsOrCallback) {
         }
     }));
 }
+
 //Notify => erzeugt ein notify und eine Mitteilung
 function showNotify(title, message, type = 'danger') {
+    //debugger;
+    //console.groupCollapsed(`🔔 //showNotify aufgerufen: "${title}" (${type})`);
+    //console.log("Message:", message);
+    //console.trace("Aufrufpfad (Stacktrace):"); // <-- DAS IST DER SCHLÜSSEL!
+    //console.groupEnd();
+
     // 1. Notification zum globalen Array hinzufügen (für die Sidebar/Counter)
     const newNotification = {
         id: Date.now() + Math.random(),
@@ -115,7 +122,7 @@ function triggerSecurityLockout() {
     // In die Seite einfügen
     document.body.appendChild(overlay);
     // 2. Benachrichtigung anzeigen
-    showNotify("Sicherheit", "Sicherheitsfall: Token nicht gefunden!", "error");
+    //showNotify("Sicherheit", "Sicherheitsfall: Token nicht gefunden!", "error");
     // 3. Nach 2 Sekunden Bedenkzeit hart zum Login weiterleiten
     setTimeout(() => {
         window.location.replace('index.php?view=login');
@@ -151,7 +158,7 @@ async function apiCall(action, params = {}, method = 'POST')
     }
     let url = `${GLOBAL_API_URL}?action=${action}`;
     
-    // 💡 KORREKTUR: Wenn params ein FormData-Objekt ist, DARF kein Content-Type gesetzt werden!
+    // KORREKTUR: Wenn params ein FormData-Objekt ist, DARF kein Content-Type gesetzt werden!
     // Der Browser setzt die Multi-Part-Boundaries sonst falsch.
     let headers = {};
     if (!(params instanceof FormData)) {
@@ -420,15 +427,23 @@ async function safeFetch(url, customOptions = {}) {
         }
 
         if (!response.ok) {
-            const rawText = await response.text();
-            let errorMsg = `Server antwortete mit Status ${response.status}`;
+            let json = null;
             try {
-                const json = JSON.parse(rawText);
-                if (json && json.error) errorMsg = json.error;
+                json = await response.json(); // Versuche das JSON trotz Status 400 zu lesen
             } catch(e) {}
+
+            // 💡 Prüfe, ob das Backend ein ui.notify im 400-Payload mitgeschickt hat
+            if (json?.details?.ui?.notify) {
+                showNotify(json.details.ui.title, json.details.ui.message, json.details.ui.type || 'danger');
+                return json;
+            }
+
+            // Fallback: Standard-Fehlermeldung
+            const errorMsg = json?.error || `Server-Fehler (${response.status})`;
             showNotify("FEHLER", errorMsg, "danger");
-            throw new Error(errorMsg);
+            return json || { success: false, error: errorMsg };
         }
+
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             const raw = await response.text();
@@ -437,9 +452,16 @@ async function safeFetch(url, customOptions = {}) {
         // 💡 KORREKTUR: jResponse/data Variablen-Chaos beseitigt
         const data = await response.json();
         
+        // 🚨 3. STRIKTE SCHEMA-PRÜFUNG (Hart abbrechen, wenn Format falsch ist!)
+        // Jede gültige Antwort MUSS ein 'success'-boolean besitzen!
+        if (typeof data.success !== 'boolean') {
+            console.error("API Contract Violation! Erhaltenes Objekt:", data);
+            throw new Error("API Fehler: Antwort entspricht nicht dem vorgegebenen Schema (Fehlendes 'success'-Feld).");
+        }
+
         if (data && data.success === false) {
             console.error("API Error:", data.error);
-            showNotify("Fehler", data.error || "Ein unbekannter Fehler ist aufgetreten", "danger");
+            //showNotify("Fehler", data.error || "Ein unbekannter Fehler ist aufgetreten", "danger");
             return data;
         }
         if (data.details?.ui?.notify) {
@@ -448,14 +470,13 @@ async function safeFetch(url, customOptions = {}) {
         }
         return data;
     } catch (error) {
-        showNotify("Systemfehler", error.message, "danger");
+        //showNotify("Systemfehler", error.message, "danger");
         return { success: false, error: error.message };
     }
 }
 window.crmEngine = function() {
     // Fallback falls window.CRM_API_URL in index.php fehlt
     const apiUrl = window.CRM_API_URL || 'api.php';
-    const paperlessUrl = 'http://192.168.0.72:8030';
 
     return {
         SYNCFOLDER: [],
@@ -770,7 +791,7 @@ if ('serviceWorker' in navigator) {
                 installingWorker.onstatechange = () => {
                     if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         window.updateAvailable = true;
-                        showNotify("Update bereit", "Eine neue Version ist installiert. <button onclick='performAppUpdate()'>Jetzt aktualisieren</button>", "info");
+                        //showNotify("Update bereit", "Eine neue Version ist installiert. <button onclick='performAppUpdate()'>Jetzt aktualisieren</button>", "info");
                     }
                 };
             };

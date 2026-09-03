@@ -49,7 +49,13 @@ class AuthController extends \App\Core\BaseController
                 'message'    => 'Logged In',
                 'user_id'    => $uid,
                 'tenant_id'  => $tid,
-                'csrf_token' => $csrfToken
+                'csrf_token' => $csrfToken,
+                'ui' => [
+                    'notify'  => true,
+                    'title'   => 'Willkommen',
+                    'message' => 'Erfolgreich angemeldet.',
+                    'type'    => 'success'
+                ]
             ],
             'error' => null
         ];

@@ -87,6 +87,7 @@ abstract class BaseController
             {
                 return $this->get($name);
             }
+
             public function offsetGet($offset)
             {
                 return $this->get($offset);
@@ -192,10 +193,20 @@ abstract class BaseController
         }
     }
 
+    /**
+     * @tbd: Authentifiziert einen Benutzer und gibt die Benutzerinformationen zurück
+     * Speichert einen Push-Abonnement-Eintrag in der Datenbank
+     * deprectated: Diese Methode ist veraltet und sollte nicht mehr verwendet werden. Verwenden Sie stattdessen die dedizierte Authentifizierungs- und Push-Abonnement-Logik.
+     * @param string $username Der Benutzername des Benutzers
+     * @param string $password Das Passwort des Benutzers
+     * @return array Die Benutzerinformationen, wenn die Authentifizierung erfolgreich ist
+    
+     */
     public function savePushSubscription($data) {
         // Speichere $data['endpoint'], $data['keys']['p256dh'], $data['keys']['auth']
         // in deiner Datenbank, verknüpft mit der User-ID.
-        $this->db->execute("INSERT INTO push_subscriptions (...) VALUES (...)");
+        
+        //$this->db->execute("INSERT INTO push_subscriptions (...) VALUES (...)");
         return ['success' => true];
     }
 }

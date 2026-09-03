@@ -67,6 +67,8 @@ Das bedeutet für dich: Du darfst den Quellcode zu Transparenzzwecken frei einse
 
 ## ⚡ Schnellstart (Installation in 5 Minuten)
 
+[text](../../Dockerfile)
+
 Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) müssen installiert sein.
 
 1. **Repository klonen:**
