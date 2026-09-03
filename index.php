@@ -87,14 +87,22 @@ if (!$isLoggedIn && $view !== 'login') {
     exit;
 }
 // 3. Optional: Tenant-Validierung (Zusätzliche Sicherheit)
-if ($isLoggedIn && isset($_SESSION['tenant_id'])) {
-    $dashboard = new \App\Dashboard($db);
-    $valid = $dashboard->isValidTenant((int)$_SESSION['tenant_id']);
-    error_log("DEBUG: Tenant valid: " . ($valid ? 'JA' : 'NEIN'));
-    if (!$dashboard->isValidTenant((int)$_SESSION['tenant_id'])) {
-        \App\Core\Auth::logout();
-        header("Location: ./index.php?view=login&error=invalid_tenant");
-        exit;
+if ($isLoggedIn && !empty($_SESSION['tenant_id'])) {
+    try {
+        $dashboard = new \App\Dashboard($db);
+        $tenantId = (int)$_SESSION['tenant_id'];
+        
+        // Prüfen, ob der Tenant existiert
+        if (!$dashboard->isValidTenant($tenantId)) {
+            error_log("SECURITY: Ungültige Tenant ID ($tenantId) in Session für User " . ($_SESSION['user_id'] ?? 'Unbekannt'));
+            \App\Core\Auth::logout();
+            header("Location: ./index.php?view=login&error=invalid_tenant");
+            exit;
+        }
+    } catch (\Throwable $e) {
+        // WICHTIG: Wenn die DB-Abfrage fehlschlägt, NIEMALS sofort ausloggen, 
+        // sondern den Fehler nur loggen!
+        error_log("Fehler bei Tenant-Validierung: " . $e->getMessage());
     }
 }
 $currentView = $_GET['view'] ?? 'start';

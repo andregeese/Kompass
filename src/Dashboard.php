@@ -19,6 +19,7 @@ class Dashboard
 {
     protected \App\Core\Database $db;
     private array $instances = [];
+    public mixed $request = null;
     public ?int $tenant_id = null;
     private array $services = [];
     
@@ -39,9 +40,6 @@ class Dashboard
     public function getTenantCryptoKey(): string 
     {
         if ($this->tenant_id === null) {
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
             if (!empty($_SESSION['tenant_id'])) {
                 $this->tenant_id = (int)$_SESSION['tenant_id'];
             }
@@ -62,7 +60,7 @@ class Dashboard
     {
         $tenantKey = $this->getTenantCryptoKey();
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
-        $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
+        //$ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);
 
         return openssl_decrypt($data, 'aes-256-cbc', $tenantKey, 0, $iv) ?: null;
@@ -72,7 +70,7 @@ class Dashboard
     {
         $tenantKey = $this->getTenantCryptoKey();
         $ENC_IV = $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_IV');
-        $ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
+        //$ENC_KEY= $this->getService('systemProcess', \App\Services\SystemProcessor::class)->getRequiredEnv('ENC_KEY');
         $iv = substr($ENC_IV, 0, 16);
 
         return openssl_encrypt($data, 'aes-256-cbc', $tenantKey, 0, $iv) ?: null;
@@ -103,6 +101,7 @@ class Dashboard
             false,
             false
         );
+
         if ($dbResult->success)
         {
             $userList = $dbResult->data->fetched;
@@ -111,9 +110,7 @@ class Dashboard
         }
         $user = $userList[0] ?? null; // Nimm das erste Element aus der Liste
         
-        //error_log("LOGIN RESULT FÜR user:" . print_r($dbResult->data->fetched[0], true));
-        //if ($user && password_verify($password, $user['password_hash'])) {
-        if ($user) {
+        if ($user && password_verify($password, $user['password_hash'])) {
             //error_log("LOGIN RESULT FÜR " . $email . ": " . $user['id'] . ", tenant_id: " . $user['tenant_id']);
             return [
                 'id'        => (int)$user['id'],
@@ -128,19 +125,19 @@ class Dashboard
      */
     public function isValidTenant(int $tenantId): bool 
     {
-        return true;
-        if (self::$tenantValidated !== null) {
-            return self::$tenantValidated;
-        }
+        error_log(__function__ . " > Überprüfe Tenant-ID: $tenantId");
+
         $dbResult = $this->db->queryIt(
-            "SELECT id FROM contacts WHERE id = :tid AND type = 'company' LIMIT 1", 
-            ['tid' => $tenantId]
+            "SELECT id FROM tenants WHERE id = :tid LIMIT 1; --AND type = 'company' LIMIT 1", 
+            ['tid' => $tenantId],
+            false,
+            false,
+            true
         );
-        if ($dbResult->success){
-            return $dbResult->data["fetched"];
-        }else{
-        }
-        self::$tenantValidated = !empty($result);
+
+        $fetched = ($dbResult && $dbResult->success) ? ($dbResult->data->fetched ?? []) : [];
+        self::$tenantValidated = !empty($fetched);
+
         return self::$tenantValidated;
     }
 
@@ -177,7 +174,7 @@ class Dashboard
     public function loginUser(string $email, string $password): array
     {
         // 1. Lass den Parameter-Namen exakt so wie im SQL
-        $sql = "SELECT id, password_hash FROM users WHERE username = :email LIMIT 1";
+        $sql = "SELECT id, tenant_id,password_hash FROM users WHERE username = :email LIMIT 1";
         
         // 2. Rufe queryIt auf
         $dbResult = $this->db->queryIt(
@@ -202,14 +199,17 @@ class Dashboard
         // 3. JETZT DIE TENANT-ID REAKTIV SETZEN
         $tenantId = (int)$user['tenant_id'];
         $this->setTenantId($tenantId);
-        
-        // 4. WICHTIG: Sofort in die Session schreiben! 
-        // Deine injectTenantId- und injectCryptoKey-Methoden greifen genau hierauf zu.
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $_SESSION['tenant_id'] = $tenantId;
 
+        // 4. Statt manuell $_SESSION zu befüllen -> sauber über Auth::login verarbeiten!
+        $csrfToken = \App\Core\Auth::login((int)$user['id'], $tenantId);
+
+        // 5. Gib das User-Array INKLUSIVE des neuen CSRF-Tokens an die API zurück
+        return [
+            'user_id'    => $user['id'],
+            'tenant_id'  => $user['tenant_id'],
+            'csrf_token' => $csrfToken
+        ];
+        
         return $user;
     }
 

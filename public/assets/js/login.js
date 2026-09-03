@@ -77,30 +77,19 @@ const loginComponent = () => ({
                 }
 
                 if (action === 'login') {
-                    if (typeof showNotify === 'function') {
-                        showNotify('Erfolgreich', 'Login erfolgreich! Leite weiter...', 'success');
-                    }
                     window.location.href = 'index.php?view=start';
                     this.currentView = 'start';
                 } else if (action === 'reset-password') {
-                    if (typeof showNotify === 'function') {
-                        showNotify('Erfolgreich', 'Passwort wurde erfolgreich geändert. Du kannst dich jetzt einloggen.', 'success');
-                    } else {
-                        alert('Passwort erfolgreich geändert.');
-                    }
+                   
+                    alert('Passwort erfolgreich geändert.');
                     this.switchToLogin();
                 } else {
-                    if (typeof showNotify === 'function') {
-                        showNotify('Erfolgreich', 'Registrierung abgeschlossen. Du kannst dich jetzt einloggen.', 'success');
-                    }
+                    
                     this.switchToLogin();
                 }
             } else {
-                if (typeof showNotify === 'function') {
-                    showNotify('Authentifizierung fehlgeschlagen', data?.error || 'Fehler bei der Anfrage.', 'danger');
-                } else {
-                    alert(data?.error || 'Fehler bei der Anfrage.');
-                }
+                
+                alert(data?.error || 'Fehler bei der Anfrage.');
             }
         } catch (err) {
             console.error("Auth-Error:", err);

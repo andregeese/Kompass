@@ -60,18 +60,29 @@ class Auth {
         // 3. Vergleichen (hash_equals schützt auch hier vor Timing-Attacken)
         return hash_equals($_SESSION['fingerprint'], $currentFingerprint);
     }
+
     /**
      * Führt den Login durch und regeneriert die Session-ID.
      */
     public static function login(int $userId, int $tenantId) 
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         session_regenerate_id(true);
         
         $_SESSION['user_id']   = $userId;
         $_SESSION['tenant_id'] = $tenantId;
         $_SESSION['fingerprint'] = self::getFingerprint();
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        $csrfToken = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $csrfToken;
+
+        session_write_close();
+
+        return $csrfToken;
     }
+
     /**
      * Zerstört die Session sicher.
      */
@@ -92,18 +103,23 @@ class Auth {
     public static function getCSRFToken(): string {
         return $_SESSION['csrf_token'] ?? '';
     }
+    
     /**
      * Prüft, ob das gesendete Token mit dem in der Session übereinstimmt
      */
     public static function verifyCsrfToken(?string $token): bool {
-        if (session_status() === PHP_SESSION_NONE) {
+        // Falls keine aktive Session läuft, starten bzw. wiederöffnen
+        if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
         
-        // Logge hier explizit den Session-Zugriff
+        // Debug-Log für die Nachvollziehbarkeit
         error_log("VERIFY: Session-Token-Status: " . (isset($_SESSION['csrf_token']) ? "Vorhanden" : "FEHLT"));
         
-        if (empty($_SESSION['csrf_token'])) return false;
+        if (empty($_SESSION['csrf_token'])) {
+            return false;
+        }
+
         return !empty($token) && hash_equals($_SESSION['csrf_token'], $token);
     }
 }

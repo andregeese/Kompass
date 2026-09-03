@@ -16,36 +16,43 @@ class AuthController extends \App\Core\BaseController
     */    
     public function login() 
     {
-        try{
-            $rawInput = file_get_contents('php://input');
-            $data     = json_decode($rawInput, true);
-            $email    = $data['email'] ?? '';
-            $password = $data['password'] ?? '';
-            
-            // 1. Benutzer validieren (Deine Dashboard-Logik)
-            $user = $this->dashboard->verifyCredentials($email, $password);
-            
-            // Debug-Ausgabe für Entwicklung:
-            if (empty($email) || empty($password)) {
-                $this->dashboard->sendResponse(false, null, "E-Mail oder Passwort nicht übergeben.", 'error');
-                return ['success' => false];
-            }
-            
-            if ($user) {
-                $uid = (int)$user['id'];
-                $tid = (int)$user['tenant_id'];
-                // 2. Jetzt erst die Auth-Logik aufrufen
-                Auth::login($uid, $tid);
-                $this->dashboard->sendResponse(true, "Logged In", null, 'success');
-                //return ['success' => true];
-            }else{
-                $this->dashboard->sendResponse(false, null, "User not found: ". print_r($user, true), 'error');    
-            }
-        }catch(\Throwable $e) {
-            
-            $this->dashboard->sendResponse(false, null, "Login fehlgeschlagen! <br/>" . $e->getMessage(), 'error');
-            return ['success' => false, 'error' => 'Login fehlgeschlagen'];
+        $rawInput = file_get_contents('php://input');
+        $data     = json_decode($rawInput, true);
+        $email    = $data['email'] ?? '';
+        $password = $data['password'] ?? '';
+        
+        
+        // Debug-Ausgabe für Entwicklung:
+        if (empty($email) || empty($password)) {
+            throw new \Exception("E-Mail oder Passwort wurde nicht übergeben.");
         }
+        
+        // 3. Benutzer verifizieren
+        $user = $this->dashboard->verifyCredentials($email, $password);
+
+        if (!$user) {
+            throw new \Exception("Zugangsdaten ungültig!");
+        }
+
+        // 4. Auth-Session aufbauen
+        $uid = (int)$user['id'];
+        $tid = (int)$user['tenant_id'];
+        
+        // Auth::login generiert das neue CSRF-Token und schreibt die Session
+        $csrfToken = Auth::login($uid, $tid);
+
+        // 5. Daten zurückgeben (Der Router kümmert sich um sendResponse)
+        return [
+            'success' => true,
+            'status'  => 'success',
+            'details' => [
+                'message'    => 'Logged In',
+                'user_id'    => $uid,
+                'tenant_id'  => $tid,
+                'csrf_token' => $csrfToken
+            ],
+            'error' => null
+        ];
         
     }
     /**
@@ -72,9 +79,9 @@ class AuthController extends \App\Core\BaseController
             // 1. Passwort sicher hashen
             // PASSWORD_DEFAULT nutzt aktuell den sichersten Algorithmus (aktuell bcrypt)
             
-            return $this->dashboard->sendResponse(true, print_r($ret, true), "", 'success');
+            //$this->dashboard->sendResponse(true, print_r($ret, true), "", 'success');
         }catch(\Throwable $e) {
-            return $this->dashboard->sendResponse(false, "", $e->getMessage(), 'error');
+            //$this->dashboard->sendResponse(false, "", $e->getMessage(), 'error');
         }
         
     }
@@ -126,14 +133,14 @@ class AuthController extends \App\Core\BaseController
             $success = $this->dashboard->resetPasswordWithToken($token, $newPassword);
 
             if ($success) {
-                $this->dashboard->sendResponse(true, "Passwort wurde erfolgreich geändert.", null, 'success');
+                //$this->dashboard->sendResponse(true, "Passwort wurde erfolgreich geändert.", null, 'success');
                 return ['success' => true];
             } else {
                 throw new \Exception("Der Link ist ungültig oder abgelaufen.");
             }
 
         } catch (\Throwable $e) {
-            $this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
+            //$this->dashboard->sendResponse(false, null, $e->getMessage(), 'error');
             return ['success' => false];
         }
     }
