@@ -46,7 +46,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 $receivedToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($headers['X-CSRF-TOKEN'] ?? 'KEIN_TOKEN');
 $action = $_REQUEST['action'] ?? '';
 // Liste der Aktionen, die KEIN CSRF-Token benötigen
-$publicActions = ['login', 'register'];
+$publicActions = ['login', 'register', 'forgot_password', 'reset_password'];
 if (isset($_GET['debug']) && $_GET['debug']=='debugMe'){
 
 }elseif(!in_array($action, $publicActions)) {
@@ -79,6 +79,8 @@ $routes = [
     // Auth
     'login'                         => [App\Api\AuthController::class, 'login'],
     'register'                      => [App\Api\AuthController::class, 'register'],
+    'forgot_password'               => [App\Api\AuthController::class, 'forgotPassword'],
+    'reset_password'                => [App\Api\AuthController::class, 'resetPassword'],
     'global_search'                 => [App\Api\SystemController::class, 'globalSearch'],
 
     // Settings
