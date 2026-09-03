@@ -48,8 +48,7 @@ class Database
         $this->pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_PERSISTENT         => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+            PDO::ATTR_PERSISTENT         => false
         ]);
         
         self::$sharedPdo = $this->pdo;
@@ -59,7 +58,7 @@ class Database
 
     private function getDebugSql(string $sql, array $params): string
     {
-        $isDebug = (defined('APP_DEBUG') && APP_DEBUG === true);
+        $isDebug = (defined('APP_DEBUG') && \APP_DEBUG === true);
 
         if (str_contains($sql, ':tenant_id')) {
             $isGlobalTable = preg_match('/users|tenants|global_config|error_logs|logs/i', $sql);
