@@ -313,4 +313,9 @@ class MailController extends \App\Core\BaseController
     {
         return $this->process($this->mailProcess, 'getAccelorateClusters', 'accelorate_clusters','');
     }
+
+    public function getMailsThatShouldBeAnswered()
+    {
+        return $this->process($this->mailProcess, 'getMailsThatShouldBeAnswered', 'mails_to_answer','');
+    }
 }

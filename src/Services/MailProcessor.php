@@ -1222,47 +1222,41 @@ class MailProcessor extends \App\Core\Database
     public function getAccelorateClusters(int $weeks = 4, $unlimited = 0)
     {
         $sql = "WITH aggregated_mails AS (
-                    SELECT 
-                        ce.email AS sender,
-                        m.imap_folder AS folder,
-                        COUNT(*) AS mail_count,
-                        MAX(m.date_received) AS latest_received,
-                        MAX(COALESCE(NULLIF(c.display_name, ''), ce.email)) as showname
-                    FROM `mails` as m
-                    INNER JOIN contact_emails ce ON ce.`id` = CASE 
-                        WHEN m.imap_folder = 'Sent Messages' THEN m.recipient_ceid 
-                        ELSE m.sender_ceid 
-                    END
-                    LEFT JOIN contacts c ON c.id = ce.contact_id
-                    WHERE m.tenant_id = :tenant_id
-                    AND m.status NOT IN ('deleted')
-                    -- Universeller Zeitraum-Filter: Greift bei :weeks = 0 komplett (Alle), ansonsten auf die Wochenbasis
-                    AND (:weeks = 0 OR m.date_received >= NOW() - INTERVAL :weeks WEEK)
-                    -- Flexibler Filter je nach Ordnertyp und Status
-                    AND (
-                        (m.imap_folder IN ('INBOX', 'Sent Messages') AND m.`status` = 'active')
-                        OR
-                        (m.imap_folder IN ('DMS', 'DMSDone') AND m.`status` IN ('active', 'dms', 'archived', 'DMSDone'))
-                    )
-                    AND ce.email NOT LIKE 'noreply%'
-                    AND ce.email NOT LIKE 'no-reply%'
-                    GROUP BY ce.email, m.imap_folder
-                    HAVING mail_count > 1
-                ),
-                ranked_clusters AS (
-                    SELECT 
-                        showname,
-                        sender,
-                        folder,
-                        mail_count,
-                        latest_received,
-                        ROW_NUMBER() OVER (PARTITION BY folder ORDER BY latest_received DESC) as rank_num
-                    FROM aggregated_mails
+                SELECT 
+                    -- Welches E-Mail-Konto betrachten wir? (Sender bei Inbound, Recipient bei Outbound)
+                    CASE WHEN v.imap_folder = 'Sent Messages' THEN v.recipient_email ELSE v.sender_email END AS sender,
+                    v.contact_name AS showname,
+                    v.imap_folder AS folder,
+                    COUNT(v.mail_id) AS mail_count,
+                    MAX(v.date_received) AS latest_received
+                FROM vw_mails_resolved v
+                WHERE v.tenant_id = :tenant_id
+                AND v.status NOT IN ('deleted')
+                AND (:weeks = 0 OR v.date_received >= NOW() - INTERVAL :weeks WEEK)
+                AND (
+                    (v.imap_folder IN ('INBOX') AND v.status = 'active')
+                    OR
+                    (v.imap_folder IN ('DMS', 'DMSDone') AND v.status IN ('active', 'dms', 'archived', 'DMSDone'))
                 )
-                SELECT showname, sender, folder, mail_count, latest_received
-                FROM ranked_clusters
-                WHERE rank_num <= 5
-                ORDER BY folder, latest_received DESC;";
+                AND v.sender_email NOT LIKE 'noreply%'
+                AND v.sender_email NOT LIKE 'no-reply%'
+                GROUP BY sender, showname, v.imap_folder
+                HAVING mail_count > 1
+            ),
+            ranked_clusters AS (
+                SELECT 
+                    showname,
+                    sender,
+                    folder,
+                    mail_count,
+                    latest_received,
+                    ROW_NUMBER() OVER (PARTITION BY folder ORDER BY latest_received DESC) AS rank_num
+                FROM aggregated_mails
+            )
+            SELECT showname, sender, folder, mail_count, latest_received
+            FROM ranked_clusters
+            WHERE rank_num <= 5
+            ORDER BY folder, latest_received DESC";
 
         $a = $this->queryIt(
             $sql, 
@@ -1277,47 +1271,98 @@ class MailProcessor extends \App\Core\Database
 
     public function getMailsThatShouldBeArchived()
     {
-        $sql ="WITH contact_group_emails AS (
-            SELECT ce_all.email
-            FROM contact_emails ce_target
-            INNER JOIN contact_emails ce_all ON ce_all.contact_id = ce_target.contact_id
-            WHERE ce_target.email IN (
-                SELECT ce.email
-                FROM `mails` m
-                INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
-                WHERE m.tenant_id = :tenant_id
-                AND m.imap_folder IN ('DMS', 'DMSDone')
-                GROUP BY ce.email
-                HAVING COUNT(*) > 0
-            )
-            GROUP BY ce_all.email
-        ),
-        dms_senders AS (
-            SELECT email AS sender_email FROM contact_group_emails
-        )
-        SELECT 
-            ce.email AS sender,
-            COALESCE(NULLIF(c.display_name, ''), ce.email) AS showname,
-            COUNT(m.id) AS unarchived_count,
-            MAX(m.date_received) AS latest_received
-        FROM `mails` m
-        INNER JOIN contact_emails ce ON ce.id = m.sender_ceid
-        LEFT JOIN contacts c ON c.id = ce.contact_id
-        INNER JOIN dms_senders ds ON ds.sender_email = ce.email
-        WHERE m.tenant_id = :tenant_id
-        AND m.imap_folder = 'INBOX'
-        AND m.status = 'active'
-        AND NOT EXISTS (
-            SELECT 1 
-            FROM `mails` m_dms 
-            INNER JOIN contact_emails ce_dms ON ce_dms.id = m_dms.sender_ceid
-            WHERE m.tenant_id = :tenant_id
-                AND ce_dms.email = ce.email 
-                AND m_dms.imap_folder IN ('DMS', 'DMSDone')
-        )
-        GROUP BY ce.email, c.display_name
-        ORDER BY unarchived_count DESC, latest_received DESC;";
+        $sql =" WITH contact_group_emails AS (
+                    SELECT DISTINCT ce_all.email
+                    FROM vw_mails_resolved v_target
+                    INNER JOIN contact_emails ce_all ON ce_all.contact_id = v_target.sender_contact_id
+                    WHERE v_target.tenant_id = :tenant_id
+                    AND v_target.imap_folder IN ('DMS', 'DMSDone')
+                ),
+                dms_senders AS (
+                    SELECT email AS sender_email FROM contact_group_emails
+                )
+                SELECT 
+                    v.sender_email AS sender,
+                    v.contact_name AS showname,
+                    COUNT(v.mail_id) AS unarchived_count,
+                    MAX(v.date_received) AS latest_received
+                FROM vw_mails_resolved v
+                INNER JOIN dms_senders ds ON ds.sender_email = v.sender_email
+                WHERE v.tenant_id = :tenant_id
+                AND v.imap_folder = 'INBOX'
+                AND v.status = 'active'
+                AND NOT EXISTS (
+                    SELECT 1 
+                    FROM vw_mails_resolved v_dms 
+                    WHERE v_dms.tenant_id = v.tenant_id
+                        AND v_dms.sender_email = v.sender_email 
+                        AND v_dms.imap_folder IN ('DMS', 'DMSDone')
+                )
+                GROUP BY v.sender_email, v.contact_name
+                ORDER BY unarchived_count DESC, latest_received DESC;";
+
+        $dbResult = $this->queryIt(
+            $sql,
+            [],
+            false,
+            false,
+            true
+        );
+
+        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
+            $dbResult->data->fetched :
+            [];
     }
+
+    public function getMailsThatShouldBeAnswered(int $weeks = 4)
+    {
+        $sql =" SELECT 
+                    v.contact_id,
+                    v.contact_name,
+                    
+                    -- 🎯 1. Holt exakt die mail_id der neuesten unbeantworteten Mail:
+                    CAST(
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(v.mail_id ORDER BY v.date_received DESC, v.mail_id DESC), 
+                            ',', 1
+                        ) AS UNSIGNED
+                    ) AS latest_mail_id,
+
+                    GROUP_CONCAT(DISTINCT v.sender_email SEPARATOR ', ') AS associated_emails,
+                    COUNT(v.mail_id) AS unanswered_count,
+                    MAX(v.date_received) AS latest_unanswered_date,
+                    r.response_rate_pct
+                FROM vw_mails_resolved v
+                INNER JOIN vw_contact_response_rates r 
+                    ON r.contact_id = v.contact_id AND r.tenant_id = v.tenant_id
+                WHERE v.tenant_id = :tenant_id
+                AND v.status = 'active'
+                AND v.is_answered = 0
+                AND v.is_newsletter = 0
+                AND (:weeks = 0 OR v.date_received >= NOW() - INTERVAL :weeks WEEKS)
+                AND r.response_rate_pct >= 30.0
+                AND r.total_mails >= 2
+                GROUP BY v.contact_id, v.contact_name, r.response_rate_pct
+                HAVING unanswered_count <= 15
+                ORDER BY latest_unanswered_date DESC, r.response_rate_pct DESC";
+
+        
+        // 3. Ausführung über deine native queryIt-Methode
+        $dbResult = $this->queryIt(
+            $sql,
+            ['weeks' => $weeks],
+            false,
+            false,
+            true
+        );
+
+        return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?
+            $dbResult->data->fetched :
+            [];
+
+    }
+
+    
 
     /**
      * Prüft unfertige lokale Mails gegen die realen IMAP-Ordner.

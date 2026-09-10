@@ -221,7 +221,7 @@ class Dashboard
     /**
      * Standard-Antwort an JSON
      */
-    public static function sendResponse(bool $success, $data = null, ?string $error = null, string $status = 'success'): void 
+    public static function sendResponse(bool $success, $data = null, ?string $error = null, ?string $status = 'success'): void 
     {
         header('Content-Type: application/json');
         $status = $status ?? 'success';

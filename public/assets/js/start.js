@@ -1,22 +1,18 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('dashboardView', () => ({
         // Zählerstände deiner IMAP-Ordner/DMS-Pipeline
-        pipeline: {
-            inbox: 20,
-            dms: 2,
-            done: 412,
+        isLoadingClusters: false,
+        paperlessInfo: {
+            details: {
+                paperless_info: {}
+            },
             timeFilter: 4
         },
-
-        // Memos, die heute fällig sind oder deren due_date in der Vergangenheit liegt
         criticalMemos: [], 
-        
-        // Die nächsten Kalendereinträge
         upcomingEvents: [],
-
         acceleratorClusters: [],
-        
-        lastDocs:[],
+        lastDocs: [],
+        shouldBeAnswered: [],
 
         init() {
             // Hier würdest du deine API-Endpunkte triggern, um die Daten zu füttern
@@ -25,6 +21,8 @@ document.addEventListener('alpine:init', () => {
 
         async loadDashboardData() {
             this.isLoadingClusters = true;
+            this.paperlessInfo = await apiCall('get_paperless_info', {}, 'GET');
+
             // Beispiel-Inhalt für Memos (Simulation)
             this.criticalMemos = [
                 { id: 101, content: 'Smarte Wohnwagen-Upgrades prüfen & DMS checken', due_date: '2026-06-11', email: 'no-reply@shelly.cloud' },
@@ -44,7 +42,9 @@ document.addEventListener('alpine:init', () => {
 
             let memos = await apiCall('get_critical_memos', {}, 'GET');
             let events = await apiCall('get_upcoming_events', {}, 'GET');
-            
+
+            let shouldBeAnswered = await apiCall('get_mails_that_should_be_answered', {}, 'GET');
+
             // (Falls correspondent_name im Objekt fehlt, nutzen wir correspondent als Fallback)
             const rawDocs = pD?.details?.last_docs || [];
             this.lastDocs = rawDocs.slice(0, 5).map(doc => ({
@@ -53,19 +53,20 @@ document.addEventListener('alpine:init', () => {
                 correspondent_name: doc.correspondent_name || (doc.correspondent ? `ID: ${doc.correspondent}` : 'Unbekannt')
             }));
 
+            this.shouldBeAnswered = shouldBeAnswered?.details?.mails_to_answer || [];
             this.upcomingEvents = events?.details?.upcoming_events || [];
         },
 
         async fetchClusters() {
             this.isLoadingClusters = true;
-            let weeksParam = this.pipeline.timeFilter === 'all' ? 999 : parseInt(this.pipeline.timeFilter);
+            let weeksParam = this.paperlessInfo.timeFilter === 'all' ? 999 : parseInt(this.paperlessInfo.timeFilter);
             let aC = await apiCall('get_accelerate_cluster', { weeks: weeksParam }, 'GET');
             this.acceleratorClusters = aC?.details?.accelorate_clusters || [];
             this.isLoadingClusters = false;
         },
 
         async changeTimeFilter(e) {
-            this.pipeline.timeFilter = e.target.value;
+            this.paperlessInfo.timeFilter = e.target.value;
             await this.fetchClusters();
         },
 
@@ -94,8 +95,8 @@ document.addEventListener('alpine:init', () => {
             // Hier fetch() an deine api.php senden, die im Hintergrund das IMAP-Moving regelt.
             // Nach Erfolg aus dem Array werfen:
             this.acceleratorClusters = this.acceleratorClusters.filter(c => c.sender !== cluster.sender);
-            this.pipeline.inbox -= cluster.count;
-            this.pipeline.dms += cluster.count;
+            this.paperlessInfo.inbox -= cluster.count;
+            this.paperlessInfo.dms += cluster.count;
         }
     }));
 });

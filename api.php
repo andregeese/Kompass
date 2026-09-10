@@ -122,6 +122,7 @@ $routes = [
     'search_mail'                   => [App\Api\MailController::class, 'searchMail'],
     'get_recent_mails'              => [App\Api\MailController::class, 'getRecentMails'],
     'get_mail_data_for_note'        => [App\Api\MailController::class, 'getMailById'],
+    'get_mails_that_should_be_answered' => [App\Api\MailController::class, 'getMailsThatShouldBeAnswered'],
 
     // Appointments
     'get_appointment'               => [App\Api\AppointmentsController::class, 'getAppointment'],
@@ -134,6 +135,7 @@ $routes = [
     'update_appointment_contact'    => [App\Api\AppointmentsController::class, 'updateAppointment'],
 
     // Paperless
+    'get_paperless_info'            => [App\Api\PaperlessController::class, 'getPaperlessInfos'],
     'get_last_documents'            => [App\Api\PaperlessController::class, 'getLastDocuments'],
     'get_last_unclassified'         => [App\Api\PaperlessController::class, 'getLastUnclassifiedDocuments'],
     'get_total_document_count'      => [App\Api\PaperlessController::class, 'getTotalDocumentCount'],
@@ -214,10 +216,10 @@ try {
     }
 
     \App\Dashboard::sendResponse(
-        true, 
-        $responseBody['details'], 
-        null, 
-        $responseBody['status']
+        (bool)($responseBody['success'] ?? true), 
+        $responseBody['details'] ?? new \stdClass(), 
+        $responseBody['error'] ?? null, 
+        $responseBody['status'] ?? 'success' // <-- FIX: Garantiert IMMER einen String!
     );
 
 } catch (\Throwable $e) {

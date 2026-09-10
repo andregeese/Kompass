@@ -229,6 +229,7 @@ function dispatchAction(action, context, triggerElement) {
         'mail_view':        (ctx) => window.loadMailByHash?.(ctx.id),
         'note_add':         (ctx) => openNoteModal(ctx.uid, ctx.folder),
         'mail_archive':     (ctx) => archiveMail(ctx.uid, triggerElement),
+        'contact_view':        (ctx) => window.loadMailByHash?.(ctx.id),
         
         'open_modal_notes': (ctx) => {
             const params = new URLSearchParams();

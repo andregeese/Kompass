@@ -76,6 +76,53 @@ class PaperlessProcessor extends \App\Core\Database
         return $result;
     }
 
+    public function getPaperlessInfos()
+    {
+        $paperless = [
+            'archvied'=> $this->getArchivedDocuments(), 
+            'unclassified'=> $this->getUnclassified(), 
+            'dms'=> $this->getTotalDocs(), 
+            'recipients' => $this->getRecipients()
+        ];
+
+        return $paperless;
+    }
+
+    private function getArchivedDocuments():int
+    {
+        $json = $this->request('/api/documents/?is_in_archive=true');
+        $data = json_decode($json, true);
+
+        return $data['count'] ?? 0;
+    }
+
+    private function getUnclassified()
+    {
+        $endpoint = '/api/documents/?correspondent__isnull=true&document_type__isnull=true';
+        $json = $this->request($endpoint);
+        
+        $data = json_decode($json, true);
+
+        return $data['count'] ?? 0;
+    }
+
+    private function getTotalDocs()
+    {
+        $json = $this->request('/api/documents/?page_size=1');
+        $data = json_decode($json, true);
+        
+        return $data['count'] ?? 0;
+    }
+
+    private function getRecipients()
+    {
+        $json = $this->request('/api/correspondents/?page_size=1000');
+        $data = json_decode($json, true);
+        
+
+        return $data['count'] ?? 0;
+    }
+
     public function getCorrespondentByContact($cid)
     {
         $sql = "SELECT correspondent_id 
@@ -794,7 +841,7 @@ class PaperlessProcessor extends \App\Core\Database
             'cid' => $cid
         ];
 
-        $dbResult = $this->queryIt($sql, $params, false, false, true);
+        $dbResult = $this->queryIt($sql, $params, false, false, false);
 
         if (!$dbResult->success){
             throw new Exception("Fehler beim Abrufen der Tags");

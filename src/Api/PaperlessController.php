@@ -19,6 +19,9 @@ class PaperlessController extends \App\Core\BaseController {
         parent::__construct($dashboard); 
     }
 
+    public function getPaperlessInfos() {
+        return $this->process($this->paperlessProcess, 'getPaperlessInfos', 'paperless_info', '');
+    }
     /**
      * Sucht in Paperless nach Dokumenten anhand von 
      * @param string $query
