@@ -65,21 +65,57 @@ Das bedeutet für dich: Du darfst den Quellcode zu Transparenzzwecken frei einse
 
 ---
 
-## ⚡ Schnellstart (Installation in 5 Minuten)
-
-(../../Dockerfile)
+## ⚡ Schnellstart (Installation in 4 Schritten)
 
 Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) müssen installiert sein.
 
-1. **Repository klonen:**
+1. **erstelle das Dockerfile:**
+
+```bash
+# PHP 8.4 / 8.5 auf Debian Bookworm
+FROM php:8.5-apache-bookworm
+
+# 1. System-Abhängigkeiten & MySQL 9.7-Clients
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    libc-client-dev \
+    libkrb5-dev \
+    default-mysql-client \
+    default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. PDO und ZIP installieren
+RUN docker-php-ext-install pdo pdo_mysql zip
+
+# 3. IMAP via PECL installieren (Neu ab PHP 8.4)
+RUN pecl install imap \
+    && docker-php-ext-enable imap
+
+# 4. Apache Rewrite-Modul aktivieren
+RUN a2enmod rewrite
+
+# 5. Composer installieren
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# 6. Arbeitsverzeichnis setzen
+WORKDIR /var/www/html
+
+```
+
+
+
+2. **Repository klonen:**
 ```bash
 
-git clone https://github.com/abwurfzone/Kompass.git
+git clone https://github.com/andregeese/Kompass.git
 cd DEIN-REPO
 
 ```
 
-2.  **Konfiguration:**
+3.  **Konfiguration:**
     Kopiere die Vorlage und setze deine Einstellungen:
 ```bash
 
@@ -94,7 +130,7 @@ nano .env
 
 ```
 
-3. **Starten:**
+4. **Starten:**
 ```bash
 
 docker-compose up -d
