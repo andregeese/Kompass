@@ -1,0 +1,33 @@
+{
+    "name": "age/age-archive",
+    "description": "Enterprise Mail Archive",
+    "require": {
+        "php": ">=8.4",
+        "dompdf/dompdf": "^3.0",
+        "ezyang/htmlpurifier": "^4.19",
+        "sabre/dav": "^4.7",
+        "sabre/vobject": "^4.6",
+        "symfony/mime": "^8.1",
+        "webklex/php-imap": "^6.2",
+        "egulias/email-validator": "^4.0",
+        "minishlink/web-push": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        },
+        "platform": {
+            "ext-imap": "8.4"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.3",
+        "phpstan/phpstan": "^2.2"
+    }
+}

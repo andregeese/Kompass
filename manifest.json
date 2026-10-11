@@ -1,0 +1,31 @@
+{
+  "name": "Enterprise Hub & CRM",
+  "short_name": "Hub",
+  "description": "Digitales KMU Dashboard mit verschlüsselter Mail- und DMS-Suche sowie Offline-CRM.",
+  "start_url": "index.php",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#0284c7",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
