@@ -67,13 +67,12 @@ Das bedeutet für dich: Du darfst den Quellcode zu Transparenzzwecken frei einse
 
 ## ⚡ Schnellstart (Installation in 5 Minuten)
 
-[text](../../Dockerfile)
+(../../Dockerfile)
 
 Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) müssen installiert sein.
 
 1. **Repository klonen:**
 ```bash
-```
 
 git clone https://github.com/abwurfzone/Kompass.git
 cd DEIN-REPO
