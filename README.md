@@ -83,16 +83,13 @@ cd DEIN-REPO
     Kopiere die Vorlage und setze deine Einstellungen:
     ```bash
 cp .env.example .env
+```
+
 # Öffne die .env Datei und passe das DB-Passwort an
 nano .env
 
-```
-
 3. **Starten:**
 ```bash
-
-```
-
 
 
 docker-compose up -d
