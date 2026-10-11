@@ -92,7 +92,7 @@ cp .env.example .env
 
 nano .env
 
-```bash
+```
 
 3. **Starten:**
 ```bash
