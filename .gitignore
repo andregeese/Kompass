@@ -10,6 +10,7 @@ Logs und Debug-Ausgaben
 .log.
 php_debug.log
 debug.log
+debug*
 php.log
 caldav_debug.xml
 

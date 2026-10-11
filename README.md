@@ -111,7 +111,7 @@ WORKDIR /var/www/html
 ```bash
 
 git clone https://github.com/andregeese/Kompass.git
-cd DEIN-REPO
+cd /DEIN-REPO
 
 ```
 
@@ -130,7 +130,13 @@ nano .env
 
 ```
 
-4. **Starten:**
+4. **Compose:**
+```bash
+
+docker exec -it webserver composer dump-autoload -o --working-dir=/DEIN-REPO
+```
+
+5. **Starten:**
 ```bash
 
 docker-compose up -d
