@@ -1,11 +1,37 @@
+.env
+.env.*
+!.env.example
+config.php
+conifg.php
+
+Logs und Debug-Ausgaben
+
+*.log
+.log.
 php_debug.log
 debug.log
-.log
 php.log
-conifg.php
-.env
-.sh
 caldav_debug.xml
-/OLD_WP/
+
+PHP-Abhängigkeiten
+
 /vendor/
+
+Lokale Skripte und alte Versionen
+
 /scripts/
+/OLD_WP/
+
+Betriebssystem und IDE
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+Temporäre Dateien
+
+*.tmp
+*.temp
+*.swp
+*.bak
