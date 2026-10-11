@@ -1319,8 +1319,6 @@ class MailProcessor extends \App\Core\Database
         $sql =" SELECT 
                     v.contact_id,
                     v.contact_name,
-                    
-                    -- 🎯 1. Holt exakt die mail_id der neuesten unbeantworteten Mail:
                     CAST(
                         SUBSTRING_INDEX(
                             GROUP_CONCAT(v.mail_id ORDER BY v.date_received DESC, v.mail_id DESC), 
@@ -1339,7 +1337,7 @@ class MailProcessor extends \App\Core\Database
                 AND v.status = 'active'
                 AND v.is_answered = 0
                 AND v.is_newsletter = 0
-                AND (:weeks = 0 OR v.date_received >= NOW() - INTERVAL :weeks WEEKS)
+                AND (:weeks = 0 OR v.date_received >= NOW() - INTERVAL :weeks WEEK)
                 AND r.response_rate_pct >= 30.0
                 AND r.total_mails >= 2
                 GROUP BY v.contact_id, v.contact_name, r.response_rate_pct
@@ -1353,7 +1351,7 @@ class MailProcessor extends \App\Core\Database
             ['weeks' => $weeks],
             false,
             false,
-            true
+            false
         );
 
         return ($dbResult->success && !empty($dbResult->data) && !empty($dbResult->data->fetched)) ?

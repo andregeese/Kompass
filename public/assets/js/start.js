@@ -5,9 +5,9 @@ document.addEventListener('alpine:init', () => {
         paperlessInfo: {
             details: {
                 paperless_info: {}
-            },
-            timeFilter: 4
+            }
         },
+        timeFilter: 4,
         criticalMemos: [], 
         upcomingEvents: [],
         acceleratorClusters: [],
@@ -43,7 +43,8 @@ document.addEventListener('alpine:init', () => {
             let memos = await apiCall('get_critical_memos', {}, 'GET');
             let events = await apiCall('get_upcoming_events', {}, 'GET');
 
-            let shouldBeAnswered = await apiCall('get_mails_that_should_be_answered', {}, 'GET');
+            let weeksParam = this.timeFilter === 'all' ? 0 : parseInt(this.timeFilter);
+            let shouldBeAnswered = await apiCall('get_mails_that_should_be_answered', { weeks: weeksParam }, 'GET');
 
             // (Falls correspondent_name im Objekt fehlt, nutzen wir correspondent als Fallback)
             const rawDocs = pD?.details?.last_docs || [];
@@ -59,14 +60,14 @@ document.addEventListener('alpine:init', () => {
 
         async fetchClusters() {
             this.isLoadingClusters = true;
-            let weeksParam = this.paperlessInfo.timeFilter === 'all' ? 999 : parseInt(this.paperlessInfo.timeFilter);
+            let weeksParam = this.timeFilter === 'all' ? 0 : parseInt(this.timeFilter);
             let aC = await apiCall('get_accelerate_cluster', { weeks: weeksParam }, 'GET');
             this.acceleratorClusters = aC?.details?.accelorate_clusters || [];
             this.isLoadingClusters = false;
         },
 
         async changeTimeFilter(e) {
-            this.paperlessInfo.timeFilter = e.target.value;
+            this.timeFilter = e.target.value;
             await this.fetchClusters();
         },
 

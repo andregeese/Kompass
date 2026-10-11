@@ -29,7 +29,7 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <!-- Unklassifiziert / Posteingang -->
         <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-sm text-center space-y-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-gray-500 block">📥 Offen</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-gray-500 block">📥 Ohne Dokumententyp</span>
             <span class="text-xl font-black text-blue-600 dark:text-blue-400 block font-mono" x-text="paperlessInfo?.details?.paperless_info?.unclassified || 0">0</span>
         </div>
 
@@ -42,7 +42,7 @@
 
         <!-- Archiviert -->
         <div class="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-sm text-center space-y-1">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-gray-500 block">✅ Archiviert</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-gray-500 block">✅ Archiviert (letzte 4W)</span>
             <span class="text-xl font-black text-emerald-500 block font-mono" x-text="paperlessInfo?.details?.paperless_info?.archvied || paperlessInfo?.details?.paperless_info?.archived || 0">0</span>
         </div>
 
@@ -65,7 +65,7 @@
                     </svg>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <select id="timeFilter" x-model="paperlessInfo.timeFilter" @change="changeTimeFilter($event)" class="bg-slate-900 text-slate-300 text-[10px] border border-slate-700 rounded-md px-2 py-0.5 focus:outline-none focus:border-blue-500">
+                    <select id="timeFilter" x-model="timeFilter" @change="changeTimeFilter($event)" class="bg-slate-900 text-slate-300 text-[10px] border border-slate-700 rounded-md px-2 py-0.5 focus:outline-none focus:border-blue-500">
                         <option value="4">4 Wochen</option>
                         <option value="8">8 Wochen</option>
                         <option value="12">12 Wochen</option>

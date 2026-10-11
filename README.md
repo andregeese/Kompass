@@ -1,7 +1,7 @@
-Enterprise CRM Hub
+Kompass by abwurfzone
 Source Available CRM System
 
-Enterprise CRM Hub ist eine spezialisierte CRM-Lösung zur effizienten Verwaltung von Korrespondenz, Kontakten und Terminen.
+Kompass by abwurfzone ist eine spezialisierte Digitalisierungsplattform zur effizienten Verwaltung von Korrespondenz, Kontakten und Terminen.
 
 ⚠️ Wichtige Lizenzbedingungen (BSL 1.1)
 Dieses Projekt wird als "Source Available"-Software unter der Business Source License (BSL) 1.1 bereitgestellt. Wir legen den Quellcode zu Transparenzzwecken offen, damit unsere Nutzer nachvollziehen können, wie das System arbeitet.
@@ -36,15 +36,15 @@ Copyright (c) 2026 Kompass by abwurfzone by André Geese. All rights reserved.
 **WIR verzweigen Mails und Digitale System (hier am Beispiel von paperless-ngx) und setzen noch einen drauf in dem wir Termin und Notizen pro E-Mail-Adresse hinterlegen können.**
 
 
-# 🚀 [Kompass by abwurfzone]
+# 🚀 Kompass by abwurfzone
 
-**Dein lokales CRM für E-Mails, Dokumente & Termine – sicher gehostet bei dir.**
+**Dein lokales Tool für E-Mails, Dokumente, Notizen und Termine – sicher gehostet bei dir.**
 
 ---
 
-[Kompass by abwurfzone] ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
+Kompass by abwurfzone ist die einfache, datenschutzkonforme Lösung für KMU und Vereine, um den Überblick über Kontakte, E-Mail-Korrespondenz und wichtige Dokumente zu behalten – ohne monatliche Abogebühren und ohne Cloud-Zwang.
 
-## 🌟 Warum [Kompass by abwurfzone]?
+## 🌟 Wozu Kompass by abwurfzone?
 
 * **Datensouveränität:** Deine Daten bleiben bei dir auf deinem Server oder NAS. Du behältst die volle Kontrolle.
 * **Alles an einem Ort:** Synchronisiere deine E-Mails mit Paperless-Dokumenten, verwalte Termine und Notizen direkt am Kontakt.
@@ -73,10 +73,7 @@ Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compo
 
 1. **Repository klonen:**
 ```bash
-
 ```
-
-
 
 git clone https://github.com/abwurfzone/Kompass.git
 cd DEIN-REPO
@@ -103,7 +100,7 @@ docker-compose up -d
 
 ```
 
-Dein CRM ist nun unter `http://localhost:8080` erreichbar.
+Dein Kompass ist nun unter `http://localhost:8080` erreichbar.
 
 ---
 
@@ -129,238 +126,3 @@ Dieses Projekt ist Open Source. Wenn dir das Tool gefällt und du es in deinem V
 
 ---
 *Entwickelt mit ❤️ für Vereine und KMU.*
-
-
--- AGE:
-docker exec -it webserver composer dump-autoload -o --working-dir=/var/www/html/age_web
-composer install!! ist wichtig, wenn ich nicht vendor ins git packe
-
-Verschlüsselungen von id aus DB
-UPDATE: 
-AND id=CAST(AES_DECRYPT(UNHEX(:id), :crypto_key) AS UNSIGNED);";
-
-SELECT 
-HEX(AES_ENCRYPT(CAST(a.id as CHAR), :crypto_key)) as id, 
-
-crypto_key ist ein schüssel der direkt injektiert wird in der SQL!
-
-
-SET FOREIGN_KEY_CHECKS = 0;
-TRUNCATE table contact_emails;
-TRUNCATE table contacts;
-TRUNCATE table mails;
-TRUNCATE table imap_sync_checkpoint;
-TRUNCATE table contact_paperless_map;
-TRUNCATE table notes;
-SET FOREIGN_KEY_CHECKS = 1;
-
-# SQL:
--- Adminer 5.4.2 MySQL 8.3.0 dump
-
-SET NAMES utf8;
-SET time_zone = '+00:00';
-SET foreign_key_checks = 0;
-
-SET NAMES utf8mb4;
-
-CREATE DATABASE `Dashboard` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `Dashboard`;
-
-DROP TABLE IF EXISTS `appointments`;
-CREATE TABLE `appointments` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int NOT NULL,
-  `uid` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `summary` text COLLATE utf8mb4_unicode_ci,
-  `start_time` datetime DEFAULT NULL,
-  `end_time` datetime DEFAULT NULL,
-  `location` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ical_data` text COLLATE utf8mb4_unicode_ci,
-  `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  `ceid` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_tenant_perf_dates` (`tenant_id`,`start_time`,`end_time`),
-  CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `contact_emails`;
-CREATE TABLE `contact_emails` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `contact_id` int NOT NULL,
-  `tenant_id` int NOT NULL,
-  `email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `email_hash` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `contact_id` (`contact_id`),
-  KEY `idx_tenant_email` (`tenant_id`,`email`(191)),
-  KEY `idx_tenant_email_hash` (`tenant_id`,`email_hash`),
-  CONSTRAINT `contact_emails_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `contact_emails_ibfk_2` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `contact_paperless_map`;
-CREATE TABLE `contact_paperless_map` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `contact_id` int NOT NULL,
-  `correspondent_id` int DEFAULT NULL,
-  `tag_id` int DEFAULT NULL,
-  `tenant_id` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `contact_id` (`contact_id`),
-  KEY `idx_tenant_contact` (`tenant_id`,`contact_id`),
-  CONSTRAINT `contact_paperless_map_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `contact_paperless_map_ibfk_2` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `contacts`;
-CREATE TABLE `contacts` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int NOT NULL,
-  `display_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `is_active` tinyint(1) DEFAULT '1',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_tenant_name` (`tenant_id`,`display_name`),
-  KEY `idx_tenant_type_active` (`tenant_id`,`type`,`is_active`),
-  CONSTRAINT `contacts_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `imap_sync_checkpoint`;
-CREATE TABLE `imap_sync_checkpoint` (
-  `tenant_id` int NOT NULL,
-  `imap_folder` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `last_uid` int DEFAULT NULL,
-  PRIMARY KEY (`tenant_id`,`imap_folder`),
-  CONSTRAINT `imap_sync_checkpoint_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `mail_bodies`;
-CREATE TABLE `mail_bodies` (
-  `mail_id` int NOT NULL,
-  `body_encrypted` text COLLATE utf8mb4_unicode_ci,
-  `body_search_index` text COLLATE utf8mb4_unicode_ci,
-  `body_hash` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`mail_id`),
-  CONSTRAINT `mail_bodies_ibfk_1` FOREIGN KEY (`mail_id`) REFERENCES `mails` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `mails`;
-CREATE TABLE `mails` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int NOT NULL,
-  `contact_id` int DEFAULT NULL,
-  `uid` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `message_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `subject_hash` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `sender` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `date_received` datetime DEFAULT NULL,
-  `imap_folder` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `is_read` tinyint(1) DEFAULT '0',
-  `is_flagged` tinyint(1) DEFAULT '0',
-  `is_answered` tinyint(1) DEFAULT '0',
-  `is_newsletter` tinyint(1) DEFAULT '0',
-  `sender_ceid` int DEFAULT NULL,
-  `recipient_ceid` int DEFAULT NULL,
-  `paperless_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `sender_ceid` (`sender_ceid`),
-  KEY `recipient_ceid` (`recipient_ceid`),
-  KEY `tenant_id_message_id_imap_folder` (`tenant_id`,`message_id`,`imap_folder`),
-  KEY `idx_tenant_folder_date` (`tenant_id`,`imap_folder`,`date_received` DESC),
-  KEY `idx_tenant_contact` (`tenant_id`,`contact_id`),
-  KEY `idx_tenant_subject` (`tenant_id`,`subject_hash`),
-  KEY `mails_ibfk_4` (`paperless_id`),
-  KEY `idx_tenant_uid` (`tenant_id`,`uid`),
-  KEY `idx_tenant_folder_uid` (`tenant_id`,`imap_folder`,`uid`),
-  CONSTRAINT `mails_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `mails_ibfk_2` FOREIGN KEY (`sender_ceid`) REFERENCES `contact_emails` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `mails_ibfk_3` FOREIGN KEY (`recipient_ceid`) REFERENCES `contact_emails` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `mails_ibfk_4` FOREIGN KEY (`paperless_id`) REFERENCES `contact_paperless_map` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `notes`;
-CREATE TABLE `notes` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int NOT NULL,
-  `mail_uid` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `mail_folder` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `content` text COLLATE utf8mb4_unicode_ci,
-  `category` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `due_date` datetime DEFAULT NULL,
-  `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `lokal_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ceid` int DEFAULT NULL,
-  `created_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  `updated_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_tenant_mail` (`tenant_id`,`mail_uid`),
-  KEY `idx_tenant_mail_folder` (`tenant_id`,`mail_folder`,`mail_uid`),
-  KEY `notes_ibfk_2` (`ceid`),
-  CONSTRAINT `notes_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `notes_ibfk_2` FOREIGN KEY (`ceid`) REFERENCES `contact_emails` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `system_errors`;
-CREATE TABLE `system_errors` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `message` text COLLATE utf8mb4_unicode_ci,
-  `file` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `line` int DEFAULT NULL,
-  `trace` text COLLATE utf8mb4_unicode_ci,
-  `url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_created_at` (`created_at` DESC),
-  KEY `idx_tenant_created` (`tenant_id`,`created_at` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `tenant_config`;
-CREATE TABLE `tenant_config` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int NOT NULL,
-  `config_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `config_value` text COLLATE utf8mb4_unicode_ci,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_config` (`tenant_id`,`config_key`),
-  CONSTRAINT `tenant_config_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `tenants`;
-CREATE TABLE `tenants` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `tenant_id` int DEFAULT NULL,
-  `username` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_tenant_username` (`tenant_id`,`username`),
-  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- 2026-07-08 07:57:50 UTC

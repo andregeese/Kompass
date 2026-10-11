@@ -35,44 +35,60 @@ class PaperlessProcessor extends \App\Core\Database
     /**
      * Zentraler cURL-Handler für alle Paperless-API-Requests
      */
-    private function request(string $endpoint, string $method = 'GET', array $postData = []): string
+    private function request(string $endpoint, string $method = 'GET', array $postData = [], $getFromWhere = false): string
     {
+        $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1] ?? null;
+        if ($getFromWhere && $caller) {
+            error_log(sprintf(
+                "Called by %s%s%s() in %s:%d",
+                $caller['class'] ?? '',
+                $caller['type'] ?? '',
+                $caller['function'] ?? 'unknown',
+                $caller['file'] ?? 'unknown',
+                $caller['line'] ?? 0
+            ));
+        }
+
         $url = $this->apiUrl . $endpoint;
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Token " . $this->token
-        ]);
-        
-        // Falls POST-Daten (z.B. beim Upload) übergeben werden
-        if ($method === 'POST') {
+
+        $headers = [
+            "Authorization: Token " . $this->token,
+            "Accept: application/json"
+        ];
+
+        if (strtoupper($method) === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            // Payload explizit als JSON-String im Body senden
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+            // Dieser Header IST bei POST ZWINGEND nötig!
+            $headers[] = "Content-Type: application/json";
         }
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $result = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
-        //curl_close($ch);
-        error_log("PaperlessURL:" . $url);
+        curl_close($ch);
 
-        // Globale Fehlerprüfung für alle Endpunkte
+        error_log(strtoupper($method) . ": PaperlessURL:" . $url);
+
         if ($httpCode === 0) {
             throw new \Exception("Paperless-Server ist offline oder nicht erreichbar. (cURL: $curlError)");
         }
         if ($httpCode === 401 || $httpCode === 403) {
             throw new \Exception("Zugriff verweigert. Der Paperless API-Token ist ungültig.");
         }
-        
-        // Je nach Methode erwarten wir andere Erfolgs-Codes (GET: 200, POST: 201)
-        $expectedCode = ($method === 'POST') ? 201 : 200;
-        if ($httpCode !== $expectedCode) {
-            // Versuche die Fehlermeldung von Paperless zu extrahieren, falls vorhanden
+
+        // 200 OK und 201 Created sowie 202 Accepted gelten als Erfolg
+        if (!in_array($httpCode, [200, 201, 202], true)) {
             $apiError = !empty($result) ? $result : 'Keine Antwortdetails';
             throw new \Exception("Paperless-API meldet Status $httpCode. Details: " . $apiError);
         }
-    
+
         return $result;
     }
 
@@ -80,9 +96,11 @@ class PaperlessProcessor extends \App\Core\Database
     {
         $paperless = [
             'archvied'=> $this->getArchivedDocuments(), 
-            'unclassified'=> $this->getUnclassified(), 
+            'unarchvied'=> $this->getUnArchivedDocuments(), 
+            'unclassified'=> $this->getWithOutDocumentType(), 
             'dms'=> $this->getTotalDocs(), 
-            'recipients' => $this->getRecipients()
+            'recipients' => $this->getRecipients(),
+            'reprocess' => $this->triggerReprocessForDate()
         ];
 
         return $paperless;
@@ -90,33 +108,71 @@ class PaperlessProcessor extends \App\Core\Database
 
     private function getArchivedDocuments():int
     {
-        $json = $this->request('/api/documents/?is_in_archive=true');
+        $fourWeeksAgo = (new \DateTime('-4 weeks'))->format('Y-m-d');
+        $params = [
+            'document_type__is__null' => 'false',
+            'created__gte'          => $fourWeeksAgo,
+            'page_size'               => 1
+        ];
+        $json = $this->request('/api/documents/?' . http_build_query($params));
         $data = json_decode($json, true);
 
+        error_log(__function__ . print_r($data['count'], true));
         return $data['count'] ?? 0;
     }
 
-    private function getUnclassified()
+    private function getUnArchivedDocuments():int
     {
-        $endpoint = '/api/documents/?correspondent__isnull=true&document_type__isnull=true';
-        $json = $this->request($endpoint);
-        
+        $params = [
+            'document_type__isnull'   => 'false',
+            'page_size'               => 1
+        ];
+        $json = $this->request('/api/documents/?' . http_build_query($params));
         $data = json_decode($json, true);
 
+        error_log(__function__ .": " . print_r($data['count'], true));
         return $data['count'] ?? 0;
+    }
+
+    private function getWithOutDocumentType()
+    {
+        error_log(__function__ . " aufgerufen!");
+        $params = [
+            'document_type__isnull' => 'true',
+            'page_size'               => 1
+        ];
+
+        
+        $docResponse = $this->request('/api/documents/?' . http_build_query($params));
+        $docData = json_decode($docResponse, true);
+        
+        if (empty($docData) || !isset($docData['count'])) {
+            return [];
+        }
+
+        error_log(__function__ . print_r($docData['count'], true));
+        return $docData['count'] ?? 0;
     }
 
     private function getTotalDocs()
     {
-        $json = $this->request('/api/documents/?page_size=1');
+        $params = [
+            'page_size'               => 1
+        ];
+        
+        $json = $this->request('/api/documents/?' . http_build_query($params));
         $data = json_decode($json, true);
         
+        error_log(__function__ . print_r($data['count'], true));
         return $data['count'] ?? 0;
     }
 
     private function getRecipients()
     {
-        $json = $this->request('/api/correspondents/?page_size=1000');
+        $params = [
+            'page_size'               => 1
+        ];
+        $json = $this->request('/api/correspondents/?' . http_build_query($params));
         $data = json_decode($json, true);
         
 
@@ -199,8 +255,8 @@ class PaperlessProcessor extends \App\Core\Database
     public function getLastDocuments()
     {
         // 1. Dokumente laden
-        $params = ['query' => 'tag:unclassified', 'page_size' => 100];
-        $docResponse = $this->request('/api/documents/?' . http_build_query($params));
+        $params = ['tags__name__iexact' => 'unclassified', 'page_size' => 100];
+        $docResponse = $this->request('/api/documents/?' . http_build_query($params), 'GET', [], true);
         $docData = json_decode($docResponse, true);
         $documents = $docData['results'] ?? [];
 
@@ -235,11 +291,40 @@ class PaperlessProcessor extends \App\Core\Database
         return $enrichedDocs;
     }
 
+    private function triggerReprocessForDate(string $date = '2026-07-01')
+    {
+        // 1. IDs aller betroffenen Dokumente holen
+        $params = [
+            'created__date' => $date, // Alternativ: 'added__date'
+            'tags__name__iexact' => 'unclassified',
+            'page_size'     => 100,
+            'fields'        => 'id',
+        ];
+
+        $docResponse = $this->request('/api/documents/?' . http_build_query($params));
+        $docData = json_decode($docResponse, true);
+        $documentIds = array_column($docData['results'] ?? [], 'id');
+
+        if (empty($documentIds)) {
+            return "Keine Dokumente für {$date} gefunden.";
+        }
+
+        // 2. Reprocess-Task für diese IDs starten
+        $payload = [
+            'documents' => array_map('intval', $documentIds),
+            'method'    => 'reprocess'
+        ];
+
+        // Request als POST an /api/documents/bulk_edit/ senden
+        //$a = $this->request('/api/documents/bulk_edit/', 'POST', $payload);
+        return "Done";
+    }
+
     public function getLastUnclassifiedDocuments()
     {
         // 1. Dokumente laden
         $params = [
-            'tag' => 'unclassified', 
+            'tags__name__iexact' => 'unclassified',
             'ordering' => '-created'
         ];
         $docResponse = $this->request('/api/documents/?' . http_build_query($params));
@@ -1053,7 +1138,7 @@ class PaperlessProcessor extends \App\Core\Database
         $paperlessDocs = $this->fetchDocumentsByCorrespondentId($correspondentid);
         if (empty($paperlessDocs)) return [];
         //alle results
-        $paperlessDocsRes = paperlessDocs["results"];
+        $paperlessDocsRes = $paperlessDocs["results"];
         // Dynamische Ermittlung der Basis-URL aus den Mandanteneinstellungen
         //$settings = $this->dashboard->getTenantSettings($this->tenantId);
         //$baseUrl  = rtrim($settings['paperless_url'] ?? 'http://192.168.0.72:8030', '/');
