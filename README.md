@@ -81,12 +81,15 @@ cd DEIN-REPO
 
 2.  **Konfiguration:**
     Kopiere die Vorlage und setze deine Einstellungen:
-    ```bash
+```bash
 cp .env.example .env
+
 ```
 
 # Öffne die .env Datei und passe das DB-Passwort an
+```bash
 nano .env
+```bash
 
 3. **Starten:**
 ```bash
