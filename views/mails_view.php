@@ -11,10 +11,7 @@
 
 <div x-data="mailView" x-init="init_mails();startBackgroundSyncDelayed();" class="flex w-full h-screen overflow-hidden bg-slate-50 dark:bg-gray-900">
     
-    <!-- 2. #sidebarMail: Mobil 'fixed' bis über die Bottom-Nav (bottom-16), ab md: 'relative h-full' -->
-    <div id="sidebarMail" 
-         class="fixed inset-x-0 top-0 bottom-16 z-40 flex shrink-0 md:relative md:inset-auto md:z-auto md:h-full" 
-         :class="isSidebarOpen ? 'w-full md:w-auto' : 'pointer-events-none md:pointer-events-auto w-0 md:w-auto'">
+    <div class="flex shrink-0 h-full" :class="isSidebarOpen ? 'w-full md:w-auto' : 'w-auto'">
         
         <div x-show="isSidebarOpen" 
             x-transition:enter="transition-all duration-300 ease-out"
@@ -23,14 +20,12 @@
             x-transition:leave="transition-all duration-300 ease-in"
             x-transition:leave-start="ml-0 opacity-100" 
             x-transition:leave-end="-ml-full md:-ml-80 opacity-0"
-            class="w-full md:w-80 h-full min-h-0 border-r border-slate-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-850 relative">
-            
+            class="w-full md:w-80 h-full border-r border-slate-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-850 relative">
             <button @click="isSidebarOpen = false" 
-                    class="hidden md:block absolute right-2 top-4 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full p-1 shadow-md hover:bg-slate-100 transition-colors text-[10px] text-slate-500">
+                    class="hidden md:block absolute -right-3 top-4 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full p-1 shadow-md hover:bg-slate-100 transition-colors text-[10px] text-slate-500">
                 ◀
             </button>
-            
-            <div class="px-2 py-2 shrink-0">
+            <div class="px-2 py-2">
                 <input type="text" 
                     x-model="mailSearchQuery"
                     placeholder="Suche in E-Mails..." 
@@ -46,18 +41,15 @@
                     </button>
                 </template>
             </div>
-            
-            <div class="flex justify-between items-center px-3 mt-1.5 text-[11px] shrink-0" x-show="mailSearchQuery.trim().length > 0" x-cloak>
+            <div class="flex justify-between items-center px-3 mt-1.5 text-[11px]" x-show="mailSearchQuery.trim().length >= 0" x-cloak>
                 <span class="text-slate-400" x-text="`Gefunden: ${filteredMails.length} von ${mails.length}`"></span>
                 <a href="#" @click.prevent="mailSearchQuery = ''" class="text-blue-500 hover:underline">Leeren</a>
             </div>
-            
-            <!-- E-Mail Liste: flex-1 und min-h-0 erzwingen internes Scrollen -->
-            <div id="mail-list" class="flex-1 min-h-0 overflow-y-auto p-2 space-y-1.5">
+            <div id="mail-list"
+                 class="flex-1 overflow-y-auto p-2 space-y-1.5">
                 <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Gesamt: <span x-text="mails.length"></span> Mails
                 </div>
-                
                 <template x-for="mail in mails" :key="mail.id">
                     <div @click="openMail(mail)" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
@@ -97,7 +89,6 @@
                 </div>
             </div>
         </div>
-        
         <div x-show="!isSidebarOpen" 
             class="relative hidden md:block w-0 h-full z-50 shrink-0">
             <button @click="isSidebarOpen = true" 
@@ -106,7 +97,7 @@
             </button>
         </div>
     </div>
-    <div id="currentmaiL" class="flex-1 h-full overflow-hidden bg-slate-50 dark:bg-gray-900 relative"
+    <main class="flex-1 h-full overflow-hidden bg-slate-50 dark:bg-gray-900 relative"
           :class="isSidebarOpen ? 'hidden md:flex flex-col' : 'flex flex-col'">
           
         <template x-if="currentMail">
@@ -144,5 +135,5 @@
                 <p class="text-xs text-center font-medium">Wähle eine Nachricht aus der linken Liste aus.</p>
             </div>
         </template>
-    </div>
+    </main>
 </div>

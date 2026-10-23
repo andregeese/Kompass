@@ -69,7 +69,35 @@ Das bedeutet für dich: Du darfst den Quellcode zu Transparenzzwecken frei einse
 
 Voraussetzungen: [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) müssen installiert sein.
 
-1. **erstelle das Dockerfile:**
+1. **docker-compose.yml öffnen bearbeiten**:
+  und unter services: eintrage:
+
+  webserver:
+    logging:
+      driver: journald
+      options:
+        tag: "webserver"
+    build: .
+    container_name: webserver
+    restart: unless-stopped
+    ports:
+      - "8085:80" # Im Browser erreichbar unter http://<Server-IP>:8085
+    volumes:
+      - /nvme/data/apache:/var/www/html 
+      - /nvme/data/paperless/consume:/export/paperless
+    environment:
+      - PAPERLESS_API_URL=http://paperless_web:8000/api # Interner Docker-Link zu Paperless
+      - PAPERLESS_TOKEN=IHR_PAPERLESS_API_TOKEN
+      - PUID=1000
+      - PGID=1000
+      #- TZ=Etc/UTC
+      - DC_MYSQL_ROOT=${DC_MYSQL_ROOT}
+      - DC_MYSQL_PASS=${DC_MYSQL_PASS}
+    
+    (OPTIONAL) networks:
+      - ha_net 
+    
+2. **erstelle das Dockerfile:**
 
 ```bash
 # PHP 8.4 / 8.5 auf Debian Bookworm
@@ -107,7 +135,7 @@ WORKDIR /var/www/html
 
 
 
-2. **Repository klonen:**
+3. **Repository klonen:**
 ```bash
 
 git clone https://github.com/andregeese/Kompass.git
@@ -115,7 +143,7 @@ cd /DEIN-REPO
 
 ```
 
-3.  **Konfiguration:**
+4.  **Konfiguration:**
     Kopiere die Vorlage und setze deine Einstellungen:
 ```bash
 
@@ -130,18 +158,30 @@ nano .env
 
 ```
 
-4. **Compose:**
+5. **Compose:**
 ```bash
 
-docker exec -it webserver composer dump-autoload -o --working-dir=/DEIN-REPO
+docker exec -it %CONTAINER% composer dump-autoload -o --working-dir=/DEIN-REPO
 ```
 
-5. **Starten:**
+6. **Starten:**
 ```bash
 
-docker-compose up -d
+docker compose up -d %CONTAINER%
 
 ```
+
+
+**FIX FOR PHP**
+docker compose build --pull --no-cache && docker compose up -d
+
+**UPDATE composer**
+docker compose exec %CONTAINER% composer update
+docker exec -it %CONTAINER% composer update --working-dir=%FOLDER% (bei mir bspw. /var/www/html/age_web)
+
+**VARIABLEN**
+$CONTAINER = der Name des Containers (in meinem Fall Webserver)
+$FOLDER = der Pfad aus dem Dockerfile
 
 Dein Kompass ist nun unter `http://localhost:8080` erreichbar.
 
