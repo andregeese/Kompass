@@ -225,20 +225,23 @@ $paperlessUrl = "http://192.168.0.3:8030";
                 throw new \Exception("Kritischer Fehler: Header-View ('views/header.php') konnte nicht geladen werden.");
             }
             echo '</div>';
-            echo '<div class="flex-1 flex overflow-hidden relative">';
 
-            // 2. DIE NEUE UNIFIZIERTE NAVIGATION (Ersetzt die alte sidebar.php)
+            // START: Haupt-Inhaltsbereich (Nimmt den restlichen Platz zwischen Header und Footer ein)
+            echo '<div class="flex-1 flex overflow-hidden relative min-h-0">';
+
+            // 2. DIE NAVIGATION
             if (!@include __DIR__ . '/views/navigation_bar.php') {
                 throw new \Exception("Kritischer Fehler: Navigation ('views/navigation_bar.php') konnte nicht geladen werden.");
             }
-            // 3. MAIN DYNAMIC VIEW
-            echo '<main class="flex-1 flex overflow-hidden relative min-h-0 pb-16 md:pb-0">';
-            $viewPath = __DIR__ . "/views/{$currentView}_view.php";
-            if (!@include $viewPath) {
-                die("Kritischer Systemfehler: View-Datei nicht gefunden.");
-                //throw new \Exception("Kritischer Fehler: Die View '{$currentView}' konnte unter dem Pfad '{$viewPath}' nicht geladen werden.");
-            }
+            
+            // 3. MAIN DYNAMIC VIEW (HINWEIS: pb-16 entfernt, da Footer jetzt ein echtes Element ist!)
+            echo '<main class="flex-1 flex overflow-hidden relative min-h-0">';
+                $viewPath = __DIR__ . "/views/{$currentView}_view.php";
+                if (!@include $viewPath) {
+                    die("Kritischer Systemfehler: View-Datei nicht gefunden.");
+                }
             echo '</main>';
+
             // 4. RIGHT SIDEBAR
             if (!@include __DIR__ . '/views/right_sidebar.php') {
                 throw new \Exception("Kritischer Fehler: Rechte Sidebar ('views/right_sidebar.php') konnte nicht geladen werden.");
@@ -250,6 +253,15 @@ $paperlessUrl = "http://192.168.0.3:8030";
             ob_end_clean();
             throw $e;
         }
+        ?>
+        <!--// 5. GLOBALER FOOTER (Automatische Höhe, shrink-0 sorgt dafür, dass nichts gestaucht wird)-->
+        <?php 
+        echo '<footer class="shrink-0 bg-white dark:bg-gray-800 border-t border-slate-200 dark:border-gray-700 px-4 py-2 text-xs flex justify-between items-center z-50">';
+            echo '<span class="text-slate-500">&copy; ' . date('Y') . ' Kompass by André Geese</span>';
+            echo '<div class="flex space-x-4">';
+                echo '<span class="text-green-600 font-medium">● System Status: Optimal</span>';
+            echo '</div>';
+        echo '</footer>';
         ?>
     </div>
     <div x-data="{ 

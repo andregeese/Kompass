@@ -9,7 +9,7 @@
  */
 ?>
 
-<div x-data="mailView" x-init="init_mails();startBackgroundSyncDelayed();" class="flex w-full h-screen overflow-hidden bg-slate-50 dark:bg-gray-900">
+<div x-data="mailView" x-init="init_mails();startBackgroundSyncDelayed();" class="flex w-full h-full overflow-hidden bg-slate-50 dark:bg-gray-900">
     
     <div class="flex shrink-0 h-full" :class="isSidebarOpen ? 'w-full md:w-auto' : 'w-auto'">
         
@@ -27,6 +27,7 @@
             </button>
             <div class="px-2 py-2">
                 <input type="text" 
+                    tabindex="0"
                     x-model="mailSearchQuery"
                     placeholder="Suche in E-Mails..." 
                     class="w-full bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
@@ -51,14 +52,15 @@
                     Gesamt: <span x-text="mails.length"></span> Mails
                 </div>
                 <template x-for="mail in mails" :key="mail.id">
-                    <div @click="openMail(mail)" 
+                   <div @click="openMail(mail)" 
+                        @keydown.enter="openMail(mail)" 
                         class="w-full text-left block bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-750 transition-all relative pl-7"
                         :class="{
-                                'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedId === mail.id,
-                                'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined,
-                                'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read,
-                                'bg-amber-50/60 dark:bg-amber-900/20 opacity-90': mail.is_newsletter
-                            }">
+                            'border-blue-500 ring-2 ring-blue-500/10 dark:bg-gray-750': selectedId === mail.id,
+                            'border-emerald-500 dark:border-emerald-500': mail.paperless_id !== null && mail.paperless_id !== undefined,
+                            'bg-slate-50/60 dark:bg-gray-850/40 opacity-90': mail.is_read,
+                            'bg-amber-50/60 dark:bg-amber-900/20 opacity-90': mail.is_newsletter
+                        }">
                         
                         <div x-show="mail.is_read===0" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
                         <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-gray-400 mb-1 min-w-0">
