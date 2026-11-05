@@ -161,27 +161,28 @@ nano .env
 5. **Compose:**
 ```bash
 
-docker exec -it %CONTAINER% composer dump-autoload -o --working-dir=/DEIN-REPO
+docker exec -it $CONTAINER composer dump-autoload -o --working-dir=$FOLDER
 ```
 
 6. **Starten:**
 ```bash
 
-docker compose up -d %CONTAINER%
+docker compose up -d $CONTAINER
 
 ```
 
 
 **FIX FOR PHP**
-docker compose build --pull --no-cache && docker compose up -d
+docker compose build --pull --no-cache && docker compose up -d $CONTAINER
 
 **UPDATE composer**
-docker compose exec %CONTAINER% composer update
-docker exec -it %CONTAINER% composer update --working-dir=%FOLDER% (bei mir bspw. /var/www/html/age_web)
+docker compose exec $CONTAINER composer update
+docker exec -it $CONTAINER composer update --working-dir=$FOLDER
+docker exec -it $CONTAINER composer dump-autoload -o --working-dir=$FOLDER
 
 **VARIABLEN**
 $CONTAINER = der Name des Containers (in meinem Fall Webserver)
-$FOLDER = der Pfad aus dem Dockerfile
+$FOLDER = /var/www/html/age_web
 
 Dein Kompass ist nun unter `http://localhost:8080` erreichbar.
 
